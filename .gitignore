@@ -5,3 +5,4 @@ data/transactions.db
 data/transactions.db-wal
 data/transactions.db-shm
 *.log
+명단.CSV
