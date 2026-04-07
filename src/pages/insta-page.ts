@@ -7,6 +7,8 @@ export function generateInstaPageHTML(): string {
   <title>콘텐츠 생성 — BSN 어시스턴트</title>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{
@@ -1314,9 +1316,13 @@ function toggleHistoryExpand() {
 }
 
 function doLogout() {
+  try { firebase.auth().signOut(); } catch(e) {}
   localStorage.removeItem('bsn_user_name');
   localStorage.removeItem('bsn_user_id');
   localStorage.removeItem('bsn_user_role');
+  localStorage.removeItem('bsn_user_email');
+  localStorage.removeItem('bsn_user_picture');
+  localStorage.removeItem('bsn_firebase_token');
   location.href = '/';
 }
 

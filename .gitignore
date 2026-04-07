@@ -6,3 +6,5 @@ data/transactions.db-wal
 data/transactions.db-shm
 *.log
 명단.CSV
+deploy-test1-*.json
+*-firebase-adminsdk-*.json

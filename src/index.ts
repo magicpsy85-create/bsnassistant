@@ -36,6 +36,7 @@ import path from 'path';
 import iconv from 'iconv-lite';
 import { getTransactions, getTransactionsByPeriod, formatYm } from './molit-api';
 import db from './db';
+import { firestore, auth as firebaseAuth } from './firebase-admin';
 
 // CSV → JSON 초기화 (최초 1회)
 function initMembersFromCSV() {
@@ -117,6 +118,110 @@ app.delete('/api/admin/members/:no', (req: Request, res: Response) => {
   const no = parseInt(req.params.no);
   deleteMember(no);
   res.json({ success: true });
+});
+
+// ─── Firebase 인증 API ───
+const ADMIN_EMAIL = 'magicpsy85@gmail.com';
+
+// Google 로그인 후 토큰 검증 + 사용자 등록/확인
+app.post('/api/auth/verify', async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ error: 'idToken 필요' });
+
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const { uid, email, name, picture } = decoded;
+
+    const userRef = firestore.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      // 신규 사용자 등록 (승인 대기)
+      const isAdmin = email === ADMIN_EMAIL;
+      await userRef.set({
+        uid,
+        email: email || '',
+        name: name || '',
+        picture: picture || '',
+        role: isAdmin ? '관리자' : '사용자',
+        approved: isAdmin, // 관리자는 자동 승인
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+      });
+      console.log('[Firebase] 신규 사용자 등록:', email, isAdmin ? '(관리자 자동승인)' : '(승인 대기)');
+      return res.json({
+        user: { uid, email, name, picture, role: isAdmin ? '관리자' : '사용자', approved: isAdmin }
+      });
+    }
+
+    // 기존 사용자 로그인 시각 갱신
+    await userRef.update({ lastLoginAt: new Date().toISOString() });
+    const userData = userDoc.data()!;
+    res.json({
+      user: {
+        uid: userData.uid,
+        email: userData.email,
+        name: userData.name,
+        picture: userData.picture,
+        role: userData.role,
+        approved: userData.approved
+      }
+    });
+  } catch (e: any) {
+    console.error('[Firebase 인증 오류]', e.message);
+    res.status(401).json({ error: '인증 실패' });
+  }
+});
+
+// 사용자 목록 조회 (관리자 전용)
+app.get('/api/auth/users', async (req: Request, res: Response) => {
+  try {
+    const snap = await firestore.collection('users').orderBy('createdAt', 'desc').get();
+    const users = snap.docs.map(d => d.data());
+    res.json(users);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 사용자 승인/거부 (관리자 전용)
+app.post('/api/auth/approve', async (req: Request, res: Response) => {
+  try {
+    const { uid, approved } = req.body;
+    if (!uid) return res.status(400).json({ error: 'uid 필요' });
+
+    await firestore.collection('users').doc(uid).update({
+      approved: !!approved,
+      approvedAt: new Date().toISOString()
+    });
+    console.log('[Firebase] 사용자', uid, approved ? '승인' : '거부');
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 사용자 역할 변경 (관리자 전용)
+app.post('/api/auth/role', async (req: Request, res: Response) => {
+  try {
+    const { uid, role } = req.body;
+    if (!uid || !role) return res.status(400).json({ error: 'uid, role 필요' });
+
+    await firestore.collection('users').doc(uid).update({ role });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Firebase 클라이언트 설정 전달
+app.get('/api/auth/config', (_req: Request, res: Response) => {
+  res.json({
+    apiKey: process.env.FIREBASE_API_KEY || '',
+    authDomain: 'deploy-test1-24dc2.firebaseapp.com',
+    projectId: 'deploy-test1-24dc2',
+    storageBucket: 'deploy-test1-24dc2.firebasestorage.app'
+  });
 });
 
 // ─── 챗봇 페이지 ───

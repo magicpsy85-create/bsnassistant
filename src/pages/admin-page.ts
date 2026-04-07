@@ -7,6 +7,8 @@ export function generateAdminPageHTML(): string {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>관리자 — BSN 어시스턴트</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{
@@ -201,13 +203,15 @@ export function generateAdminPageHTML(): string {
 
 <!-- Login overlay -->
 <div id="adminLoginOverlay" class="login-overlay" style="display:none;">
-  <div class="login-box">
+  <div class="login-box" style="text-align:center;">
+    <div style="font-size:28px;margin-bottom:8px;">&#128272;</div>
     <h2>관리자 로그인</h2>
-    <p>이름과 핸드폰 번호 뒤 4자리를 입력해 주세요.</p>
-    <input type="text" id="adminLoginName" placeholder="이름" onkeydown="if(event.key==='Enter')document.getElementById('adminLoginPhone').focus()">
-    <input type="text" id="adminLoginPhone" placeholder="핸드폰 뒤 4자리" maxlength="4" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    <p>관리자 권한이 있는 Google 계정으로 로그인하세요.</p>
+    <button class="login-btn" id="adminGoogleBtn" onclick="doAdminGoogleLogin()" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Google로 로그인
+    </button>
     <div class="login-error" id="adminLoginError"></div>
-    <button class="login-btn" onclick="doAdminLogin()">로그인</button>
   </div>
 </div>
 
@@ -217,6 +221,7 @@ export function generateAdminPageHTML(): string {
     <button class="tab active" onclick="switchTab('records')">상담 기록</button>
     <button class="tab" onclick="switchTab('rules')">규정 설정</button>
     <button class="tab" onclick="switchTab('members')">명단 관리</button>
+    <button class="tab" onclick="switchTab('users')">사용자 관리</button>
   </div>
 
   <!-- 상담 기록 -->
@@ -360,6 +365,18 @@ export function generateAdminPageHTML(): string {
       </div>
     </div>
   </div>
+
+  <!-- 사용자 관리 -->
+  <div id="users-section" class="section">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="card-title">사용자 관리</div>
+        <button class="btn btn-primary" onclick="loadFirebaseUsers()" style="font-size:12px;padding:6px 14px;">새로고침</button>
+      </div>
+      <p style="font-size:12px;color:var(--sub);margin-bottom:16px;">Google 로그인한 사용자 목록입니다. 승인하지 않으면 서비스를 이용할 수 없습니다.</p>
+      <div id="firebaseUsersBody" style="min-height:100px;"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -379,68 +396,75 @@ window._deleteMode = false;
 let memberPage = 1;
 const MEMBER_PAGE_SIZE = 9999;
 
-// ─── 관리자 권한 체크 ───
+// ─── Firebase Google 로그인 (관리자) ───
+var firebaseApp = null;
+var firebaseAuthInstance = null;
+
+async function initFirebase() {
+  try {
+    var configRes = await fetch('/api/auth/config');
+    var config = await configRes.json();
+    firebaseApp = firebase.initializeApp(config);
+    firebaseAuthInstance = firebase.auth();
+  } catch(e) { console.error('[Firebase] 초기화 실패', e); }
+}
+
 async function checkAdminAccess() {
-  const userName = localStorage.getItem('bsn_user_name');
-  const userId = localStorage.getItem('bsn_user_id');
-  if (!userName || !userId) {
+  await initFirebase();
+  var token = localStorage.getItem('bsn_firebase_token');
+  var role = localStorage.getItem('bsn_user_role');
+  if (!token) {
     return await showAdminLogin();
   }
-  const res = await fetch('/api/members');
-  const members = await res.json();
-  const me = members.find(m => m.name === userName && 'member_' + m.no === userId);
-  if (!me || me.role !== '관리자') {
-    if (!me) {
-      return await showAdminLogin();
+  try {
+    var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
+    var data = await res.json();
+    if (!data.user || data.user.role !== '관리자') {
+      document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
+      return false;
     }
-    document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
-    return false;
+    return true;
+  } catch(e) {
+    return await showAdminLogin();
   }
-  return true;
 }
 
 function showAdminLogin() {
-  return new Promise((resolve) => {
-    const overlay = document.getElementById('adminLoginOverlay');
-    overlay.style.display = 'flex';
-    document.getElementById('adminLoginName').focus();
+  return new Promise(function(resolve) {
+    document.getElementById('adminLoginOverlay').style.display = 'flex';
     window._adminLoginResolve = resolve;
   });
 }
 
-async function doAdminLogin() {
-  const name = document.getElementById('adminLoginName').value.trim();
-  const phone = document.getElementById('adminLoginPhone').value.trim();
-  const errEl = document.getElementById('adminLoginError');
-  if (!name || !phone || phone.length !== 4) {
-    errEl.textContent = '이름과 핸드폰 뒤 4자리를 모두 입력해 주세요.';
-    errEl.style.display = 'block';
-    return;
-  }
+async function doAdminGoogleLogin() {
+  var errEl = document.getElementById('adminLoginError');
+  errEl.style.display = 'none';
+  var btn = document.getElementById('adminGoogleBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
   try {
-    const res = await fetch('/api/members');
-    const members = await res.json();
-    const found = members.find(m => m.name === name && m.phoneLast4 === phone);
-    if (!found) {
-      errEl.textContent = '이름 또는 번호가 일치하지 않습니다.';
+    var provider = new firebase.auth.GoogleAuthProvider();
+    var result = await firebaseAuthInstance.signInWithPopup(provider);
+    var idToken = await result.user.getIdToken();
+    var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:idToken}) });
+    var data = await res.json();
+    if (!data.user) throw new Error('인증 실패');
+    if (data.user.role !== '관리자') {
+      errEl.textContent = '관리자 권한이 없는 계정입니다. (' + data.user.email + ')';
       errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Google로 로그인';
       return;
     }
-    if (found.role !== '관리자') {
-      errEl.textContent = '관리자 권한이 없는 계정입니다.';
-      errEl.style.display = 'block';
-      return;
-    }
-    localStorage.setItem('bsn_user_name', found.name);
-    localStorage.setItem('bsn_user_id', 'member_' + found.no);
-    localStorage.setItem('bsn_user_role', found.role || '사용자');
+    localStorage.setItem('bsn_user_name', data.user.name);
+    localStorage.setItem('bsn_user_id', data.user.uid);
+    localStorage.setItem('bsn_user_role', data.user.role);
+    localStorage.setItem('bsn_user_email', data.user.email);
+    localStorage.setItem('bsn_firebase_token', idToken);
     document.getElementById('adminLoginOverlay').style.display = 'none';
-    if (window._adminLoginResolve) {
-      window._adminLoginResolve(true);
-    }
+    if (window._adminLoginResolve) window._adminLoginResolve(true);
   } catch(e) {
-    errEl.textContent = '서버 오류가 발생했습니다.';
+    errEl.textContent = e.message || '로그인 실패';
     errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Google로 로그인';
   }
 }
 
@@ -451,9 +475,13 @@ async function init() {
 }
 
 function doLogout() {
+  try { firebase.auth().signOut(); } catch(e) {}
   localStorage.removeItem('bsn_user_name');
   localStorage.removeItem('bsn_user_id');
   localStorage.removeItem('bsn_user_role');
+  localStorage.removeItem('bsn_user_email');
+  localStorage.removeItem('bsn_user_picture');
+  localStorage.removeItem('bsn_firebase_token');
   location.href = '/';
 }
 
@@ -481,6 +509,9 @@ async function switchTab(name) {
   if (name === 'rules') {
     await loadDraftMembers();
     renderDrafts();
+  }
+  if (name === 'users') {
+    loadFirebaseUsers();
   }
 }
 
@@ -1430,6 +1461,81 @@ function calcTenure(dateStr) {
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ═══ 사용자 관리 (Firebase) ═══
+var firebaseUsers = [];
+
+async function loadFirebaseUsers() {
+  var body = document.getElementById('firebaseUsersBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">로딩 중...</div>';
+  try {
+    var res = await fetch('/api/auth/users');
+    firebaseUsers = await res.json();
+    renderFirebaseUsers();
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:20px;color:#E24B4A;">사용자 목록 로드 실패</div>';
+  }
+}
+
+function renderFirebaseUsers() {
+  var body = document.getElementById('firebaseUsersBody');
+  if (!firebaseUsers.length) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">등록된 사용자가 없습니다</div>';
+    return;
+  }
+  var pending = firebaseUsers.filter(function(u){return !u.approved;});
+  var approved = firebaseUsers.filter(function(u){return u.approved;});
+  var html = '';
+  if (pending.length) {
+    html += '<div style="font-size:13px;font-weight:600;color:#E24B4A;margin-bottom:8px;">승인 대기 (' + pending.length + '명)</div>';
+    pending.forEach(function(u) { html += renderUserRow(u); });
+    html += '<div style="margin-bottom:16px;"></div>';
+  }
+  html += '<div style="font-size:13px;font-weight:600;color:var(--sub);margin-bottom:8px;">승인된 사용자 (' + approved.length + '명)</div>';
+  approved.forEach(function(u) { html += renderUserRow(u); });
+  body.innerHTML = html;
+}
+
+function renderUserRow(u) {
+  var statusColor = u.approved ? '#1D9E75' : '#E24B4A';
+  var statusText = u.approved ? '승인됨' : '대기중';
+  var roleColor = u.role === '관리자' ? '#2C4A7C' : 'var(--sub)';
+  var pic = u.picture ? '<img src="' + esc(u.picture) + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">' : '<div style="width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;">&#128100;</div>';
+  var html = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">';
+  html += pic;
+  html += '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">' + esc(u.name || '이름 없음') + ' <span style="font-size:11px;font-weight:500;color:' + roleColor + ';">' + esc(u.role || '사용자') + '</span></div>';
+  html += '<div style="font-size:11px;color:var(--muted);">' + esc(u.email || '') + '</div></div>';
+  html += '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">';
+  html += '<span style="font-size:11px;color:' + statusColor + ';font-weight:600;">' + statusText + '</span>';
+  if (!u.approved) {
+    html += '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveUser(\'' + u.uid + '\',true)">승인</button>';
+  } else {
+    html += '<button class="btn" style="font-size:11px;padding:4px 10px;background:#FCEBEB;color:#791F1F;border:none;" onclick="approveUser(\'' + u.uid + '\',false)">해제</button>';
+  }
+  if (u.role !== '관리자') {
+    html += '<button class="btn" style="font-size:11px;padding:4px 10px;" onclick="toggleRole(\'' + u.uid + '\',\'' + u.role + '\')">역할변경</button>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+async function approveUser(uid, approve) {
+  try {
+    await fetch('/api/auth/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({uid:uid,approved:approve}) });
+    showToast(approve ? '사용자를 승인했습니다' : '승인을 해제했습니다');
+    loadFirebaseUsers();
+  } catch(e) { showToast('오류가 발생했습니다'); }
+}
+
+async function toggleRole(uid, currentRole) {
+  var newRole = currentRole === '관리자' ? '사용자' : '관리자';
+  if (!confirm(newRole + ' 역할로 변경하시겠습니까?')) return;
+  try {
+    await fetch('/api/auth/role', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({uid:uid,role:newRole}) });
+    showToast('역할이 변경되었습니다');
+    loadFirebaseUsers();
+  } catch(e) { showToast('오류가 발생했습니다'); }
+}
 
 init();
 </script>

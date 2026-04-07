@@ -8,6 +8,8 @@ export function generateChatbotPageHTML(): string {
   <title>BSN 어시스턴트</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{
@@ -166,14 +168,27 @@ export function generateChatbotPageHTML(): string {
   </div>
 
   <!-- 로그인 -->
-  <div class="login-overlay" id="namePrompt" style="display:none;">
-    <div class="login-box">
-      <h3>본인 확인</h3>
-      <p>이름과 핸드폰 번호 뒤 4자리를 입력해 주세요.</p>
-      <input type="text" id="loginName" placeholder="이름" onkeydown="if(event.key==='Enter')document.getElementById('loginPhone').focus()">
-      <input type="text" id="loginPhone" placeholder="핸드폰 뒤 4자리" maxlength="4" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="login-overlay" id="loginOverlay" style="display:none;">
+    <div class="login-box" style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">&#128273;</div>
+      <h3>BSN 어시스턴트</h3>
+      <p>Google 계정으로 로그인하세요</p>
+      <button class="login-btn" id="googleLoginBtn" onclick="doGoogleLogin()" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Google로 로그인
+      </button>
       <div class="login-error" id="loginError"></div>
-      <button class="login-btn" onclick="doLogin()">시작하기</button>
+    </div>
+  </div>
+  <!-- 승인 대기 -->
+  <div class="login-overlay" id="pendingOverlay" style="display:none;">
+    <div class="login-box" style="text-align:center;">
+      <div style="font-size:36px;margin-bottom:12px;">&#9203;</div>
+      <h3>승인 대기 중</h3>
+      <p id="pendingEmail" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
+      <p>관리자의 승인이 필요합니다.<br>승인 후 새로고침하면 이용할 수 있습니다.</p>
+      <button class="login-btn" onclick="location.reload()" style="margin-top:16px;">새로고침</button>
+      <button style="display:block;width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--sub);font-size:13px;cursor:pointer;font-family:inherit;" onclick="doLogout()">다른 계정으로 로그인</button>
     </div>
   </div>
 
@@ -192,7 +207,7 @@ const sendBtn = document.getElementById('sendBtn');
 let isLoading = false;
 let userName = localStorage.getItem('bsn_user_name') || '';
 let userId = localStorage.getItem('bsn_user_id') || '';
-let allMembers = [];
+let userRole = localStorage.getItem('bsn_user_role') || '';
 let chatMessages = loadChatHistory();
 
 function saveChatHistory() {
@@ -210,53 +225,97 @@ const defaultQuestions = [
   '계약 해지 시 매물은?'
 ];
 
-async function initLogin() {
-  if (userName) {
-    document.getElementById('logoutBtn').style.display = 'block';
-    restoreChatHistory();
-    return;
-  }
+// ─── Firebase Google 로그인 ───
+var firebaseApp = null;
+var firebaseAuthInstance = null;
+
+async function initFirebase() {
   try {
-    const res = await fetch('/api/members');
-    allMembers = await res.json();
-  } catch(e) {}
-  document.getElementById('namePrompt').style.display = 'flex';
-  document.getElementById('loginName').focus();
+    var configRes = await fetch('/api/auth/config');
+    var config = await configRes.json();
+    firebaseApp = firebase.initializeApp(config);
+    firebaseAuthInstance = firebase.auth();
+  } catch(e) {
+    console.error('[Firebase] 초기화 실패', e);
+  }
 }
 
-async function doLogin() {
-  const name = document.getElementById('loginName').value.trim();
-  const phone = document.getElementById('loginPhone').value.trim();
-  const errEl = document.getElementById('loginError');
-  if (!name || !phone || phone.length !== 4) {
-    errEl.textContent = '이름과 핸드폰 뒤 4자리를 모두 입력해 주세요.';
-    errEl.style.display = 'block';
+async function initLogin() {
+  await initFirebase();
+  if (userName && userId) {
+    // 이미 로그인됨 → 승인 상태 재확인
+    try {
+      var token = localStorage.getItem('bsn_firebase_token');
+      if (token) {
+        var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
+        var data = await res.json();
+        if (data.user && data.user.approved) {
+          document.getElementById('logoutBtn').style.display = 'block';
+          restoreChatHistory();
+          return;
+        } else if (data.user && !data.user.approved) {
+          document.getElementById('pendingEmail').textContent = data.user.email;
+          document.getElementById('pendingOverlay').style.display = 'flex';
+          return;
+        }
+      }
+    } catch(e) {}
+    // 토큰 만료 → 재로그인
+    doLogout();
     return;
   }
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+
+async function doGoogleLogin() {
+  var errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  var btn = document.getElementById('googleLoginBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
   try {
-    const res = await fetch('/api/members');
-    allMembers = await res.json();
-  } catch(e) {}
-  const found = allMembers.find(m => m.name === name && m.phoneLast4 === phone);
-  if (!found) {
-    errEl.textContent = '이름 또는 번호가 일치하지 않습니다.';
+    var provider = new firebase.auth.GoogleAuthProvider();
+    var result = await firebaseAuthInstance.signInWithPopup(provider);
+    var idToken = await result.user.getIdToken();
+
+    var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:idToken}) });
+    var data = await res.json();
+    if (!data.user) throw new Error('인증 실패');
+
+    userName = data.user.name || result.user.displayName || '';
+    userId = data.user.uid;
+    userRole = data.user.role;
+    localStorage.setItem('bsn_user_name', userName);
+    localStorage.setItem('bsn_user_id', userId);
+    localStorage.setItem('bsn_user_role', userRole);
+    localStorage.setItem('bsn_user_email', data.user.email);
+    localStorage.setItem('bsn_user_picture', data.user.picture || '');
+    localStorage.setItem('bsn_firebase_token', idToken);
+
+    if (!data.user.approved) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('pendingEmail').textContent = data.user.email;
+      document.getElementById('pendingOverlay').style.display = 'flex';
+      return;
+    }
+
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'block';
+    inputEl.focus();
+  } catch(e) {
+    errEl.textContent = e.message || '로그인에 실패했습니다.';
     errEl.style.display = 'block';
-    return;
+    btn.disabled = false; btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Google로 로그인';
   }
-  userName = found.name;
-  userId = 'member_' + found.no;
-  localStorage.setItem('bsn_user_name', userName);
-  localStorage.setItem('bsn_user_id', userId);
-  localStorage.setItem('bsn_user_role', found.role || '사용자');
-  document.getElementById('namePrompt').style.display = 'none';
-  document.getElementById('logoutBtn').style.display = 'block';
-  inputEl.focus();
 }
 
 function doLogout() {
+  if (firebaseAuthInstance) firebaseAuthInstance.signOut().catch(function(){});
   localStorage.removeItem('bsn_user_name');
   localStorage.removeItem('bsn_user_id');
   localStorage.removeItem('bsn_user_role');
+  localStorage.removeItem('bsn_user_email');
+  localStorage.removeItem('bsn_user_picture');
+  localStorage.removeItem('bsn_firebase_token');
   localStorage.removeItem('bsn_chat_history');
   location.reload();
 }
