@@ -134,12 +134,13 @@ export function generateChatbotPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="/" class="nav-link active">챗봇</a>
-      <a href="/insta" class="nav-link">콘텐츠 생성</a>
       <a href="/insta#transaction" class="nav-link">실거래가</a>
+      <a href="/insta" class="nav-link">콘텐츠 생성</a>
+      <a href="/" class="nav-link active">챗봇</a>
       <a href="/admin" class="nav-link">관리자</a>
     </div>
     <div class="nav-spacer"></div>
+    <span id="navUserName" style="font-size:12px;color:#6B6B80;margin-right:8px;display:none;"></span>
     <button id="logoutBtn" onclick="doLogout()" class="nav-btn" style="display:none;">나가기</button>
   </div>
 </nav>
@@ -180,15 +181,23 @@ export function generateChatbotPageHTML(): string {
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
-  <!-- 승인 대기 -->
-  <div class="login-overlay" id="pendingOverlay" style="display:none;">
+  <!-- 접근 거부 -->
+  <div class="login-overlay" id="deniedOverlay" style="display:none;">
     <div class="login-box" style="text-align:center;">
-      <div style="font-size:36px;margin-bottom:12px;">&#9203;</div>
-      <h3>승인 대기 중</h3>
-      <p id="pendingEmail" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
-      <p>관리자의 승인이 필요합니다.<br>승인 후 새로고침하면 이용할 수 있습니다.</p>
-      <button class="login-btn" onclick="location.reload()" style="margin-top:16px;">새로고침</button>
-      <button style="display:block;width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--sub);font-size:13px;cursor:pointer;font-family:inherit;" onclick="doLogout()">다른 계정으로 로그인</button>
+      <div style="font-size:36px;margin-bottom:12px;">&#128683;</div>
+      <h3>접근 권한 없음</h3>
+      <p id="deniedEmail" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
+      <p>등록되지 않은 계정입니다.<br>관리자에게 명단 등록을 요청하세요.</p>
+      <button class="login-btn" onclick="doLogout()" style="margin-top:16px;">다른 계정으로 로그인</button>
+    </div>
+  </div>
+  <!-- 세션 만료 -->
+  <div class="login-overlay" id="kickedOverlay" style="display:none;">
+    <div class="login-box" style="text-align:center;">
+      <div style="font-size:36px;margin-bottom:12px;">&#128274;</div>
+      <h3>다른 기기에서 로그인됨</h3>
+      <p style="font-size:13px;color:var(--muted);margin-top:8px;">동일 계정으로 다른 곳에서 로그인하여<br>현재 세션이 종료되었습니다.</p>
+      <button class="login-btn" onclick="doLogout()" style="margin-top:16px;">다시 로그인</button>
     </div>
   </div>
 
@@ -240,31 +249,138 @@ async function initFirebase() {
   }
 }
 
-async function initLogin() {
-  await initFirebase();
-  if (userName && userId) {
-    // 이미 로그인됨 → 승인 상태 재확인
+var bsnChannel = null;
+try { bsnChannel = new BroadcastChannel('bsn_auth'); } catch(e) {}
+
+if (bsnChannel) {
+  bsnChannel.onmessage = function(e) {
+    if (e.data === 'ping' && sessionStorage.getItem('bsn_session_active')) {
+      bsnChannel.postMessage('pong');
+    }
+    if (e.data === 'logout') {
+      localStorage.removeItem('bsn_user_name');
+      localStorage.removeItem('bsn_user_id');
+      localStorage.removeItem('bsn_user_role');
+      localStorage.removeItem('bsn_user_email');
+      localStorage.removeItem('bsn_user_picture');
+      localStorage.removeItem('bsn_firebase_token');
+      localStorage.removeItem('bsn_session_id');
+      sessionStorage.removeItem('bsn_session_active');
+      location.reload();
+    }
+    if (e.data === 'kicked') {
+      sessionStorage.removeItem('bsn_session_active');
+      document.getElementById('kickedOverlay').style.display = 'flex';
+    }
+  };
+}
+
+function checkBrowserSession() {
+  return new Promise(function(resolve) {
+    if (sessionStorage.getItem('bsn_session_active')) {
+      resolve(true);
+      return;
+    }
+    if (!bsnChannel) { resolve(false); return; }
+    var answered = false;
+    function handler(e) {
+      if (e.data === 'pong' && !answered) {
+        answered = true;
+        sessionStorage.setItem('bsn_session_active', 'true');
+        resolve(true);
+      }
+    }
+    bsnChannel.addEventListener('message', handler);
+    bsnChannel.postMessage('ping');
+    setTimeout(function() {
+      bsnChannel.removeEventListener('message', handler);
+      if (!answered) resolve(false);
+    }, 500);
+  });
+}
+
+var sessionCheckTimer = null;
+function startSessionCheck() {
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer);
+  sessionCheckTimer = setInterval(async function() {
+    var email = localStorage.getItem('bsn_user_email');
+    var sid = localStorage.getItem('bsn_session_id');
+    if (!email || !sid) return;
     try {
-      var token = localStorage.getItem('bsn_firebase_token');
-      if (token) {
-        var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
+      var res = await fetch('/api/auth/check-session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email,sessionId:sid}) });
+      if (!res.ok) {
         var data = await res.json();
-        if (data.user && data.user.approved) {
-          document.getElementById('logoutBtn').style.display = 'block';
-          restoreChatHistory();
-          return;
-        } else if (data.user && !data.user.approved) {
-          document.getElementById('pendingEmail').textContent = data.user.email;
-          document.getElementById('pendingOverlay').style.display = 'flex';
-          return;
+        if (data.kicked) {
+          clearInterval(sessionCheckTimer);
+          sessionStorage.removeItem('bsn_session_active');
+          if (bsnChannel) bsnChannel.postMessage('kicked');
+          document.getElementById('kickedOverlay').style.display = 'flex';
         }
       }
     } catch(e) {}
-    // 토큰 만료 → 재로그인
-    doLogout();
+  }, 60000);
+}
+
+async function initLogin() {
+  await initFirebase();
+  var hasLocal = localStorage.getItem('bsn_user_name') && localStorage.getItem('bsn_user_id');
+
+  if (!hasLocal) {
+    document.getElementById('loginOverlay').style.display = 'flex';
     return;
   }
-  document.getElementById('loginOverlay').style.display = 'flex';
+
+  var alive = await checkBrowserSession();
+  if (!alive) {
+    localStorage.removeItem('bsn_user_name');
+    localStorage.removeItem('bsn_user_id');
+    localStorage.removeItem('bsn_user_role');
+    localStorage.removeItem('bsn_user_email');
+    localStorage.removeItem('bsn_user_picture');
+    localStorage.removeItem('bsn_firebase_token');
+    localStorage.removeItem('bsn_session_id');
+    userName = ''; userId = ''; userRole = '';
+    document.getElementById('loginOverlay').style.display = 'flex';
+    return;
+  }
+
+  try {
+    var email = localStorage.getItem('bsn_user_email');
+    var sid = localStorage.getItem('bsn_session_id');
+    if (email && sid) {
+      var sRes = await fetch('/api/auth/check-session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email,sessionId:sid}) });
+      if (!sRes.ok) {
+        var sData = await sRes.json();
+        if (sData.kicked) {
+          sessionStorage.removeItem('bsn_session_active');
+          if (bsnChannel) bsnChannel.postMessage('kicked');
+          document.getElementById('kickedOverlay').style.display = 'flex';
+          return;
+        }
+        doLogout();
+        return;
+      }
+    }
+    var token = localStorage.getItem('bsn_firebase_token');
+    if (token) {
+      var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
+      if (res.ok) {
+        var data = await res.json();
+        if (data.user) {
+          userRole = data.user.role;
+          localStorage.setItem('bsn_user_role', userRole);
+          localStorage.setItem('bsn_session_id', data.user.sessionId || '');
+          sessionStorage.setItem('bsn_session_active', 'true');
+          document.getElementById('navUserName').textContent = userName; document.getElementById('navUserName').style.display = 'inline';
+          document.getElementById('logoutBtn').style.display = 'block';
+          restoreChatHistory();
+          startSessionCheck();
+          return;
+        }
+      }
+    }
+  } catch(e) {}
+  doLogout();
 }
 
 async function doGoogleLogin() {
@@ -279,7 +395,14 @@ async function doGoogleLogin() {
 
     var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:idToken}) });
     var data = await res.json();
-    if (!data.user) throw new Error('인증 실패');
+
+    if (!res.ok || !data.user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('deniedEmail').textContent = data.email || result.user.email || '';
+      document.getElementById('deniedOverlay').style.display = 'flex';
+      btn.disabled = false; btn.textContent = 'Google로 로그인';
+      return;
+    }
 
     userName = data.user.name || result.user.displayName || '';
     userId = data.user.uid;
@@ -290,33 +413,33 @@ async function doGoogleLogin() {
     localStorage.setItem('bsn_user_email', data.user.email);
     localStorage.setItem('bsn_user_picture', data.user.picture || '');
     localStorage.setItem('bsn_firebase_token', idToken);
-
-    if (!data.user.approved) {
-      document.getElementById('loginOverlay').style.display = 'none';
-      document.getElementById('pendingEmail').textContent = data.user.email;
-      document.getElementById('pendingOverlay').style.display = 'flex';
-      return;
-    }
+    localStorage.setItem('bsn_session_id', data.user.sessionId || '');
+    sessionStorage.setItem('bsn_session_active', 'true');
 
     document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('navUserName').textContent = userName; document.getElementById('navUserName').style.display = 'inline';
     document.getElementById('logoutBtn').style.display = 'block';
-    inputEl.focus();
+    restoreChatHistory();
+    startSessionCheck();
   } catch(e) {
-    errEl.textContent = e.message || '로그인에 실패했습니다.';
+    errEl.textContent = '로그인 중 오류가 발생했습니다';
     errEl.style.display = 'block';
-    btn.disabled = false; btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Google로 로그인';
+    btn.disabled = false; btn.textContent = 'Google로 로그인';
   }
 }
 
 function doLogout() {
-  if (firebaseAuthInstance) firebaseAuthInstance.signOut().catch(function(){});
+  try { firebaseAuthInstance.signOut(); } catch(e) {}
+  if (bsnChannel) bsnChannel.postMessage('logout');
   localStorage.removeItem('bsn_user_name');
   localStorage.removeItem('bsn_user_id');
   localStorage.removeItem('bsn_user_role');
   localStorage.removeItem('bsn_user_email');
   localStorage.removeItem('bsn_user_picture');
   localStorage.removeItem('bsn_firebase_token');
-  localStorage.removeItem('bsn_chat_history');
+  localStorage.removeItem('bsn_session_id');
+  sessionStorage.removeItem('bsn_session_active');
+  if (sessionCheckTimer) clearInterval(sessionCheckTimer);
   location.reload();
 }
 initLogin();
@@ -340,11 +463,18 @@ function restoreChatHistory() {
     if (msg.role === 'user') {
       addMessage('user', msg.content);
     } else if (msg.role === 'bot') {
-      const bubble = addMessage('bot', msg.content);
+      var bubble = addMessage('bot', msg.content);
+      var actionDiv = document.createElement('div');
+      actionDiv.style.cssText = 'margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;';
+      var actionHtml = '';
       if (msg.showConsultBtn) {
-        const actionDiv = document.createElement('div');
-        actionDiv.style.cssText = 'margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;';
-        actionDiv.innerHTML = \`<a href="https://pf.kakao.com/_Ugaxcu" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.15s;" onmouseover="this.style.borderColor='#2C4A7C';this.style.color='#2C4A7C';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--sub)';">\u{1F4AC} 직접 문의</a>\`;
+        actionHtml += '<a href="https://pf.kakao.com/_Ugaxcu" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;text-decoration:none;font-family:inherit;transition:all 0.15s;">\u{1F4AC} 직접 문의</a>';
+      }
+      if (msg.recordId && msg.question) {
+        actionHtml += '<button class="report-btn" data-rid="' + msg.recordId + '" onclick="showReportFormFromHistory(this)" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;font-family:inherit;transition:all 0.15s;">⚑ 오류신고</button>';
+      }
+      if (actionHtml) {
+        actionDiv.innerHTML = actionHtml;
         bubble.appendChild(actionDiv);
       }
     }
@@ -455,16 +585,13 @@ async function sendMessage() {
       if (showConsultBtn) {
         actionHtml += \`<a href="https://pf.kakao.com/_Ugaxcu" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.15s;" onmouseover="this.style.borderColor='#2C4A7C';this.style.color='#2C4A7C';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--sub)';">\u{1F4AC} 직접 문의</a>\`;
       }
-      const userRole = localStorage.getItem('bsn_user_role') || '사용자';
-      if (userRole === '관리자') {
-        actionHtml += \`<button class="report-btn" onclick="showReportForm(this, '\${esc(text).replace(/'/g, "\\\\'")}', '\${esc(data.reply).replace(/'/g, "\\\\'")}' )" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;">⚑ 오류신고</button>\`;
-      }
+      actionHtml += \`<button class="report-btn" onclick="showReportForm(this, '\${esc(text).replace(/'/g, "\\\\'")}', '\${esc(data.reply).replace(/'/g, "\\\\'")}', '\${recordId}' )" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border:1px solid var(--border);color:var(--sub);background:white;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;">⚑ 오류신고</button>\`;
       if (actionHtml) {
         actionDiv.innerHTML = actionHtml;
         bubble.appendChild(actionDiv);
       }
 
-      chatMessages.push({ role: 'bot', content: data.reply, recordId, status, showConsultBtn, timestamp: new Date().toISOString() });
+      chatMessages.push({ role: 'bot', content: data.reply, question: text, recordId, status, showConsultBtn, timestamp: new Date().toISOString() });
       saveChatHistory();
     } else {
       const err = await res.json().catch(() => ({}));
@@ -488,41 +615,45 @@ async function sendMessage() {
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-function showReportForm(btn, question, answer) {
-  const existing = btn.closest('.msg-bubble').querySelector('.report-form');
+function showReportFormFromHistory(btn) {
+  var rid = btn.getAttribute('data-rid');
+  showReportForm(btn, '', '', rid);
+}
+
+function showReportForm(btn, question, answer, recordId) {
+  var existing = btn.closest('.msg-bubble').querySelector('.report-form');
   if (existing) { existing.remove(); return; }
-  const form = document.createElement('div');
+  var form = document.createElement('div');
   form.className = 'report-form';
   form.style.cssText = 'margin-top:10px;border:1px solid var(--border);border-radius:8px;padding:12px;background:#FAFAFA;';
-  form.innerHTML = \`
-    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">오류 신고</div>
-    <textarea class="report-text" placeholder="어떤 부분이 잘못되었는지 설명해 주세요..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
-    <div style="display:flex;gap:6px;margin-top:8px;">
-      <button onclick="submitReport(this, \${JSON.stringify(question).replace(/"/g, '&quot;')}, \${JSON.stringify(answer).replace(/"/g, '&quot;')})" style="padding:5px 12px;border-radius:6px;border:none;background:var(--navy);color:#fff;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">제출</button>
-      <button onclick="this.closest('.report-form').remove()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--sub);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">취소</button>
-    </div>
-  \`;
+  form.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">오류 신고</div>' +
+    '<textarea class="report-text" placeholder="어떤 부분이 잘못되었는지 설명해 주세요..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;"></textarea>' +
+    '<div style="display:flex;gap:6px;margin-top:8px;">' +
+    '<button class="report-submit-btn" style="padding:5px 12px;border-radius:6px;border:none;background:var(--navy);color:#fff;font-size:11px;cursor:pointer;font-family:inherit;">제출</button>' +
+    '<button class="report-cancel-btn" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--sub);font-size:11px;cursor:pointer;font-family:inherit;">취소</button>' +
+    '</div>';
+  form.querySelector('.report-submit-btn').onclick = function() { submitReport(this, recordId); };
+  form.querySelector('.report-cancel-btn').onclick = function() { form.remove(); };
   btn.closest('.msg-bubble').appendChild(form);
   form.querySelector('textarea').focus();
 }
 
-async function submitReport(btn, question, answer) {
-  const form = btn.closest('.report-form');
-  const text = form.querySelector('.report-text').value.trim();
+async function submitReport(btn, recordId) {
+  var form = btn.closest('.report-form');
+  var text = form.querySelector('.report-text').value.trim();
   if (!text) return;
-  await fetch('/api/admin/drafts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      section: '오류신고',
-      itemNumber: '',
-      action: '오류신고',
-      content: text,
-      reason: 'AI답변: ' + answer.substring(0, 100),
-      updatedBy: localStorage.getItem('bsn_user_name') || '알 수 없음',
-    })
-  });
-  form.innerHTML = '<div style="font-size:11px;color:var(--navy);font-weight:600;padding:4px 0;">✓ 오류 신고가 접수되었습니다.</div>';
+  btn.disabled = true; btn.textContent = '제출 중...';
+  try {
+    await fetch('/api/admin/records/' + recordId + '/report-error', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ errorNote: text })
+    });
+    form.innerHTML = '<div style="font-size:11px;color:var(--navy);font-weight:600;padding:4px 0;">오류 신고가 접수되었습니다.</div>';
+    setTimeout(function() { form.remove(); }, 2000);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '제출';
+  }
 }
 
 </script>

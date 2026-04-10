@@ -1,0 +1,27 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "api"
+      }
+    ]
+  },
+  "functions": {
+    "source": ".",
+    "runtime": "nodejs20",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "scripts",
+      "data/transactions.db*",
+      "명단.CSV",
+      "*.json.bak"
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

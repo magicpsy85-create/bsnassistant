@@ -67,6 +67,14 @@ export function generateAdminPageHTML(): string {
     .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
     .badge-ai{background:#EEF2F9;color:#2C4A7C;border:1px solid #C5D3EC;}
     .badge-human{background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;}
+    .badge-error{background:#FCEBEB;color:#E24B4A;border:1px solid #F7C1C1;}
+    .answer-row{display:none;background:var(--bg);}
+    .answer-row.open{display:table-row;}
+    .answer-row td{padding:12px 16px;font-size:12px;color:var(--sub);line-height:1.7;white-space:pre-wrap;word-break:break-word;border-top:none;}
+    .question-row{cursor:pointer;}
+    .question-row:hover{background:rgba(44,74,124,0.02);}
+    .q-arrow{font-size:10px;color:var(--muted);margin-left:4px;display:inline-block;transition:transform 0.2s;}
+    .q-arrow.open{transform:rotate(180deg);}
     .badge-pending{background:var(--accent-lt);color:var(--accent);}
     .badge-applied{background:var(--success-lt);color:var(--success);}
 
@@ -87,6 +95,7 @@ export function generateAdminPageHTML(): string {
     /* Stats */
     .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
     .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all 0.15s;box-shadow:var(--shadow);}
+    .stat-card:hover{border-color:var(--navy);}.stat-card.active{border:2px solid var(--navy);background:var(--navy-light);}
     .stat-card:hover{border-color:var(--navy);}
     .stat-card.active{border-color:var(--navy);background:var(--navy-light);}
     .stat-num{font-size:26px;font-weight:800;color:var(--primary);font-family:'Poppins',sans-serif;}
@@ -191,12 +200,13 @@ export function generateAdminPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="/" class="nav-link">챗봇</a>
-      <a href="/insta" class="nav-link">콘텐츠 생성</a>
       <a href="/insta#transaction" class="nav-link">실거래가</a>
+      <a href="/insta" class="nav-link">콘텐츠 생성</a>
+      <a href="/" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link active">관리자</a>
     </div>
     <div class="nav-spacer"></div>
+    <span id="adminUserName" style="font-size:12px;color:#6B6B80;margin-right:8px;"></span>
     <button onclick="doLogout()" class="nav-btn">나가기</button>
   </div>
 </nav>
@@ -220,8 +230,7 @@ export function generateAdminPageHTML(): string {
   <div class="tabs">
     <button class="tab active" onclick="switchTab('records')">상담 기록</button>
     <button class="tab" onclick="switchTab('rules')">규정 설정</button>
-    <button class="tab" onclick="switchTab('members')">명단 관리</button>
-    <button class="tab" onclick="switchTab('users')">사용자 관리</button>
+    <button class="tab" onclick="switchTab('members')">사용자 관리</button>
   </div>
 
   <!-- 상담 기록 -->
@@ -234,18 +243,9 @@ export function generateAdminPageHTML(): string {
     <div class="card">
       <div class="card-header">
         <div class="card-title">상담 기록</div>
+        <input type="text" id="searchInput" placeholder="사용자, 질문 검색..." oninput="filterRecords()" style="width:200px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);margin-left:12px;">
+        <div style="flex:1;"></div>
         <button class="btn btn-sm" onclick="exportCSV()">CSV 내보내기</button>
-      </div>
-      <div class="filter-bar">
-        <input type="text" id="searchInput" placeholder="질문 검색..." oninput="filterRecords()">
-        <select id="statusFilter" onchange="filterRecords()">
-          <option value="">전체 결과</option>
-          <option value="AI해결">AI해결</option>
-          <option value="직접 문의">직접 문의</option>
-        </select>
-        <select id="userFilter" onchange="filterRecords()">
-          <option value="">전체 사용자</option>
-        </select>
       </div>
       <div class="table-wrap">
         <table style="width:100%;table-layout:fixed;border-collapse:collapse;">
@@ -268,7 +268,7 @@ export function generateAdminPageHTML(): string {
     <div class="stats" id="memberStats"></div>
     <div class="card">
       <div class="card-header">
-        <div class="card-title">구성원 명단</div>
+        <div class="card-title">사용자 명단</div>
         <button class="btn btn-sm" onclick="exportMembersCSV()">CSV 내보내기</button>
       </div>
       <div class="filter-bar">
@@ -285,7 +285,7 @@ export function generateAdminPageHTML(): string {
           <thead>
             <tr>
               <th style="width:40px;text-align:center;">No</th>
-              <th style="width:60px;text-align:center;">비고</th>
+              <th style="width:90px;text-align:center;">최근로그인</th>
               <th style="width:80px;text-align:center;">위촉일</th>
               <th style="width:70px;text-align:center;">성명</th>
               <th style="width:80px;text-align:center;">소속</th>
@@ -366,17 +366,6 @@ export function generateAdminPageHTML(): string {
     </div>
   </div>
 
-  <!-- 사용자 관리 -->
-  <div id="users-section" class="section">
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div class="card-title">사용자 관리</div>
-        <button class="btn btn-primary" onclick="loadFirebaseUsers()" style="font-size:12px;padding:6px 14px;">새로고침</button>
-      </div>
-      <p style="font-size:12px;color:var(--sub);margin-bottom:16px;">Google 로그인한 사용자 목록입니다. 승인하지 않으면 서비스를 이용할 수 없습니다.</p>
-      <div id="firebaseUsersBody" style="min-height:100px;"></div>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -389,12 +378,64 @@ const PAGE_SIZE = 20;
 let currentPage = 1;
 let recordMembers = {}; // userId -> member info
 let filterUserId = null; // 사용자별 필터
+let statFilter = null;
 
 let allMembers = [];
 let draftMembers = {}; // name lookup for drafts: updatedBy -> member name
 window._deleteMode = false;
 let memberPage = 1;
 const MEMBER_PAGE_SIZE = 9999;
+
+// ─── BroadcastChannel ───
+var bsnChannel = null;
+try { bsnChannel = new BroadcastChannel('bsn_auth'); } catch(e) {}
+
+if (bsnChannel) {
+  bsnChannel.onmessage = function(e) {
+    if (e.data === 'ping' && sessionStorage.getItem('bsn_session_active')) {
+      bsnChannel.postMessage('pong');
+    }
+    if (e.data === 'logout') {
+      localStorage.removeItem('bsn_user_name');
+      localStorage.removeItem('bsn_user_id');
+      localStorage.removeItem('bsn_user_role');
+      localStorage.removeItem('bsn_user_email');
+      localStorage.removeItem('bsn_user_picture');
+      localStorage.removeItem('bsn_firebase_token');
+      localStorage.removeItem('bsn_session_id');
+      sessionStorage.removeItem('bsn_session_active');
+      location.href = '/';
+    }
+    if (e.data === 'kicked') {
+      sessionStorage.removeItem('bsn_session_active');
+      document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><div style="font-size:36px;margin-bottom:12px;">&#128274;</div><h2 style="margin-bottom:12px;">다른 기기에서 로그인됨</h2><p style="color:var(--sub);margin-bottom:20px;">동일 계정으로 다른 곳에서 로그인하여 현재 세션이 종료되었습니다.</p><a href="/" class="btn btn-primary">다시 로그인</a></div>';
+    }
+  };
+}
+
+function checkBrowserSession() {
+  return new Promise(function(resolve) {
+    if (sessionStorage.getItem('bsn_session_active')) {
+      resolve(true);
+      return;
+    }
+    if (!bsnChannel) { resolve(false); return; }
+    var answered = false;
+    function handler(e) {
+      if (e.data === 'pong' && !answered) {
+        answered = true;
+        sessionStorage.setItem('bsn_session_active', 'true');
+        resolve(true);
+      }
+    }
+    bsnChannel.addEventListener('message', handler);
+    bsnChannel.postMessage('ping');
+    setTimeout(function() {
+      bsnChannel.removeEventListener('message', handler);
+      if (!answered) resolve(false);
+    }, 500);
+  });
+}
 
 // ─── Firebase Google 로그인 (관리자) ───
 var firebaseApp = null;
@@ -411,18 +452,56 @@ async function initFirebase() {
 
 async function checkAdminAccess() {
   await initFirebase();
-  var token = localStorage.getItem('bsn_firebase_token');
-  var role = localStorage.getItem('bsn_user_role');
-  if (!token) {
+
+  var hasLocal = localStorage.getItem('bsn_user_name') && localStorage.getItem('bsn_user_id');
+  if (!hasLocal) {
     return await showAdminLogin();
   }
+
+  var alive = await checkBrowserSession();
+  if (!alive) {
+    localStorage.removeItem('bsn_user_name');
+    localStorage.removeItem('bsn_user_id');
+    localStorage.removeItem('bsn_user_role');
+    localStorage.removeItem('bsn_user_email');
+    localStorage.removeItem('bsn_user_picture');
+    localStorage.removeItem('bsn_firebase_token');
+    localStorage.removeItem('bsn_session_id');
+    return await showAdminLogin();
+  }
+
+  var sEmail = localStorage.getItem('bsn_user_email');
+  var sSid = localStorage.getItem('bsn_session_id');
+  if (sEmail && sSid) {
+    try {
+      var sRes = await fetch('/api/auth/check-session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:sEmail,sessionId:sSid}) });
+      if (!sRes.ok) {
+        var sData = await sRes.json();
+        if (sData.kicked) {
+          sessionStorage.removeItem('bsn_session_active');
+          if (bsnChannel) bsnChannel.postMessage('kicked');
+          document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><div style="font-size:36px;margin-bottom:12px;">&#128274;</div><h2 style="margin-bottom:12px;">다른 기기에서 로그인됨</h2><p style="color:var(--sub);margin-bottom:20px;">동일 계정으로 다른 곳에서 로그인하여 현재 세션이 종료되었습니다.</p><a href="/" class="btn btn-primary">다시 로그인</a></div>';
+          return false;
+        }
+      }
+    } catch(e) {}
+  }
+
+  var token = localStorage.getItem('bsn_firebase_token');
+  if (!token) return await showAdminLogin();
+
   try {
     var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
+    if (!res.ok) return await showAdminLogin();
     var data = await res.json();
     if (!data.user || data.user.role !== '관리자') {
-      document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
+      document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><div style="font-size:36px;margin-bottom:12px;">&#128683;</div><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.<br>현재 계정: ' + esc(data.user.email || '') + '</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
       return false;
     }
+    localStorage.setItem('bsn_user_role', data.user.role);
+    localStorage.setItem('bsn_session_id', data.user.sessionId || '');
+    sessionStorage.setItem('bsn_session_active', 'true');
+    document.getElementById('adminUserName').textContent = data.user.name || localStorage.getItem('bsn_user_name') || '';
     return true;
   } catch(e) {
     return await showAdminLogin();
@@ -446,6 +525,13 @@ async function doAdminGoogleLogin() {
     var result = await firebaseAuthInstance.signInWithPopup(provider);
     var idToken = await result.user.getIdToken();
     var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:idToken}) });
+    if (!res.ok) {
+      var errData = await res.json();
+      errEl.textContent = errData.error || '등록되지 않은 계정입니다';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Google로 로그인';
+      return;
+    }
     var data = await res.json();
     if (!data.user) throw new Error('인증 실패');
     if (data.user.role !== '관리자') {
@@ -458,11 +544,14 @@ async function doAdminGoogleLogin() {
     localStorage.setItem('bsn_user_id', data.user.uid);
     localStorage.setItem('bsn_user_role', data.user.role);
     localStorage.setItem('bsn_user_email', data.user.email);
+    localStorage.setItem('bsn_user_picture', data.user.picture || '');
     localStorage.setItem('bsn_firebase_token', idToken);
+    localStorage.setItem('bsn_session_id', data.user.sessionId || '');
+    sessionStorage.setItem('bsn_session_active', 'true');
     document.getElementById('adminLoginOverlay').style.display = 'none';
     if (window._adminLoginResolve) window._adminLoginResolve(true);
   } catch(e) {
-    errEl.textContent = e.message || '로그인 실패';
+    errEl.textContent = '로그인 중 오류가 발생했습니다';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Google로 로그인';
   }
@@ -471,7 +560,17 @@ async function doAdminGoogleLogin() {
 async function init() {
   const hasAccess = await checkAdminAccess();
   if (!hasAccess) return;
-  await Promise.all([loadRecords(), loadDraftMembers(), loadDrafts(), loadRules(), loadMemberList()]);
+  try {
+    await Promise.all([loadRecords(), loadDraftMembers(), loadDrafts(), loadRules(), loadMemberList()]);
+  } catch(e) {
+    console.error('[init] 데이터 로드 오류:', e);
+    // 개별 로드 재시도
+    try { await loadRecords(); } catch(e2) { console.error('[loadRecords]', e2); }
+    try { await loadDraftMembers(); } catch(e2) { console.error('[loadDraftMembers]', e2); }
+    try { await loadDrafts(); } catch(e2) { console.error('[loadDrafts]', e2); }
+    try { await loadRules(); } catch(e2) { console.error('[loadRules]', e2); }
+    try { await loadMemberList(); } catch(e2) { console.error('[loadMemberList]', e2); }
+  }
 }
 
 function doLogout() {
@@ -497,6 +596,11 @@ async function switchTab(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   event.target.classList.add('active');
   document.getElementById(name + '-section').classList.add('active');
+  if (name === 'records') {
+    statFilter = null;
+    document.getElementById('searchInput').value = '';
+    currentPage = 1;
+  }
   if (name === 'members') {
     statFilter = null;
     teamFilter = null;
@@ -509,9 +613,6 @@ async function switchTab(name) {
   if (name === 'rules') {
     await loadDraftMembers();
     renderDrafts();
-  }
-  if (name === 'users') {
-    loadFirebaseUsers();
   }
 }
 
@@ -547,16 +648,20 @@ function resolveUpdaterName(updatedBy) {
 
 // ═══ 상담 기록 ═══
 async function loadRecords() {
-  const url = filterUserId ? '/api/admin/records?userId=' + encodeURIComponent(filterUserId) : '/api/admin/records';
-  const [recRes, memRes] = await Promise.all([fetch(url), fetch('/api/members')]);
+  const [recRes, memRes] = await Promise.all([fetch('/api/admin/records'), fetch('/api/members')]);
   allRecords = await recRes.json();
   const members = await memRes.json();
   recordMembers = {};
-  members.forEach(m => { recordMembers['member_' + m.no] = m; });
+  members.forEach(m => { recordMembers[m.name] = m; });
+
+  if (filterUserId) {
+    allRecords = allRecords.filter(r => r.userName === filterUserId);
+  }
+
   updateStats();
   populateUserFilter();
   renderRecords();
-  // 배너 표시
+
   const banner = document.getElementById('userFilterBanner');
   if (filterUserId && recordMembers[filterUserId]) {
     const m = recordMembers[filterUserId];
@@ -571,35 +676,42 @@ function updateStats() {
   const total = allRecords.length;
   const aiSolved = allRecords.filter(r => r.status === 'AI해결').length;
   const humanReq = allRecords.filter(r => r.status === '직접 문의').length;
+  const errorCount = allRecords.filter(r => r.status === '오류').length;
   const today = new Date().toISOString().slice(0, 10);
   const todayCount = allRecords.filter(r => r.timestamp.slice(0, 10) === today).length;
   const users = new Set(allRecords.map(r => r.userName)).size;
 
   document.getElementById('stats').innerHTML = \`
-    <div class="stat-card"><div class="stat-num">\${total}</div><div class="stat-label">전체 상담</div></div>
-    <div class="stat-card"><div class="stat-num">\${aiSolved}</div><div class="stat-label">AI 해결</div></div>
-    <div class="stat-card"><div class="stat-num">\${humanReq}</div><div class="stat-label">직접 문의</div></div>
-    <div class="stat-card"><div class="stat-num">\${todayCount}</div><div class="stat-label">오늘 상담</div></div>
+    <div class="stat-card \${statFilter === null ? 'active' : ''}" onclick="filterByStat(null)"><div class="stat-num">\${total}</div><div class="stat-label">전체 상담</div></div>
+    <div class="stat-card \${statFilter === 'AI해결' ? 'active' : ''}" onclick="filterByStat('AI해결')"><div class="stat-num">\${aiSolved}</div><div class="stat-label">AI 해결</div></div>
+    <div class="stat-card \${statFilter === '직접 문의' ? 'active' : ''}" onclick="filterByStat('직접 문의')"><div class="stat-num">\${humanReq}</div><div class="stat-label">직접 문의</div></div>
+    <div class="stat-card \${statFilter === '오류' ? 'active' : ''}" onclick="filterByStat('오류')"><div class="stat-num" style="\${errorCount > 0 ? 'color:#E24B4A;' : ''}">\${errorCount}</div><div class="stat-label">오류 신고</div></div>
+    <div class="stat-card \${statFilter === 'today' ? 'active' : ''}" onclick="filterByStat('today')"><div class="stat-num">\${todayCount}</div><div class="stat-label">오늘 상담</div></div>
     <div class="stat-card"><div class="stat-num">\${users}</div><div class="stat-label">이용자 수</div></div>
   \`;
 }
 
-function populateUserFilter() {
-  const users = [...new Set(allRecords.map(r => r.userName))];
-  const sel = document.getElementById('userFilter');
-  sel.innerHTML = '<option value="">전체 사용자</option>' + users.map(u => \`<option value="\${u}">\${u}</option>\`).join('');
+function populateUserFilter() {}
+
+function filterByStat(type) {
+  statFilter = type;
+  document.getElementById('searchInput').value = '';
+  currentPage = 1;
+  updateStats();
+  renderRecords();
 }
 
 function filterRecords() { currentPage = 1; renderRecords(); }
 
 function getFilteredRecords() {
   const search = document.getElementById('searchInput').value.toLowerCase();
-  const status = document.getElementById('statusFilter').value;
-  const user = document.getElementById('userFilter').value;
+  const today = new Date().toISOString().slice(0, 10);
   return allRecords.filter(r => {
-    if (search && !r.question.toLowerCase().includes(search)) return false;
-    if (status && r.status !== status) return false;
-    if (user && r.userName !== user) return false;
+    if (search && !r.userName.toLowerCase().includes(search) && !r.question.toLowerCase().includes(search)) return false;
+    if (statFilter === 'AI해결' || statFilter === '직접 문의' || statFilter === '오류') {
+      if (r.status !== statFilter) return false;
+    }
+    if (statFilter === 'today' && r.timestamp.slice(0, 10) !== today) return false;
     return true;
   }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
@@ -611,17 +723,22 @@ function renderRecords() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const page = filtered.slice(start, start + PAGE_SIZE);
 
-  document.getElementById('recordsBody').innerHTML = page.map(r => {
-    const m = recordMembers[r.userId];
+  document.getElementById('recordsBody').innerHTML = page.map((r, idx) => {
+    const m = recordMembers[r.userName];
     const userDisplay = m
-      ? '<span style="cursor:pointer;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="filterByUser(\\'' + esc(r.userId).replace(/'/g, "\\\\'") + '\\')">' + esc(m.name) + '</span><span style="font-size:11px;color:var(--sub);margin-left:4px;">' + esc(m.department) + (m.team && m.team !== '-' ? ' ' + esc(m.team) : '') + ' / ' + esc(m.position) + '</span>'
+      ? '<span style="cursor:pointer;color:var(--navy);text-decoration:underline;font-weight:600;" onclick="filterByUser(\\'' + esc(r.userName).replace(/'/g, "\\\\'") + '\\')">' + esc(m.name) + '</span><span style="font-size:11px;color:var(--sub);margin-left:4px;">' + esc(m.department) + (m.team && m.team !== '-' ? ' ' + esc(m.team) : '') + ' / ' + esc(m.position) + '</span>'
       : esc(r.userName);
+    var badgeClass = r.status === 'AI해결' ? 'badge-ai' : r.status === '오류' ? 'badge-error' : 'badge-human';
+    var rowId = 'ans_' + start + '_' + idx;
     return \`
-    <tr>
+    <tr class="question-row" onclick="var a=document.getElementById('\${rowId}');var ar=this.querySelector('.q-arrow');if(a){a.classList.toggle('open');if(ar)ar.classList.toggle('open');}">
       <td style="white-space:nowrap;font-size:12px;text-align:center;">\${formatDate(r.timestamp)}</td>
       <td style="text-align:center;">\${userDisplay}</td>
-      <td>\${esc(r.question.slice(0, 80))}\${r.question.length > 80 ? '...' : ''}</td>
-      <td style="text-align:center;"><span class="badge \${r.status === 'AI해결' ? 'badge-ai' : 'badge-human'}">\${r.status}</span></td>
+      <td>\${esc(r.question.slice(0, 80))}\${r.question.length > 80 ? '...' : ''} <span class="q-arrow">&#9660;</span></td>
+      <td style="text-align:center;"><span class="badge \${badgeClass}">\${r.status}</span></td>
+    </tr>
+    <tr class="answer-row" id="\${rowId}">
+      <td colspan="4">\${r.answer ? esc(r.answer) : '<span style="color:var(--muted);">답변 기록 없음</span>'}</td>
     </tr>
   \`; }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:40px;">상담 기록이 없습니다</td></tr>';
 
@@ -634,8 +751,8 @@ function renderRecords() {
 
 function goPage(p) { currentPage = p; renderRecords(); }
 
-function filterByUser(userId) {
-  filterUserId = userId;
+function filterByUser(userName) {
+  filterUserId = userName;
   currentPage = 1;
   loadRecords();
 }
@@ -650,8 +767,8 @@ function clearUserFilter() {
 
 function exportCSV() {
   const filtered = getFilteredRecords();
-  const header = '시간,사용자,질문,상태\\n';
-  const rows = filtered.map(r => \`"\${r.timestamp}","\${r.userName}","\${r.question.replace(/"/g, '""')}","\${r.status}"\`).join('\\n');
+  const header = '시간,사용자,질문,답변,상태\\n';
+  const rows = filtered.map(r => \`"\${r.timestamp}","\${r.userName}","\${r.question.replace(/"/g, '""')}","\${(r.answer || '').replace(/"/g, '""')}","\${r.status}"\`).join('\\n');
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), header + rows], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1185,11 +1302,11 @@ async function applyDrafts() {
 // ═══ 명단 관리 ═══
 let editingMemberNo = null;
 let isAddingNew = false;
-let statFilter = null;
 let teamFilter = null;
 
 const DEPT_OPTIONS = ['빌딩','PENT','CARE','경영'];
-const POS_OPTIONS = ['수습','중개사','매니저','팀장','실장','대리','과장','부장','이사','상무','대표','PD'];
+const POS_OPTIONS = ['수습','중개사','매니저','팀장','실장','대리','과장','부장','이사','상무','대표','PD','사장','부사장'];
+const LOCKED_POS = {94:'사장', 95:'부사장'};
 const ROLE_OPTIONS = ['사용자','관리자'];
 
 function makeSelect(options, selected, name) {
@@ -1222,11 +1339,11 @@ function updateMemberStats() {
   ];
 
   document.getElementById('memberStats').innerHTML = cards.map(c =>
-    \`<div class="stat-card\${statFilter === c.key ? ' active' : ''}" onclick="filterByStat(\${c.key === null ? 'null' : "'" + c.key + "'"})"><div class="stat-num">\${c.num}</div><div class="stat-label">\${c.label}</div></div>\`
+    \`<div class="stat-card\${statFilter === c.key ? ' active' : ''}" onclick="filterByMemberStat(\${c.key === null ? 'null' : "'" + c.key + "'"})"><div class="stat-num">\${c.num}</div><div class="stat-label">\${c.label}</div></div>\`
   ).join('');
 }
 
-function filterByStat(key) {
+function filterByMemberStat(key) {
   statFilter = statFilter === key ? null : key;
   teamFilter = null;
   memberPage = 1;
@@ -1287,11 +1404,11 @@ function renderMemberRow(m, displayNo) {
   if (editingMemberNo === m.no) {
     return \`<tr class="editing" data-no="\${m.no}">
       <td>\${displayNo}</td>
-      <td>\${makeInput(m.note, 'note', '비고')}</td>
+      <td style="text-align:center;font-size:11px;color:var(--muted);">\${m.lastLoginAt ? formatDate(m.lastLoginAt) : '-'}</td>
       <td>\${makeInput(m.joinDate, 'joinDate', '25-01-02')}</td>
       <td>\${makeInput(m.name, 'name', '성명 *')}</td>
       <td>\${makeSelect(DEPT_OPTIONS, m.department, 'department')}\${makeTeamSelect(m.team)}</td>
-      <td>\${makeSelect(POS_OPTIONS, m.position, 'position')}</td>
+      <td>\${LOCKED_POS[m.no] ? '<span style="font-size:13px;font-weight:500;color:var(--navy);">'+LOCKED_POS[m.no]+'</span><input type="hidden" data-field="position" value="'+LOCKED_POS[m.no]+'">' : makeSelect(POS_OPTIONS, m.position, 'position')}</td>
       <td>\${makeInput(m.phone, 'phone', '연락처 *')}</td>
       <td>\${makeInput(m.email, 'email', '이메일')}</td>
       <td>\${makeSelect(ROLE_OPTIONS, m.role || '사용자', 'role')}</td>
@@ -1304,7 +1421,7 @@ function renderMemberRow(m, displayNo) {
   const teamHtml = m.team && m.team !== '-' ? '<div class="team-tag" onclick="filterByTeam(\\'' + esc(m.team).replace(/'/g, "\\\\'") + '\\')">' + esc(m.team) + '</div>' : '';
   return \`<tr>
     <td style="text-align:center;">\${displayNo}</td>
-    <td style="text-align:center;font-size:12px;color:var(--warn);">\${esc(m.note || '')}</td>
+    <td style="text-align:center;font-size:11px;color:var(--muted);white-space:nowrap;">\${m.lastLoginAt ? formatDate(m.lastLoginAt) : '-'}</td>
     <td style="text-align:center;white-space:nowrap;font-size:12px;">\${esc(m.joinDate)}\${m.joinDate ? '<div class="tenure">' + calcTenure(m.joinDate) + '</div>' : ''}</td>
     <td style="text-align:center;font-weight:600;">\${esc(m.name)}</td>
     <td style="text-align:center;">\${esc(m.department)}\${teamHtml}</td>
@@ -1322,7 +1439,7 @@ function renderMemberRow(m, displayNo) {
 function renderNewRow() {
   return \`<tr class="editing" data-no="new">
     <td style="color:var(--muted);">-</td>
-    <td>\${makeInput('', 'note', '비고')}</td>
+    <td style="text-align:center;color:var(--muted);font-size:11px;">-</td>
     <td>\${makeInput('', 'joinDate', '25-01-02')}</td>
     <td>\${makeInput('', 'name', '성명 *')}</td>
     <td>\${makeSelect(DEPT_OPTIONS, '빌딩', 'department')}\${makeTeamSelect('')}</td>
@@ -1428,8 +1545,8 @@ async function removeMember(no, name) {
 
 function exportMembersCSV() {
   const filtered = getFilteredMembers();
-  const header = 'No,비고,위촉일,성명,소속,소속팀,직책,연락처,이메일,권한\\n';
-  const rows = filtered.map(m => \`\${m.no},"\${m.note || ''}","\${m.joinDate}","\${m.name}","\${m.department}","\${m.position}","\${m.team || ''}","\${m.phone}","\${m.email}","\${m.role || '사용자'}"\`).join('\\n');
+  const header = 'No,최근로그인,위촉일,성명,소속,소속팀,직책,연락처,이메일,권한\\n';
+  const rows = filtered.map(m => \`\${m.no},"\${m.lastLoginAt || ''}","\${m.joinDate}","\${m.name}","\${m.department}","\${m.position}","\${m.team || ''}","\${m.phone}","\${m.email}","\${m.role || '사용자'}"\`).join('\\n');
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), header + rows], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1440,7 +1557,7 @@ function exportMembersCSV() {
 // ─── 유틸 ───
 function formatDate(iso) {
   const d = new Date(iso);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + '<br>' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 function calcTenure(dateStr) {
   if (!dateStr) return '';
@@ -1461,81 +1578,6 @@ function calcTenure(dateStr) {
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-// ═══ 사용자 관리 (Firebase) ═══
-var firebaseUsers = [];
-
-async function loadFirebaseUsers() {
-  var body = document.getElementById('firebaseUsersBody');
-  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">로딩 중...</div>';
-  try {
-    var res = await fetch('/api/auth/users');
-    firebaseUsers = await res.json();
-    renderFirebaseUsers();
-  } catch(e) {
-    body.innerHTML = '<div style="text-align:center;padding:20px;color:#E24B4A;">사용자 목록 로드 실패</div>';
-  }
-}
-
-function renderFirebaseUsers() {
-  var body = document.getElementById('firebaseUsersBody');
-  if (!firebaseUsers.length) {
-    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">등록된 사용자가 없습니다</div>';
-    return;
-  }
-  var pending = firebaseUsers.filter(function(u){return !u.approved;});
-  var approved = firebaseUsers.filter(function(u){return u.approved;});
-  var html = '';
-  if (pending.length) {
-    html += '<div style="font-size:13px;font-weight:600;color:#E24B4A;margin-bottom:8px;">승인 대기 (' + pending.length + '명)</div>';
-    pending.forEach(function(u) { html += renderUserRow(u); });
-    html += '<div style="margin-bottom:16px;"></div>';
-  }
-  html += '<div style="font-size:13px;font-weight:600;color:var(--sub);margin-bottom:8px;">승인된 사용자 (' + approved.length + '명)</div>';
-  approved.forEach(function(u) { html += renderUserRow(u); });
-  body.innerHTML = html;
-}
-
-function renderUserRow(u) {
-  var statusColor = u.approved ? '#1D9E75' : '#E24B4A';
-  var statusText = u.approved ? '승인됨' : '대기중';
-  var roleColor = u.role === '관리자' ? '#2C4A7C' : 'var(--sub)';
-  var pic = u.picture ? '<img src="' + esc(u.picture) + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">' : '<div style="width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;">&#128100;</div>';
-  var html = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">';
-  html += pic;
-  html += '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">' + esc(u.name || '이름 없음') + ' <span style="font-size:11px;font-weight:500;color:' + roleColor + ';">' + esc(u.role || '사용자') + '</span></div>';
-  html += '<div style="font-size:11px;color:var(--muted);">' + esc(u.email || '') + '</div></div>';
-  html += '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">';
-  html += '<span style="font-size:11px;color:' + statusColor + ';font-weight:600;">' + statusText + '</span>';
-  if (!u.approved) {
-    html += '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveUser(\'' + u.uid + '\',true)">승인</button>';
-  } else {
-    html += '<button class="btn" style="font-size:11px;padding:4px 10px;background:#FCEBEB;color:#791F1F;border:none;" onclick="approveUser(\'' + u.uid + '\',false)">해제</button>';
-  }
-  if (u.role !== '관리자') {
-    html += '<button class="btn" style="font-size:11px;padding:4px 10px;" onclick="toggleRole(\'' + u.uid + '\',\'' + u.role + '\')">역할변경</button>';
-  }
-  html += '</div></div>';
-  return html;
-}
-
-async function approveUser(uid, approve) {
-  try {
-    await fetch('/api/auth/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({uid:uid,approved:approve}) });
-    showToast(approve ? '사용자를 승인했습니다' : '승인을 해제했습니다');
-    loadFirebaseUsers();
-  } catch(e) { showToast('오류가 발생했습니다'); }
-}
-
-async function toggleRole(uid, currentRole) {
-  var newRole = currentRole === '관리자' ? '사용자' : '관리자';
-  if (!confirm(newRole + ' 역할로 변경하시겠습니까?')) return;
-  try {
-    await fetch('/api/auth/role', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({uid:uid,role:newRole}) });
-    showToast('역할이 변경되었습니다');
-    loadFirebaseUsers();
-  } catch(e) { showToast('오류가 발생했습니다'); }
-}
 
 init();
 </script>

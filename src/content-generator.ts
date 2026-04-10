@@ -137,33 +137,33 @@ async function doResearch(analysis: AnalysisResult): Promise<ResearchData> {
     } catch { return []; }
   })();
 
-  // (3) 구글 검색 (선택적)
-  const googlePromise = (async () => {
+  // (3) Brave Search
+  const bravePromise = (async () => {
     try {
-      const gKey = process.env.GOOGLE_API_KEY;
-      const gCx = process.env.GOOGLE_CX;
-      if (!gKey || !gCx) return [];
+      const braveKey = process.env.BRAVE_API_KEY;
+      if (!braveKey) return [];
       const kw = analysis.search_keywords[0] + ' 빌딩 부동산';
-      const resp = await axios.get('https://www.googleapis.com/customsearch/v1', {
-        params: { key: gKey, cx: gCx, q: kw, num: 5, lr: 'lang_ko' },
+      const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+        params: { q: kw, count: 5, search_lang: 'ko' },
+        headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
         timeout: 5000
       });
-      return (resp.data.items || []).map((it: any) => ({
-        title: it.title,
-        snippet: it.snippet
+      return (resp.data.web?.results || []).map((it: any) => ({
+        title: it.title || '',
+        snippet: it.description || ''
       }));
     } catch { return []; }
   })();
 
-  const [naverResults, txResults, gResults] = await Promise.all([
+  const [naverResults, txResults, braveResults] = await Promise.all([
     Promise.all(naverPromises),
     transactionPromise,
-    googlePromise
+    bravePromise
   ]);
 
   data.naverNews = naverResults.flat();
   data.transactions = txResults;
-  data.googleResults = gResults;
+  data.googleResults = braveResults;
 
   return data;
 }
@@ -233,6 +233,11 @@ async function generateContent(
 
   // 학습 데이터 참조 컨텍스트 추가
   const learningCtx = buildLearningContext();
+
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+  const currentYM = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+  const oldestYM = `${sixMonthsAgo.getFullYear()}년 ${sixMonthsAgo.getMonth() + 1}월`;
 
   const userContent = `[사용자 입력]
 ${input}
@@ -308,10 +313,19 @@ ${researchSummary}
 2. 직접적이고, 구체적이고, 이해하기 쉽게 쓰세요.
 3. AI가 쓴 것 같지 않게, 실제 현장 경험이 있는 사람이 말하는 것처럼 자연스럽게 작성하세요.
 4. "~입니다", "~됩니다"의 딱딱한 어투 대신 "~거든요", "~에요", "~합니다" 를 자연스럽게 섞어 사용하세요.
-5. 과거·현재·미래 데이터를 반드시 포함하세요. 시간축 비교가 설득력을 만듭니다.
-6. 구체적인 수치와 사례를 반드시 포함하세요. 막연한 표현 금지.
+5. 과거·현재·미래 데이터를 반드시 포함하세요. 시간축 비교가 설득력을 만듭니다. 현재 시점은 ${currentYM}이며, 단독으로 인용하는 수치는 반드시 ${oldestYM} 이후의 데이터여야 합니다. 6개월보다 오래된 과거 데이터는 반드시 현재 데이터와 비교하는 용도로만 사용하세요. 예: "2024년 공실률 30%에서 현재 15%로 절반 가까이 줄었다" — 이처럼 과거 수치는 변화폭을 보여주는 비교 기준으로만 쓰고, 과거 수치만 단독으로 언급하지 마세요. 정확한 시점의 데이터를 모르겠으면 수치를 넣지 말고 정성적 표현으로 대체하세요.
+6. 구체적인 수치와 사례를 반드시 포함하되, 출처와 시점이 불확실한 수치는 절대 사용하지 마세요. 오래된 데이터를 마치 현재 상황인 것처럼 쓰는 것은 신뢰를 깎습니다. 리서치 데이터에서 제공된 수치만 사용하고, 리서치에 없는 수치는 직접 만들어내지 마세요.
 7. 마크다운 강조 문법(*, ** 등)은 절대 사용하지 마세요. 이모지는 허용합니다.
 8. 단어를 절대 축약하지 마세요. "리모델링"을 "리모델"로, "브랜딩"을 "브랜"으로 줄이는 등 단어 끝을 자르지 마세요. 글자 수가 길어지더라도 정확한 완전한 단어를 사용하세요.
+9. AI가 쓴 티가 나는 모든 표현을 금지합니다. 다음을 절대 사용하지 마세요:
+   - "~에 대해 알아보겠습니다", "~을 살펴보겠습니다", "~에 주목해야 합니다"
+   - "핵심 포인트", "핵심 인사이트", "주요 시사점", "눈여겨봐야 할"
+   - "~라는 점에서 의미가 있습니다", "~라는 점이 흥미롭습니다"
+   - "결론적으로", "종합하면", "요약하자면", "정리하면"
+   - "~하는 것이 중요합니다", "~할 필요가 있습니다"
+   - "부동산 시장의 새로운 패러다임", "게임 체인저", "판도를 바꿀"
+10. 실제 현장에서 부동산 브로커가 고객에게 설명하듯이 쓰세요. 교과서나 보고서 톤이 아니라 실무자의 말투입니다.
+11. "~거든요", "~인데요", "~더라고요" 같은 구어체를 적극 활용하세요. 딱딱한 문어체보다 말하듯이 쓴 글이 더 자연스럽습니다.
 
 [분석 방식 제한]
 CAP Rate(자본환원율), NOI 기반 수익률 계산 등의 분석 방식은 사용하지 마세요.

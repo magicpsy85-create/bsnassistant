@@ -38,92 +38,74 @@ import { getTransactions, getTransactionsByPeriod, formatYm } from './molit-api'
 import db from './db';
 import { firestore, auth as firebaseAuth } from './firebase-admin';
 
-// CSV → JSON 초기화 (최초 1회)
-function initMembersFromCSV() {
-  const existing = getMembers();
-  if (existing.length > 0) return; // 이미 JSON에 데이터 있으면 스킵
-
-  const csvPath = path.resolve(__dirname, '..', '명단.CSV');
-  if (!fs.existsSync(csvPath)) return;
-
-  const buf = fs.readFileSync(csvPath);
-  const text = iconv.decode(buf, 'cp949');
-  const lines = text.split('\n').filter(l => l.trim().replace(/,/g, '').length > 0);
-  const members: Member[] = [];
-
-  // 대표(문승환)를 기본 관리자로 설정
-  for (const line of lines) {
-    const cols = line.split(',');
-    const no = parseInt(cols[1]);
-    if (isNaN(no)) continue;
-    const name = (cols[6] || '').trim();
-    const rawDept = (cols[4] || '').trim();
-    const deptMap: Record<string, string> = { '매매': '빌딩', 'pent': 'PENT', '자산관리': 'CARE', '본부': '경영' };
-    const department = deptMap[rawDept] || rawDept;
-    const position = (cols[5] || '').trim();
-    const phone = (cols[7] || '').trim();
-    const email = (cols[8] || '').trim();
-    const team = (cols[9] || '').trim();
-    const joinDate = (cols[2] || '').trim();
-    const birthDate = (cols[3] || '').trim();
-    const note = (cols[0] || '').trim();
-    const phoneLast4 = phone.replace(/[^0-9]/g, '').slice(-4);
-    const role: '관리자' | '사용자' = (position === '대표' || position === '이사' || position === '부장') ? '관리자' : '사용자';
-    if (name) members.push({ no, name, position, department, team, phone, phoneLast4, joinDate, birthDate, email, note, role });
-  }
-
-  saveMembers(members);
-  console.log(`  CSV에서 ${members.length}명의 멤버를 가져왔습니다.`);
-}
-
 const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: '50mb' }));
 
-// CSV 초기화
-initMembersFromCSV();
+// 서버 기본 타임아웃 5분 (GPT 호출 대기)
+app.use((_req: any, _res: any, next: any) => { _req.setTimeout(300000); next(); });
 
 // ─── 멤버 목록 API ───
-app.get('/api/members', (_req: Request, res: Response) => {
-  res.json(getMembers());
+app.get('/api/members', async (_req: Request, res: Response) => {
+  res.json(await getMembers());
 });
 
 // 멤버 추가
-app.post('/api/admin/members', (req: Request, res: Response) => {
+const AUTO_TEAM_POSITIONS = ['대표', '상무', '이사', '팀장'];
+const LOCKED_MEMBERS: Record<number, string> = { 94: '사장', 95: '부사장' };
+
+app.post('/api/admin/members', async (req: Request, res: Response) => {
   const { name, position, department, team, phone, joinDate, birthDate, email, note, role } = req.body;
   if (!name || !phone) return res.status(400).json({ error: '이름과 연락처는 필수입니다.' });
-  const members = getMembers();
+  const members = await getMembers();
   const maxNo = members.length > 0 ? Math.max(...members.map(m => m.no)) : 0;
+  const autoTeam = (AUTO_TEAM_POSITIONS.includes(position) && !team) ? (name + '팀') : (team || '');
   const newMember: Member = {
     no: maxNo + 1,
     name, position: position || '', department: department || '',
-    team: team || '', phone, phoneLast4: phone.replace(/[^0-9]/g, '').slice(-4),
+    team: autoTeam, phone, phoneLast4: phone.replace(/[^0-9]/g, '').slice(-4),
     joinDate: joinDate || '', birthDate: birthDate || '',
     email: email || '', note: note || '', role: role || '사용자',
   };
-  addMember(newMember);
+  await addMember(newMember);
   res.json({ success: true, member: newMember });
 });
 
 // 멤버 수정
-app.put('/api/admin/members/:no', (req: Request, res: Response) => {
+app.put('/api/admin/members/:no', async (req: Request, res: Response) => {
   const no = parseInt(req.params.no);
-  updateMember(no, req.body);
+  const updates = req.body;
+
+  // 직책 고정 멤버: 직책 변경 차단
+  if (LOCKED_MEMBERS[no] && updates.position && updates.position !== LOCKED_MEMBERS[no]) {
+    updates.position = LOCKED_MEMBERS[no];
+  }
+
+  // 팀명 자동 생성: 대표/상무/이사/팀장
+  if (AUTO_TEAM_POSITIONS.includes(updates.position)) {
+    if (updates.name) {
+      updates.team = updates.name + '팀';
+    } else {
+      const members = await getMembers();
+      const member = members.find(m => m.no === no);
+      if (member) updates.team = member.name + '팀';
+    }
+  }
+
+  await updateMember(no, updates);
   res.json({ success: true });
 });
 
 // 멤버 삭제
-app.delete('/api/admin/members/:no', (req: Request, res: Response) => {
+app.delete('/api/admin/members/:no', async (req: Request, res: Response) => {
   const no = parseInt(req.params.no);
-  deleteMember(no);
+  await deleteMember(no);
   res.json({ success: true });
 });
 
 // ─── Firebase 인증 API ───
-const ADMIN_EMAIL = 'magicpsy85@gmail.com';
 
-// Google 로그인 후 토큰 검증 + 사용자 등록/확인
 app.post('/api/auth/verify', async (req: Request, res: Response) => {
   try {
     const { idToken } = req.body;
@@ -132,39 +114,35 @@ app.post('/api/auth/verify', async (req: Request, res: Response) => {
     const decoded = await firebaseAuth.verifyIdToken(idToken);
     const { uid, email, name, picture } = decoded;
 
-    const userRef = firestore.collection('users').doc(uid);
-    const userDoc = await userRef.get();
+    if (!email) return res.status(403).json({ error: '이메일 정보 없음' });
 
-    if (!userDoc.exists) {
-      // 신규 사용자 등록 (승인 대기)
-      const isAdmin = email === ADMIN_EMAIL;
-      await userRef.set({
-        uid,
-        email: email || '',
-        name: name || '',
-        picture: picture || '',
-        role: isAdmin ? '관리자' : '사용자',
-        approved: isAdmin, // 관리자는 자동 승인
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString()
-      });
-      console.log('[Firebase] 신규 사용자 등록:', email, isAdmin ? '(관리자 자동승인)' : '(승인 대기)');
-      return res.json({
-        user: { uid, email, name, picture, role: isAdmin ? '관리자' : '사용자', approved: isAdmin }
-      });
+    const membersSnap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+
+    if (membersSnap.empty) {
+      console.log('[인증 거부] 명단에 없는 계정:', email);
+      return res.status(403).json({ error: '등록되지 않은 계정입니다', email: email });
     }
 
-    // 기존 사용자 로그인 시각 갱신
-    await userRef.update({ lastLoginAt: new Date().toISOString() });
-    const userData = userDoc.data()!;
+    const memberDoc = membersSnap.docs[0];
+    const member = memberDoc.data();
+    const sessionId = Math.random().toString(36).substr(2) + Date.now().toString(36);
+
+    await memberDoc.ref.update({
+      sessionId: sessionId,
+      lastLoginAt: new Date().toISOString()
+    });
+
+    console.log('[인증 성공]', email, '→', member.name, '(' + member.role + ')');
+
     res.json({
       user: {
-        uid: userData.uid,
-        email: userData.email,
-        name: userData.name,
-        picture: userData.picture,
-        role: userData.role,
-        approved: userData.approved
+        uid,
+        email: email,
+        name: member.name || name || '',
+        picture: picture || '',
+        role: member.role || '사용자',
+        memberNo: member.no,
+        sessionId: sessionId
       }
     });
   } catch (e: any) {
@@ -173,42 +151,19 @@ app.post('/api/auth/verify', async (req: Request, res: Response) => {
   }
 });
 
-// 사용자 목록 조회 (관리자 전용)
-app.get('/api/auth/users', async (req: Request, res: Response) => {
+app.post('/api/auth/check-session', async (req: Request, res: Response) => {
   try {
-    const snap = await firestore.collection('users').orderBy('createdAt', 'desc').get();
-    const users = snap.docs.map(d => d.data());
-    res.json(users);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
+    const { email, sessionId } = req.body;
+    if (!email || !sessionId) return res.status(400).json({ error: 'email, sessionId 필요' });
 
-// 사용자 승인/거부 (관리자 전용)
-app.post('/api/auth/approve', async (req: Request, res: Response) => {
-  try {
-    const { uid, approved } = req.body;
-    if (!uid) return res.status(400).json({ error: 'uid 필요' });
+    const snap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+    if (snap.empty) return res.status(403).json({ error: '등록되지 않은 계정' });
 
-    await firestore.collection('users').doc(uid).update({
-      approved: !!approved,
-      approvedAt: new Date().toISOString()
-    });
-    console.log('[Firebase] 사용자', uid, approved ? '승인' : '거부');
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// 사용자 역할 변경 (관리자 전용)
-app.post('/api/auth/role', async (req: Request, res: Response) => {
-  try {
-    const { uid, role } = req.body;
-    if (!uid || !role) return res.status(400).json({ error: 'uid, role 필요' });
-
-    await firestore.collection('users').doc(uid).update({ role });
-    res.json({ success: true });
+    const member = snap.docs[0].data();
+    if (member.sessionId !== sessionId) {
+      return res.status(401).json({ kicked: true, error: '다른 기기에서 로그인되었습니다' });
+    }
+    res.json({ valid: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -217,7 +172,7 @@ app.post('/api/auth/role', async (req: Request, res: Response) => {
 // Firebase 클라이언트 설정 전달
 app.get('/api/auth/config', (_req: Request, res: Response) => {
   res.json({
-    apiKey: process.env.FIREBASE_API_KEY || '',
+    apiKey: process.env.FB_WEB_API_KEY || '',
     authDomain: 'deploy-test1-24dc2.firebaseapp.com',
     projectId: 'deploy-test1-24dc2',
     storageBucket: 'deploy-test1-24dc2.firebasestorage.app'
@@ -242,11 +197,21 @@ app.get('/insta', (_req: Request, res: Response) => {
 // ─── 콘텐츠 생성 API ───
 app.post('/api/content/generate', async (req: Request, res: Response) => {
   try {
+    req.setTimeout(300000); // 5분 타임아웃
+    res.setTimeout(300000);
     const { mode, input } = req.body;
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: '입력 내용이 필요합니다.' });
     }
     const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim());
+
+    // URL 모드일 때 자동으로 학습에 추가 (중복은 내부에서 스킵)
+    if (mode === 'url') {
+      addArticlesFromUrls([input.trim()]).then(r => {
+        if (r.added > 0) console.log('[학습] 콘텐츠 생성 URL 자동 학습:', input.trim());
+      }).catch(() => {});
+    }
+
     res.json({ success: true, result });
   } catch (err: any) {
     console.error('콘텐츠 생성 오류:', err);
@@ -260,6 +225,8 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
 // ─── 카드 이미지 생성 API ───
 app.post('/api/content/generate-card', async (req: Request, res: Response) => {
   try {
+    req.setTimeout(300000);
+    res.setTimeout(300000);
     const { cardIndex, topic, tag, title, style, imageIdea } = req.body;
     if (typeof cardIndex !== 'number' || !title) {
       return res.status(400).json({ error: '필수 파라미터가 누락되었습니다.' });
@@ -389,7 +356,7 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
     for (const kw of keywords) {
       try {
         const resp = await axios.get('https://openapi.naver.com/v1/search/news.json', {
-          params: { query: kw, display: 10, start: 1, sort: 'date' },
+          params: { query: kw, display: 100, start: 1, sort: 'date' },
           headers: { 'X-Naver-Client-Id': naverId, 'X-Naver-Client-Secret': naverSecret },
           timeout: 5000
         });
@@ -419,8 +386,7 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
     }
 
     allResults.sort((a, b) => b._ts - a._ts);
-    const count = parseInt((_req.query.count as string) || '5') || 5;
-    res.json({ articles: allResults.slice(0, count).map(({ _ts, ...r }) => r) });
+    res.json({ articles: allResults.map(({ _ts, ...r }) => r) });
   } catch (err: any) {
     console.error('[뉴스 추천] 에러:', err.message);
     res.json({ articles: [], error: err.message });
@@ -604,7 +570,7 @@ app.post('/api/chatbot', async (req: Request, res: Response) => {
       status,
       timestamp: new Date().toISOString(),
     };
-    addRecord(record);
+    await addRecord(record);
 
     res.json({ reply, recordId: record.id, status: record.status });
   } catch (err) {
@@ -614,16 +580,16 @@ app.post('/api/chatbot', async (req: Request, res: Response) => {
 });
 
 // ─── 추천 질문 API (빈도 기반) ───
-app.get('/api/chatbot/top-questions', (_req: Request, res: Response) => {
-  const questions = getTopQuestions(5);
+app.get('/api/chatbot/top-questions', async (_req: Request, res: Response) => {
+  const questions = await getTopQuestions(5);
   res.json({ questions });
 });
 
 // ═══ 관리자 API ═══
 
 // 상담 기록 조회
-app.get('/api/admin/records', (req: Request, res: Response) => {
-  let records = getRecords();
+app.get('/api/admin/records', async (req: Request, res: Response) => {
+  let records = await getRecords();
   const userId = req.query.userId as string;
   if (userId) {
     records = records.filter(r => r.userId === userId);
@@ -632,22 +598,41 @@ app.get('/api/admin/records', (req: Request, res: Response) => {
 });
 
 // 상담 상태 변경
-app.put('/api/admin/records/:id/status', (req: Request, res: Response) => {
+app.put('/api/admin/records/:id/status', async (req: Request, res: Response) => {
   const { status } = req.body;
-  if (status !== 'AI해결' && status !== '직접 문의') {
+  if (status !== 'AI해결' && status !== '직접 문의' && status !== '오류') {
     return res.status(400).json({ error: '유효하지 않은 상태입니다.' });
   }
-  updateRecordStatus(req.params.id, status);
+  await updateRecordStatus(req.params.id, status);
   res.json({ success: true });
 });
 
+// 오류 신고 — 기존 레코드를 오류로 업데이트
+app.put('/api/admin/records/:id/report-error', async (req: Request, res: Response) => {
+  try {
+    const { errorNote } = req.body;
+    if (!errorNote) return res.status(400).json({ error: '오류 내용 필요' });
+    const ref = firestore.collection('records').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: '기록을 찾을 수 없습니다' });
+    const existing = doc.data()!;
+    await ref.update({
+      status: '오류',
+      answer: (existing.answer || '') + '\n\n[오류 신고] ' + errorNote
+    });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 규정 초안 조회
-app.get('/api/admin/drafts', (_req: Request, res: Response) => {
-  res.json(getRuleDrafts());
+app.get('/api/admin/drafts', async (_req: Request, res: Response) => {
+  res.json(await getRuleDrafts());
 });
 
 // 규정 초안 추가
-app.post('/api/admin/drafts', (req: Request, res: Response) => {
+app.post('/api/admin/drafts', async (req: Request, res: Response) => {
   const { section, itemNumber, action, content, reason, updatedBy } = req.body;
   const draft: RuleDraft = {
     id: crypto.randomUUID(),
@@ -660,51 +645,48 @@ app.post('/api/admin/drafts', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     applied: false,
   };
-  addRuleDraft(draft);
+  await addRuleDraft(draft);
   res.json({ success: true, draft });
 });
 
 // 규정 초안 수정
-app.put('/api/admin/drafts/:id', (req: Request, res: Response) => {
-  const updated = updateRuleDraft(req.params.id, req.body);
+app.put('/api/admin/drafts/:id', async (req: Request, res: Response) => {
+  const updated = await updateRuleDraft(req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: 'not found' });
   res.json({ success: true });
 });
 
 // 규정 초안 삭제
-app.delete('/api/admin/drafts/:id', (req: Request, res: Response) => {
-  deleteRuleDraft(req.params.id);
+app.delete('/api/admin/drafts/:id', async (req: Request, res: Response) => {
+  await deleteRuleDraft(req.params.id);
   res.json({ success: true });
 });
 
 // 규정 초안 일괄 적용
-app.post('/api/admin/drafts/apply', (_req: Request, res: Response) => {
-  const drafts = getRuleDrafts().filter(d => !d.applied);
+app.post('/api/admin/drafts/apply', async (_req: Request, res: Response) => {
+  const drafts = (await getRuleDrafts()).filter(d => !d.applied);
   if (drafts.length === 0) {
     return res.json({ success: true, applied: 0 });
   }
 
-  let rules = loadRulesFile();
+  let rules = await loadRulesFile();
 
   for (const draft of drafts) {
     const sectionHeader = `# ${draft.section}`;
     const sectionIdx = rules.indexOf(sectionHeader);
     if (sectionIdx === -1 && draft.action !== '추가') continue;
 
-    // 다음 섹션 시작 위치 찾기
     const afterHeader = sectionIdx + sectionHeader.length;
     const nextSectionIdx = rules.indexOf('\n# ', afterHeader);
     const sectionEnd = nextSectionIdx === -1 ? rules.length : nextSectionIdx;
     let sectionContent = rules.slice(afterHeader, sectionEnd);
 
     if (draft.action === '수정' && draft.itemNumber !== 'new') {
-      // 해당 항목 번호 찾아서 교체
       const itemRegex = new RegExp(`^${draft.itemNumber}\\. .+$`, 'm');
       if (itemRegex.test(sectionContent)) {
         sectionContent = sectionContent.replace(itemRegex, `${draft.itemNumber}. ${draft.content}`);
       }
     } else if (draft.action === '추가') {
-      // 섹션 끝에 추가
       const lines = sectionContent.trim().split('\n');
       const lastLine = lines[lines.length - 1];
       const lastNumMatch = lastLine.match(/^(\d+)\./);
@@ -718,37 +700,37 @@ app.post('/api/admin/drafts/apply', (_req: Request, res: Response) => {
     rules = rules.slice(0, afterHeader) + sectionContent + rules.slice(sectionEnd);
   }
 
-  saveRulesFile(rules);
-  markDraftsApplied(drafts.map(d => d.id));
+  await saveRulesFile(rules);
+  await markDraftsApplied(drafts.map(d => d.id));
 
   res.json({ success: true, applied: drafts.length });
 });
 
 // 현재 규정 조회
-app.get('/api/admin/rules', (_req: Request, res: Response) => {
-  res.json({ content: loadRulesFile() });
+app.get('/api/admin/rules', async (_req: Request, res: Response) => {
+  res.json({ content: await loadRulesFile() });
 });
 
 // 규정 직접 수정 (섹션별 또는 전체)
-app.post('/api/admin/rules/update', (req: Request, res: Response) => {
+app.post('/api/admin/rules/update', async (req: Request, res: Response) => {
   const { content } = req.body;
   if (typeof content !== 'string') {
     return res.status(400).json({ error: '내용이 필요합니다.' });
   }
-  saveRulesFile(content);
+  await saveRulesFile(content);
   res.json({ success: true });
 });
 
 // 섹션 추가
-app.post('/api/admin/rules/section', (req: Request, res: Response) => {
+app.post('/api/admin/rules/section', async (req: Request, res: Response) => {
   const { sectionName, updatedBy } = req.body;
   if (!sectionName || typeof sectionName !== 'string') {
     return res.status(400).json({ error: '섹션 이름이 필요합니다.' });
   }
-  let rules = loadRulesFile();
+  let rules = await loadRulesFile();
   rules = rules.trimEnd() + '\n\n# ' + sectionName.trim() + '\n';
-  saveRulesFile(rules);
-  addRuleDraft({
+  await saveRulesFile(rules);
+  await addRuleDraft({
     id: crypto.randomUUID(),
     section: sectionName.trim(),
     itemNumber: '',
@@ -763,10 +745,10 @@ app.post('/api/admin/rules/section', (req: Request, res: Response) => {
 });
 
 // 섹션 삭제
-app.delete('/api/admin/rules/section/:sectionName', (req: Request, res: Response) => {
+app.delete('/api/admin/rules/section/:sectionName', async (req: Request, res: Response) => {
   const sectionName = decodeURIComponent(req.params.sectionName);
   const updatedBy = req.body?.updatedBy || '알 수 없음';
-  let rules = loadRulesFile();
+  let rules = await loadRulesFile();
   const header = '# ' + sectionName;
   const idx = rules.indexOf(header);
   if (idx === -1) {
@@ -774,11 +756,10 @@ app.delete('/api/admin/rules/section/:sectionName', (req: Request, res: Response
   }
   const nextIdx = rules.indexOf('\n# ', idx + header.length);
   const end = nextIdx === -1 ? rules.length : nextIdx;
-  // Remove from preceding newline if exists
   const start = idx > 0 && rules[idx - 1] === '\n' ? idx - 1 : idx;
   rules = rules.slice(0, start) + rules.slice(end);
-  saveRulesFile(rules);
-  addRuleDraft({
+  await saveRulesFile(rules);
+  await addRuleDraft({
     id: crypto.randomUUID(),
     section: sectionName,
     itemNumber: '',
@@ -930,13 +911,28 @@ function calculateStats(transactions: any[], prevTransactions: any[]) {
     : 0;
 
   const prevCount = prevValid.length;
+
+  // 전기 평균 매매가
+  const prevAvgPrice = prevCount > 0
+    ? Math.round(prevValid.reduce((s: number, t: any) => s + t.deal_amount, 0) / prevCount)
+    : 0;
+
+  // 전기 토지 평당가
   const prevPyeong = prevValid.filter((t: any) => t.plottage_ar > 0);
   const prevAvgPP = prevPyeong.length > 0
     ? Math.round(prevPyeong.reduce((s: number, t: any) => s + (t.deal_amount / t.plottage_ar * 3.3058), 0) / prevPyeong.length)
     : 0;
 
+  // 전기 연면적 평당가
+  const prevArea = prevValid.filter((t: any) => t.building_ar && t.building_ar > 0);
+  const prevAvgPA = prevArea.length > 0
+    ? Math.round(prevArea.reduce((s: number, t: any) => s + (t.deal_amount / t.building_ar * 3.3058), 0) / prevArea.length)
+    : 0;
+
   const volumeChange = prevCount > 0 ? Math.round((totalCount - prevCount) / prevCount * 100) : 0;
   const priceChange = prevAvgPP > 0 ? Math.round((avgPricePerPyeong - prevAvgPP) / prevAvgPP * 100) : 0;
+  const avgPriceChange = prevAvgPrice > 0 ? Math.round((avgPrice - prevAvgPrice) / prevAvgPrice * 100) : 0;
+  const areaChange = prevAvgPA > 0 ? Math.round((avgPricePerArea - prevAvgPA) / prevAvgPA * 100) : 0;
 
   const buyerCorp = valid.filter((t: any) => t.buyer_gbn === '법인').length;
   const buyerPersonal = valid.filter((t: any) => t.buyer_gbn === '개인').length;
@@ -1003,7 +999,7 @@ function calculateStats(transactions: any[], prevTransactions: any[]) {
 
   return {
     totalCount, cancelCount, avgPrice, avgPricePerPyeong, avgPricePerArea,
-    prevPeriodChange: { volume: volumeChange, price: priceChange },
+    prevPeriodChange: { volume: volumeChange, price: priceChange, avgPrice: avgPriceChange, area: areaChange, hasPrev: prevCount > 0 },
     buyer: {
       corp: { count: buyerCorp, ratio: totalCount > 0 ? Math.round(buyerCorp / totalCount * 100) : 0 },
       personal: { count: buyerPersonal, ratio: totalCount > 0 ? Math.round(buyerPersonal / totalCount * 100) : 0 }
@@ -1103,26 +1099,241 @@ app.get('/api/transaction/query', async (req: Request, res: Response) => {
   }
 });
 
+// ─── 실거래가 랭킹 API ───
+app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
+  try {
+    const sido = String(req.query.sido || '전국');
+    const months = parseInt(String(req.query.months || '6'));
+    const sortBy = String(req.query.sortBy || 'totalCount');
+    const sgg = req.query.sgg ? String(req.query.sgg) : null;
+    const startMonth = req.query.startMonth ? String(req.query.startMonth) : null;
+    const endMonth = req.query.endMonth ? String(req.query.endMonth) : null;
+
+    const now = new Date();
+    const ymList: string[] = [];
+    const prevYmList: string[] = [];
+
+    if (startMonth && endMonth) {
+      const sy = parseInt(startMonth.substring(0, 4)), sm = parseInt(startMonth.substring(4, 6)) - 1;
+      const ey = parseInt(endMonth.substring(0, 4)), em = parseInt(endMonth.substring(4, 6)) - 1;
+      for (let d = new Date(sy, sm); d <= new Date(ey, em); d.setMonth(d.getMonth() + 1)) {
+        ymList.push(formatYm(new Date(d)));
+      }
+      for (let i = 0; i < ymList.length; i++) {
+        prevYmList.push(formatYm(new Date(sy - 1, sm + i, 1)));
+      }
+    } else {
+      for (let i = 0; i < months; i++) {
+        ymList.push(formatYm(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+      }
+      for (let i = 0; i < months; i++) {
+        prevYmList.push(formatYm(new Date(now.getFullYear() - 1, now.getMonth() - i, 1)));
+      }
+    }
+
+    const sortFn = (a: any, b: any) => {
+      if (sortBy === 'avgPricePerPyeong') return b.stats.avgPricePerPyeong - a.stats.avgPricePerPyeong;
+      if (sortBy === 'avgPrice') return b.stats.avgPrice - a.stats.avgPrice;
+      if (sortBy === 'avgPricePerArea') return b.stats.avgPricePerArea - a.stats.avgPricePerArea;
+      return b.stats.totalCount - a.stats.totalCount;
+    };
+
+    // ─── 전국 모드: 시/도별 랭킹 ───
+    if (sido === '전국') {
+      const sidoEntries = Object.entries(regionData as any);
+      const sidoRanking: any[] = [];
+
+      for (let si = 0; si < sidoEntries.length; si += 2) {
+        const sidoBatch = sidoEntries.slice(si, si + 2);
+        const batchResults = await Promise.all(sidoBatch.map(async ([sidoName, sidoObj]) => {
+          const sggEntries = Object.entries(sidoObj as any) as [string, any][];
+          let allTx: any[] = [];
+          let prevTx: any[] = [];
+
+          for (const [, sggInfo] of sggEntries) {
+            const sggCd = (sggInfo as any).code;
+            for (const ym of ymList) { allTx.push(...await getTransactions(sggCd, ym)); }
+            for (const ym of prevYmList) { prevTx.push(...await getTransactions(sggCd, ym)); }
+          }
+
+          const stats = calculateStats(allTx, prevTx);
+          return { name: sidoName, stats };
+        }));
+        sidoRanking.push(...batchResults);
+      }
+
+      sidoRanking.sort(sortFn);
+
+      res.json({
+        type: 'sido',
+        sido: '전국',
+        period: { start: ymList[ymList.length - 1], end: ymList[0] },
+        prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
+        ranking: sidoRanking
+      });
+      return;
+    }
+
+    // ─── 시/도 선택 모드 ───
+    const sidoData = (regionData as any)[sido];
+    if (!sidoData) return res.status(400).json({ error: '유효하지 않은 시/도입니다' });
+
+    // ─── 특정 구 선택 → 동별 랭킹 ───
+    if (sgg && sidoData[sgg]) {
+      const sggInfo = sidoData[sgg];
+      const sggCd = sggInfo.code;
+
+      let allTx: any[] = [];
+      let prevTx: any[] = [];
+      for (const ym of ymList) { allTx.push(...await getTransactions(sggCd, ym)); }
+      for (const ym of prevYmList) { prevTx.push(...await getTransactions(sggCd, ym)); }
+
+      const fullStats = calculateStats(allTx, prevTx);
+
+      const dongs = sggInfo.dongs || [];
+      const dongRanking: any[] = [];
+
+      for (const dong of dongs) {
+        const dongTx = allTx.filter((t: any) => t.umd_nm && t.umd_nm.includes(dong));
+        const dongPrevTx = prevTx.filter((t: any) => t.umd_nm && t.umd_nm.includes(dong));
+        if (dongTx.length === 0) continue;
+        const dongStats = calculateStats(dongTx, dongPrevTx);
+        dongRanking.push({
+          name: dong,
+          sggCd,
+          sggNm: sgg,
+          stats: dongStats,
+          transactions: dongTx
+        });
+      }
+
+      dongRanking.sort(sortFn);
+
+      res.json({
+        type: 'dong',
+        sido,
+        sgg,
+        period: { start: ymList[ymList.length - 1], end: ymList[0] },
+        prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
+        fullStats,
+        ranking: dongRanking
+      });
+      return;
+    }
+
+    // ─── 전체 구 → 구별 랭킹 (3개씩 순차 병렬) ───
+    const sggEntries = Object.entries(sidoData) as [string, any][];
+    const ranking: any[] = [];
+
+    for (let i = 0; i < sggEntries.length; i += 3) {
+      const batch = sggEntries.slice(i, i + 3);
+      const results = await Promise.all(batch.map(async ([sggName, sggInfo]: [string, any]) => {
+        const sggCd = sggInfo.code;
+        let allTx: any[] = [];
+        let prevTx: any[] = [];
+
+        for (const ym of ymList) { allTx.push(...await getTransactions(sggCd, ym)); }
+        for (const ym of prevYmList) { prevTx.push(...await getTransactions(sggCd, ym)); }
+
+        const stats = calculateStats(allTx, prevTx);
+        return {
+          name: sggName,
+          sggCd,
+          stats,
+          transactions: allTx
+        };
+      }));
+      ranking.push(...results);
+    }
+
+    ranking.sort(sortFn);
+
+    res.json({
+      type: 'sgg',
+      sido,
+      period: { start: ymList[ymList.length - 1], end: ymList[0] },
+      prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
+      ranking
+    });
+  } catch (e: any) {
+    console.error('[랭킹 API 오류]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Brave Search 컨텍스트 보강 ───
+async function searchBraveContext(keywords: string[]): Promise<string> {
+  const braveKey = process.env.BRAVE_API_KEY;
+  if (!braveKey || keywords.length === 0) return '';
+
+  try {
+    const results: string[] = [];
+    const queries = keywords.slice(0, 3);
+
+    for (const kw of queries) {
+      const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+        params: { q: kw, count: 3, search_lang: 'ko' },
+        headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
+        timeout: 5000
+      });
+      const items = resp.data.web?.results || [];
+      items.forEach((item: any) => {
+        results.push(`- ${item.title || ''}: ${item.description || ''}`);
+      });
+    }
+
+    if (results.length === 0) return '';
+    return '\n\n[최신 뉴스/시장 동향]\n' + results.slice(0, 8).join('\n');
+  } catch (e: any) {
+    console.log('[Brave Search] 검색 실패:', e.message);
+    return '';
+  }
+}
+
 // ─── AI 인사이트 ───
 app.post('/api/transaction/insight', async (req: Request, res: Response) => {
   try {
     const { regions } = req.body;
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
+    const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
+    const searchKeywords = regionNames.map((name: string) => name + ' 빌딩 매매 시장');
+    const braveContext = await searchBraveContext(searchKeywords);
+
     const summary = regions.map((r: any) => {
       const s = r.stats;
-      return `[${r.sggNm}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n거래건수: ${s.totalCount}건, 평균매매가: ${s.avgPrice}만원, 평당매매가: ${s.avgPricePerPyeong}만원\n법인매수: ${s.buyer.corp.ratio}%, 법인매도: ${s.seller.corp.ratio}%\n전기대비 거래량: ${s.prevPeriodChange.volume > 0 ? '+' : ''}${s.prevPeriodChange.volume}%, 전기대비 가격: ${s.prevPeriodChange.price > 0 ? '+' : ''}${s.prevPeriodChange.price}%`;
+      return `[${r.sggNm || r.name || ''}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n거래건수: ${s.totalCount}건, 평균매매가: ${s.avgPrice}만원, 평당매매가: ${s.avgPricePerPyeong}만원\n법인매수: ${s.buyer.corp.ratio}%, 법인매도: ${s.seller.corp.ratio}%\n전년대비 거래량: ${s.prevPeriodChange.volume > 0 ? '+' : ''}${s.prevPeriodChange.volume}%, 전년대비 가격: ${s.prevPeriodChange.price > 0 ? '+' : ''}${s.prevPeriodChange.price}%`;
     }).join('\n\n');
 
     const OpenAI = require('openai');
     const openai = new OpenAI();
     const resp = await openai.chat.completions.create({
       model: 'gpt-4o',
-      max_tokens: 1500,
+      max_tokens: 2000,
       temperature: 0.3,
       messages: [
-        { role: 'system', content: '당신은 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다. 빌딩 매매 중개 관점에서 실거래 데이터를 분석하고 인사이트를 제공하세요. 간결하게 핵심만 3~5개 포인트로 작성하세요. 각 포인트는 한 줄로.' },
-        { role: 'user', content: `다음 지역의 상업업무용 부동산 실거래 데이터를 비교 분석해주세요:\n\n${summary}` }
+        { role: 'system', content: `당신은 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
+
+[서식 규칙 — 반드시 아래 형식으로 작성]
+1. 정확히 4~5개 포인트로 작성
+2. 각 포인트는 아래 형식을 따름:
+   ① [한줄 핵심 요약]
+   → [원인 분석 또는 배경 설명 1~2문장]
+
+3. 마지막 포인트는 반드시 "향후 전망"으로 작성
+
+[분석 규칙]
+- 전년대비 변동이 있는 모든 항목에 대해 반드시 원인을 분석해라. 단순히 "거래량이 증가했다"가 아니라 왜 증가했는지를 최신 뉴스와 시장 동향을 근거로 설명해라.
+- 법인 매수/매도 비율 변화의 의미를 해석해라.
+- 해당 지역의 개발 호재, 교통 인프라, 상권 변화, 정책 영향 등 구체적 요인을 언급해라.
+- 뻔한 일반론("시장이 활성화되고 있다")은 쓰지 마라. 이 데이터에서만 읽을 수 있는 구체적인 이야기를 해라.
+
+[문체 규칙]
+- 마크다운 문법(**, *, #, - 등) 사용 금지
+- "인사이트", "주목할 만한", "살펴보면", "시사점", "결론적으로" 등 AI투 표현 금지
+- 현장 브로커가 대표에게 구두 보고하는 톤으로 작성
+- 이모지 허용` },
+        { role: 'user', content: `다음 지역의 상업업무용 부동산 실거래 데이터를 분석해주세요:\n\n${summary}${braveContext}` }
       ]
     });
 
@@ -1139,11 +1350,25 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     const { regions } = req.body;
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
+    const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
+    const searchKeywords = [
+      ...regionNames.map((name: string) => name + ' 상업용 부동산'),
+      ...regionNames.map((name: string) => name + ' 개발 호재 교통')
+    ];
+    const braveContext = await searchBraveContext(searchKeywords);
+
     const summary = regions.map((r: any) => {
       const s = r.stats;
-      const dongInfo = Object.entries(s.byDong).map(([d, v]: any) => `${d}: ${v.count}건, 평균 ${v.ppCount > 0 ? Math.round(v.totalPP / v.ppCount) : 0}만/평`).join(', ');
-      const useInfo = Object.entries(s.byUse).map(([u, c]) => `${u} ${c}건`).join(', ');
-      return `[${r.sggNm}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n총 ${s.totalCount}건 (해제 ${s.cancelCount}건)\n평균매매가: ${s.avgPrice}만원, 토지평당: ${s.avgPricePerPyeong}만, 연면적평당: ${s.avgPricePerArea}만\n전기대비 거래량 ${s.prevPeriodChange.volume}%, 가격 ${s.prevPeriodChange.price}%\n법인매수 ${s.buyer.corp.ratio}%, 법인매도 ${s.seller.corp.ratio}%\n동별: ${dongInfo}\n용도: ${useInfo}`;
+      const dongInfo = s.byDong ? Object.entries(s.byDong).map(([d, v]: any) => `${d}: ${v.count}건, 평균 ${v.ppCount > 0 ? Math.round(v.totalPP / v.ppCount) : 0}만/평`).join(', ') : '';
+      const useInfo = s.byUse ? Object.entries(s.byUse).map(([u, c]) => `${u} ${c}건`).join(', ') : '';
+      let txDetail = '';
+      if (s.highest) txDetail += `\n최고 평당가 거래: ${s.highest.umd_nm || ''} ${s.highest.jibun || ''}, ${s.highest.land_use || ''}, 대지 ${s.highest.plottage_ar || 0}㎡, ${Math.round(s.highest.pricePerPyeong)}만/평, ${s.highest.deal_amount}만원`;
+      if (s.lowest) txDetail += `\n최저 평당가 거래: ${s.lowest.umd_nm || ''} ${s.lowest.jibun || ''}, ${s.lowest.land_use || ''}, 대지 ${s.lowest.plottage_ar || 0}㎡, ${Math.round(s.lowest.pricePerPyeong)}만/평, ${s.lowest.deal_amount}만원`;
+      if (r.recentTx && r.recentTx.length) {
+        txDetail += '\n최근 주요 거래:';
+        r.recentTx.forEach((t: any) => { txDetail += `\n- ${t.umd_nm || ''} ${t.jibun || ''} / ${t.building_use || ''} / 대지${t.plottage_ar || 0}㎡ / ${t.deal_amount}만원 / ${t.deal_year}.${String(t.deal_month).padStart(2,'0')}`; });
+      }
+      return `[${r.sggNm || r.name || ''}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n총 ${s.totalCount}건 (해제 ${s.cancelCount || 0}건)\n평균매매가: ${s.avgPrice}만원, 토지평당: ${s.avgPricePerPyeong}만, 연면적평당: ${s.avgPricePerArea}만\n전년대비 거래량 ${s.prevPeriodChange.volume}%, 가격 ${s.prevPeriodChange.price}%\n법인매수 ${s.buyer.corp.ratio}%, 법인매도 ${s.seller.corp.ratio}%\n동별: ${dongInfo}\n용도: ${useInfo}${txDetail}`;
     }).join('\n\n');
 
     const OpenAI = require('openai');
@@ -1153,7 +1378,28 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       reasoning_effort: 'low' as any,
       max_completion_tokens: 4000,
       messages: [
-        { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.\n\n다음 실거래 데이터를 바탕으로 시장 리포트를 작성하세요.\n빌딩 매매 중개 관점에서 작성하되, 매수자와 매도자 모두에게 유용한 정보를 포함하세요.\n\n구성:\n1. 시장 개요 (2~3문장)\n2. 핵심 트렌드 (3~4개 포인트)\n3. 주목할 거래 (특이 거래 1~2건)\n4. 시장 전망 (2~3문장)\n\n데이터:\n${summary}` }
+        { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
+
+다음 실거래 데이터와 최신 시장 동향을 바탕으로 시장 리포트를 작성하세요.
+빌딩 매매 중개 관점에서 작성하되, 매수자와 매도자 모두에게 유용한 정보를 포함하세요.
+
+[구성]
+1. 시장 개요 (2~3문장)
+2. 전년대비 변동 원인 분석 (거래량, 가격 변동의 구체적 원인 2~3개)
+3. 핵심 트렌드 (3~4개 포인트 — 개발 호재, 상권 변화, 정책 영향 등 구체적 요인 기반)
+4. 주목할 거래 (특이 거래 1~2건 — 왜 주목해야 하는지 이유 포함)
+5. 향후 전망 (2~3문장 — 뻔한 전망이 아니라 데이터와 뉴스 근거 기반)
+
+[문체 규칙]
+- 마크다운 문법(**, * 등) 사용 금지. 이모지 허용
+- "인사이트", "살펴보면", "주목할 만한", "시사점", "결론적으로", "종합하면" 등 AI투 표현 금지
+- 현장 실무자가 대표에게 보고하듯이 직접적이고 간결한 문체
+- 단순 데이터 나열이 아니라, "왜 이런 변화가 생겼는지"를 최신 뉴스와 연결하여 설명
+- 일반론("시장이 회복세를 보이고 있다") 대신 구체적 근거("GTX-A 개통 이후 역세권 빌딩 거래가 3개월 연속 증가")를 사용
+
+[데이터]
+${summary}
+${braveContext}` }
       ]
     });
 
@@ -1164,14 +1410,20 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
   }
 });
 
-// ─── 서버 시작 ───
-if (!process.env.MOLIT_API_KEY) {
-  console.warn('[경고] MOLIT_API_KEY가 .env에 설정되지 않았습니다');
+// ─── app export (Cloud Functions용) ───
+export { app };
+
+// ─── 로컬 서버 시작 (직접 실행 시에만) ───
+const isDirectRun = require.main === module;
+if (isDirectRun) {
+  if (!process.env.MOLIT_API_KEY) {
+    console.warn('[경고] MOLIT_API_KEY가 .env에 설정되지 않았습니다');
+  }
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('  BSN 규정 챗봇 서버 시작!');
+    console.log(`  -> 챗봇:    http://localhost:${PORT}`);
+    console.log(`  -> 관리자:  http://localhost:${PORT}/admin`);
+    console.log('');
+  });
 }
-app.listen(PORT, () => {
-  console.log('');
-  console.log('  BSN 규정 챗봇 서버 시작!');
-  console.log(`  -> 챗봇:    http://localhost:${PORT}`);
-  console.log(`  -> 관리자:  http://localhost:${PORT}/admin`);
-  console.log('');
-});

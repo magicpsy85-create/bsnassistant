@@ -145,8 +145,8 @@ export async function getTransactions(sggCd: string, dealYm: string) {
     'SELECT * FROM fetch_log WHERE sgg_cd = ? AND deal_ym = ?'
   ).get(sggCd, dealYm);
 
-  // 확정 데이터 → DB 즉시 반환
-  if (log && log.is_final === 1) {
+  // 확정 데이터 → DB 즉시 반환 (단, 0건은 의심스러우니 재조회)
+  if (log && log.is_final === 1 && log.count > 0) {
     return getFromDB(sggCd, dealYm);
   }
 

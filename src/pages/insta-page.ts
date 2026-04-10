@@ -204,9 +204,6 @@ export function generateInstaPageHTML(): string {
     .learn-tab.active{color:var(--navy) !important;border-bottom-color:var(--navy) !important;font-weight:600 !important;}
 
     /* Kakao */
-    .kakao-float{position:fixed;bottom:24px;right:24px;z-index:40;}
-    .kakao-btn{width:48px;height:48px;border-radius:50%;background:#FEE500;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.15);transition:transform 0.15s;}
-    .kakao-btn:hover{transform:scale(1.08);}
 
     /* ─── Transaction View ─── */
     .tx-view{display:none;}
@@ -229,13 +226,57 @@ export function generateInstaPageHTML(): string {
     .tx-period-btn{padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;color:var(--sub);cursor:pointer;font-family:inherit;transition:all 0.15s;}
     .tx-period-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
     .tx-period-btn:hover:not(.active){border-color:var(--navy);color:var(--navy);}
-    .tx-custom-range{display:none;gap:8px;align-items:center;margin-bottom:8px;}
+    .tx-custom-range{display:none;gap:12px;align-items:flex-start;margin-bottom:8px;}
     .tx-custom-range.active{display:flex;}
-    .tx-custom-range select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface);outline:none;}
+    .tx-ym-picker{flex:1;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);}
+    .tx-ym-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(44,74,124,0.04);}
+    .tx-ym-header span{font-size:14px;font-weight:500;color:var(--text);}
+    .tx-ym-nav{width:28px;height:28px;border:none;background:none;cursor:pointer;font-size:14px;color:var(--sub);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+    .tx-ym-nav:hover{background:rgba(44,74,124,0.08);color:var(--navy);}
+    .tx-ym-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px;}
+    .tx-ym-btn{padding:6px 0;border:none;border-radius:6px;background:none;font-size:12px;color:var(--text);cursor:pointer;font-family:inherit;transition:all 0.12s;}
+    .tx-ym-btn:hover:not(.disabled):not(.selected){background:rgba(44,74,124,0.06);}
+    .tx-ym-btn.selected{background:var(--navy);color:#fff;}
+    .tx-ym-btn.disabled{color:var(--border);cursor:default;}
+    .tx-ym-label{text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;}
     .tx-type-pill{font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(44,74,124,0.06);color:var(--sub);display:inline-block;margin-bottom:8px;}
     .tx-query-btn{width:100%;padding:13px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px;}
     .tx-query-btn:hover{background:var(--navy-dark);}
     .tx-query-btn:disabled{background:#9ca3af;cursor:not-allowed;}
+    .tx-rank-ctrl{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+    .tx-rank-ctrl select{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+    .tx-rank-ctrl .cl{font-size:12px;color:var(--muted);}
+    .tx-stat-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+    .tx-stat-pill{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--sub);transition:all 0.12s;font-family:inherit;}
+    .tx-stat-pill.on{background:var(--navy-light);color:var(--navy);border-color:var(--navy-border);}
+    .tx-period-info{font-size:11px;color:var(--muted);margin-bottom:14px;}
+    .tx-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+    @media(max-width:700px){.tx-rank-grid{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:480px){.tx-rank-grid{grid-template-columns:repeat(2,1fr);}}
+    .tx-rank-card{background:var(--surface);border:1px solid rgba(44,74,124,0.08);border-radius:12px;padding:12px;cursor:pointer;transition:all 0.12s;position:relative;}
+    .tx-rank-card:hover{border-color:rgba(44,74,124,0.25);}
+    .tx-rank-card.open{border-color:var(--navy);border-width:1.5px;}
+    .tx-rank-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px;}
+    .tx-rank-num.r1{color:#BA7517;}.tx-rank-num.r2{color:#5F5E5A;}.tx-rank-num.r3{color:#993C1D;}
+    .tx-rank-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px;}
+    .tx-rank-val{font-size:16px;font-weight:600;color:var(--navy);}
+    .tx-rank-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .tx-rank-change{font-size:11px;margin-top:2px;}
+    .tx-rank-change.up{color:#0F6E56;}.tx-rank-change.dn{color:#E24B4A;}
+    .tx-rank-check{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all 0.12s;}
+    .tx-rank-check.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+    .tx-rank-detail{grid-column:1/-1;background:var(--bg);border:1px solid rgba(44,74,124,0.08);border-radius:12px;padding:20px;display:none;}
+    .tx-rank-detail.open{display:block;}
+    .tx-compare-float{position:sticky;bottom:16px;display:none;justify-content:center;padding:8px 0;z-index:10;}
+    .tx-compare-float.show{display:flex;}
+    .tx-compare-btn{padding:10px 24px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .tx-compare-btn:hover{background:var(--navy-dark);}
+    .tx-compare-panel{grid-column:1/-1;background:var(--bg);border:1px solid rgba(44,74,124,0.08);border-radius:12px;padding:20px;margin-bottom:8px;}
+    .tx-compare-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .tx-compare-table th,.tx-compare-table td{padding:8px 10px;border:0.5px solid var(--border);text-align:center;}
+    .tx-compare-table th{background:var(--bg);font-size:11px;font-weight:600;color:var(--sub);}
+    .tx-compare-table th:first-child{width:80px;text-align:left;}
+    .tx-compare-table td:first-child{text-align:left;font-weight:500;color:var(--sub);font-size:11px;}
     .tx-loading{text-align:center;padding:40px 0;color:var(--muted);font-size:13px;}
     .tx-loading .spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
     .tx-empty{text-align:center;padding:48px 0;}
@@ -346,13 +387,54 @@ export function generateInstaPageHTML(): string {
     .tx-report-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;}
     .tx-report-modal.active{display:flex;}
     .tx-report-content{background:#fff;border-radius:14px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;padding:24px;}
-    .tx-report-content h3{font-size:16px;font-weight:600;margin-bottom:16px;}
+    .tx-report-content h3{font-size:16px;font-weight:600;}
     .tx-report-body{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
     .tx-report-actions{display:flex;gap:8px;margin-top:16px;}
     .tx-report-actions button{flex:1;padding:10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .login-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(244,242,237,0.97);display:flex;align-items:center;justify-content:center;z-index:9999;}
+    .login-box{background:#fff;border-radius:16px;padding:40px;max-width:360px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.08);text-align:center;}
+    .login-box h3{font-size:18px;font-weight:600;margin:0 0 8px;color:var(--text);}
+    .login-box p{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5;}
+    .login-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text);transition:background 0.15s;}
+    .login-btn:hover{background:var(--bg);}
+    .login-btn img{width:18px;height:18px;}
+    .login-error{display:none;font-size:12px;color:#E24B4A;margin-top:8px;}
   </style>
 </head>
 <body>
+
+<!-- 로그인 -->
+<div class="login-overlay" id="instaLoginOverlay">
+  <div class="login-box">
+    <h3>BSN Assistant</h3>
+    <p>콘텐츠 생성 및 실거래가 조회를 위해<br>Google 계정으로 로그인하세요.</p>
+    <button class="login-btn" id="instaGoogleBtn" onclick="doInstaLogin()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">Google로 로그인
+    </button>
+    <div class="login-error" id="instaLoginError"></div>
+  </div>
+</div>
+
+<!-- 접근 거부 -->
+<div class="login-overlay" id="instaDeniedOverlay" style="display:none;">
+  <div class="login-box">
+    <div style="font-size:36px;margin-bottom:12px;">&#128683;</div>
+    <h3>접근 권한 없음</h3>
+    <p id="instaDeniedEmail" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
+    <p>등록되지 않은 계정입니다.<br>관리자에게 명단 등록을 요청하세요.</p>
+    <button class="login-btn" onclick="doLogout()" style="margin-top:16px;">다른 계정으로 로그인</button>
+  </div>
+</div>
+
+<!-- 세션 만료 -->
+<div class="login-overlay" id="instaKickedOverlay" style="display:none;">
+  <div class="login-box">
+    <div style="font-size:36px;margin-bottom:12px;">&#128274;</div>
+    <h3>다른 기기에서 로그인됨</h3>
+    <p style="font-size:13px;color:var(--muted);margin-top:8px;">동일 계정으로 다른 곳에서 로그인하여<br>현재 세션이 종료되었습니다.</p>
+    <button class="login-btn" onclick="doLogout()" style="margin-top:16px;">다시 로그인</button>
+  </div>
+</div>
 
 <nav>
   <div class="nav-inner">
@@ -361,12 +443,13 @@ export function generateInstaPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
+      <a href="javascript:void(0)" class="nav-link" id="navTransaction" onclick="location.href='/insta#transaction';location.reload()">실거래가</a>
+      <a href="javascript:void(0)" class="nav-link active" id="navContent" onclick="location.href='/insta';location.reload()">콘텐츠 생성</a>
       <a href="/" class="nav-link">챗봇</a>
-      <a href="javascript:void(0)" class="nav-link active" id="navContent" onclick="showContentView()">콘텐츠 생성</a>
-      <a href="javascript:void(0)" class="nav-link" id="navTransaction" onclick="showTransactionView()">실거래가</a>
       <a href="/admin" class="nav-link">관리자</a>
     </div>
     <div class="nav-spacer"></div>
+    <span id="navUserName" style="font-size:12px;color:#6B6B80;margin-right:8px;"></span>
     <button onclick="doLogout()" class="nav-btn">나가기</button>
   </div>
 </nav>
@@ -383,35 +466,18 @@ export function generateInstaPageHTML(): string {
   </div>
 
   <div class="card">
-    <!-- Mode Toggle -->
-    <div class="mode-toggle">
-      <button class="mode-btn active" data-mode="url" onclick="switchMode('url')">기사 URL</button>
-      <button class="mode-btn" data-mode="text" onclick="switchMode('text')">직접 입력</button>
+    <div class="input-section">
+      <textarea class="text-input" id="textInput" placeholder="무엇이든 입력하세요&#10;&#10;예시:&#10;· 성수동&#10;· 강남역 상권 회복에 대한 콘텐츠 만들어줘&#10;· https://news.example.com/article/... (기사 URL도 가능)"></textarea>
+      <div class="input-guide">텍스트, 키워드, 기사 URL 모두 입력 가능 · URL 입력 시 기사를 자동 추출합니다</div>
     </div>
 
-    <!-- URL Input -->
-    <div id="urlMode" class="input-section">
-      <input type="text" class="url-input" id="urlInput" placeholder="https://news.example.com/article/...">
-      <div class="input-hint">기사 내용을 자동으로 추출하여 분석합니다</div>
-    </div>
-
-    <!-- Text Input -->
-    <div id="textMode" class="input-section" style="display:none;">
-      <textarea class="text-input" id="textInput" placeholder="무엇이든 입력하세요&#10;예시:&#10;· 성수동&#10;· 성수동 임대시세&#10;· 강남역 상권 회복에 대한 콘텐츠 만들어줘&#10;· 땅값 거품론 반박하는 내용으로 써줘"></textarea>
-      <div class="input-guide">단어, 문장, 대화체 모두 인식합니다 · 자동으로 리서치 후 콘텐츠를 생성합니다</div>
-    </div>
-
-    <div class="img-check-row">
-      <input type="checkbox" id="imgCheck">
-      <label for="imgCheck">AI 이미지 생성 포함 <span class="check-hint">(카드뉴스 배경 이미지를 AI가 자동 생성합니다)</span></label>
-    </div>
     <button class="btn-generate" id="generateBtn" onclick="doGenerate()">콘텐츠 생성하기</button>
   </div>
 
   <!-- AI News -->
   <div class="card" style="padding:20px;margin-top:16px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:15px;font-weight:500;color:#1A1A2E;">AI 뉴스 추천</span>
+      <span style="font-size:15px;font-weight:500;color:#1A1A2E;">AI 뉴스 추천 <span id="newsCountBadge" style="font-size:11px;color:#A8A49C;font-weight:400;"></span></span>
       <button onclick="refreshNews()" style="border:none;background:none;color:#2C4A7C;font-size:12px;cursor:pointer;font-family:inherit;">새로고침</button>
     </div>
     <div style="font-size:11px;color:#A8A49C;margin-top:2px;margin-bottom:12px;">학습 데이터 기반으로 빌딩 매매 관련 최신 기사를 추천합니다</div>
@@ -462,7 +528,7 @@ export function generateInstaPageHTML(): string {
   <!-- ── Instagram Panel ── -->
   <div class="channel-panel active" id="panel-insta">
     <div class="card">
-      <div class="section-label">카드뉴스 미리보기</div>
+      <div class="section-label">카드뉴스 미리보기 <button id="btnAiImage" onclick="generateCardImages()" style="font-size:11px;padding:3px 10px;border:1px solid rgba(44,74,124,0.3);border-radius:6px;background:none;color:#2C4A7C;cursor:pointer;font-family:inherit;font-weight:500;display:none;">AI 이미지 생성</button></div>
       <div class="card-preview-wrap">
         <div class="card-preview" id="cardPreview">
           <div class="skeleton" id="cardSkeleton"></div>
@@ -628,103 +694,96 @@ export function generateInstaPageHTML(): string {
 
 <!-- ═══ TRANSACTION VIEW ═══ -->
 <div id="transactionView" class="tx-view">
-  <h1 style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;margin-bottom:4px;">실거래가 조회</h1>
-  <div class="result-subtitle">상업업무용 부동산(집합,지분거래 제외) 실거래 데이터를 조회합니다 - 국토교통부 API</div>
+  <h1 style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;margin-bottom:4px;">실거래가 분석</h1>
+  <div class="result-subtitle">상업업무용 부동산(집합,지분거래 제외) 실거래 데이터 — 국토교통부 API</div>
 
-  <!-- 조회 조건 -->
-  <div class="tx-card" id="txSearchCard">
-    <div class="tx-fav-bar" id="txFavBar"></div>
-
-    <div id="txRegionSelectors">
-      <div class="tx-region-selector" data-idx="0">
-        <div class="tx-select-row">
-          <select class="tx-select" onchange="txOnSidoChange(this,0)"><option value="">시/도 선택</option></select>
-          <select class="tx-select" onchange="txOnSggChange(this,0)" disabled><option value="">시/군/구 선택</option></select>
+  <div class="tx-card" id="txRankingSetup">
+    <div class="tx-rank-ctrl">
+      <span class="cl">지역</span>
+      <select id="txRankSido" onchange="txOnRankSidoChange()">
+        <option value="전국">전국</option>
+      </select>
+      <select id="txRankSgg" onchange="txOnRankSggChange()" style="display:none;">
+        <option value="">전체</option>
+      </select>
+      <span class="cl" style="margin-left:8px;">기간</span>
+      <select id="txRankPeriod" onchange="txOnRankPeriodChange()">
+        <option value="ytd" selected>올해</option>
+        <option value="3">3개월</option>
+        <option value="6">6개월</option>
+        <option value="12">1년</option>
+        <option value="custom">직접 설정</option>
+      </select>
+      <button id="txRankCustomBtn" onclick="txLoadRanking()" style="display:none;padding:7px 16px;border:none;border-radius:8px;background:var(--navy);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">조회</button>
+    </div>
+    <div id="txRankCustomRange" style="display:none;margin-bottom:10px;display:none;gap:12px;align-items:flex-start;">
+      <div style="flex:1;">
+        <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;">시작</div>
+        <div class="tx-ym-picker">
+          <div class="tx-ym-header">
+            <button class="tx-ym-nav" onclick="txRankYmNav('start',-1)">&#9664;</button>
+            <span id="txRankStartYearLabel"></span>
+            <button class="tx-ym-nav" onclick="txRankYmNav('start',1)">&#9654;</button>
+          </div>
+          <div class="tx-ym-grid" id="txRankStartGrid"></div>
         </div>
-        <div class="tx-select-row" style="grid-template-columns:1fr;">
-          <select class="tx-select" onchange="txOnDongChange(this,0)" disabled><option value="">읍/면/동 (전체)</option></select>
+      </div>
+      <span style="font-size:14px;color:var(--muted);margin-top:22px;">~</span>
+      <div style="flex:1;">
+        <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;">종료</div>
+        <div class="tx-ym-picker">
+          <div class="tx-ym-header">
+            <button class="tx-ym-nav" onclick="txRankYmNav('end',-1)">&#9664;</button>
+            <span id="txRankEndYearLabel"></span>
+            <button class="tx-ym-nav" onclick="txRankYmNav('end',1)">&#9654;</button>
+          </div>
+          <div class="tx-ym-grid" id="txRankEndGrid"></div>
         </div>
       </div>
     </div>
-
-    <div class="tx-tag-bar" id="txTagBar"></div>
-
-    <div class="tx-period-row">
-      <button class="tx-period-btn" data-m="1" onclick="txSetPeriod(1,this)">1개월</button>
-      <button class="tx-period-btn" data-m="3" onclick="txSetPeriod(3,this)">3개월</button>
-      <button class="tx-period-btn active" data-m="6" onclick="txSetPeriod(6,this)">6개월</button>
-      <button class="tx-period-btn" data-m="12" onclick="txSetPeriod(12,this)">1년</button>
-      <button class="tx-period-btn" data-m="0" onclick="txSetPeriod(0,this)">직접 설정</button>
+    <div class="tx-stat-pills" id="txStatPills">
+      <span class="tx-stat-pill on" data-sort="totalCount" onclick="txPickStat(this)">거래량</span>
+      <span class="tx-stat-pill" data-sort="avgPrice" onclick="txPickStat(this)">평균 매매가</span>
+      <span class="tx-stat-pill" data-sort="avgPricePerPyeong" onclick="txPickStat(this)">평당 매매가(토지)</span>
+      <span class="tx-stat-pill" data-sort="avgPricePerArea" onclick="txPickStat(this)">평당 매매가(연면적)</span>
     </div>
-    <div class="tx-custom-range" id="txCustomRange">
-      <select class="tx-select" id="txStartMonth" style="flex:1;"></select>
-      <span style="font-size:12px;color:var(--muted);">~</span>
-      <select class="tx-select" id="txEndMonth" style="flex:1;"></select>
-    </div>
-
-    <button class="tx-query-btn" id="txQueryBtn" onclick="txDoQuery()">조회하기</button>
   </div>
 
-  <!-- 결과 영역 -->
-  <div id="txResultArea" style="display:none;">
-    <!-- 로딩 -->
-    <div class="tx-loading" id="txLoading" style="display:none;">
-      <div class="spin"></div>
-      <div>데이터를 조회하고 있습니다...</div>
-    </div>
+  <div class="tx-period-info" id="txRankPeriodInfo"></div>
 
-    <!-- 빈 상태 -->
-    <div class="tx-empty" id="txEmpty" style="display:none;">
-      <div class="tx-empty-icon">&#128202;</div>
-      <div class="tx-empty-text">해당 기간에 상업업무용 부동산(일반건물) 거래 내역이 없습니다</div>
-      <div class="tx-empty-sub">기간을 1년으로 확대하면 더 많은 데이터를 확인할 수 있습니다</div>
-    </div>
+  <div class="tx-loading" id="txRankLoading" style="display:none;">
+    <div class="spin"></div>
+    <div>랭킹 데이터를 불러오고 있습니다...</div>
+  </div>
 
-    <!-- 거래 요약 (지역별) -->
-    <div id="txSummaries"></div>
+  <div class="tx-rank-grid" id="txRankGrid"></div>
 
-    <!-- 비교 테이블 (2개 이상) -->
-    <div id="txCompareArea" style="display:none;"></div>
-
-    <!-- 전체 통계 -->
-    <div id="txAllStatsArea" style="display:none;"></div>
-
-    <!-- 거래 리스트 -->
-    <div id="txListArea" style="display:none;"></div>
-
-    <!-- 하단 버튼 -->
-    <div class="tx-bottom-btns" id="txBottomBtns" style="display:none;">
-      <button class="tx-btn-outline" onclick="txToContent()">이 데이터로 콘텐츠 생성</button>
-      <button class="tx-btn-filled" onclick="txGenerateReport()">리포트 생성하기</button>
-    </div>
+  <div class="tx-compare-float" id="txCompareFloat">
+    <button class="tx-compare-btn" onclick="txShowCompare()">선택 지역 비교 분석</button>
   </div>
 </div>
 
 <!-- 리포트 모달 -->
 <div class="tx-report-modal" id="txReportModal">
   <div class="tx-report-content">
-    <h3>시장 리포트</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="margin:0;">시장 리포트</h3>
+      <button style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:16px;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;" onmouseover="this.style.background='#F7F6F3'" onmouseout="this.style.background='#fff'" onclick="document.getElementById('txReportModal').classList.remove('active')">&#10005;</button>
+    </div>
     <div class="tx-report-body" id="txReportBody"></div>
     <div class="tx-report-actions">
       <button class="tx-btn-outline" onclick="txCopyReport()">복사하기</button>
       <button class="tx-btn-filled" onclick="txReportToContent()">콘텐츠로 변환</button>
     </div>
-    <button style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;" onclick="document.getElementById('txReportModal').classList.remove('active')">&#10005;</button>
   </div>
 </div>
 
 </main>
 
 <!-- Kakao -->
-<div class="kakao-float">
-  <a href="https://pf.kakao.com/_Ugaxcu" target="_blank">
-    <button class="kakao-btn" title="카카오톡 문의">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C6.48 3 2 6.58 2 10.9c0 2.78 1.86 5.21 4.65 6.6-.15.53-.96 3.41-1 3.56 0 0-.02.09.03.13.05.04.11.02.11.02.15-.02 3.48-2.27 4.04-2.65.7.1 1.43.15 2.17.15 5.52 0 10-3.58 10-7.9C22 6.58 17.52 3 12 3z"/></svg>
-    </button>
-  </a>
-</div>
 
 <script>
+(function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
 const CARD_STYLES = {
@@ -1022,6 +1081,8 @@ async function generateCardImages() {
   cardImages = new Array(7).fill(null);
   goToSlide(0);
   var spinner = document.getElementById('cardSpinner');
+  var aiBtn = document.getElementById('btnAiImage');
+  if (aiBtn) { aiBtn.disabled = true; aiBtn.textContent = '이미지 생성 중...'; aiBtn.style.opacity = '0.5'; }
 
   for (var i = 0; i < cardsData.length && i < 7; i++) {
     if (i === 6) continue; // 7장은 고정 디자인, 이미지 생성 스킵
@@ -1047,6 +1108,7 @@ async function generateCardImages() {
   isGeneratingImages = false;
   spinner.classList.remove('active');
   goToSlide(currentSlide);
+  if (aiBtn) { aiBtn.disabled = false; aiBtn.textContent = '재생성하기'; aiBtn.style.opacity = '1'; }
 }
 
 // ─── ZIP 다운로드 ───
@@ -1078,11 +1140,9 @@ async function downloadAllCards() {
   URL.revokeObjectURL(a.href);
 }
 
-// ─── Mode switch ───
+// ─── Mode switch (호환 래퍼) ───
 function switchMode(mode) {
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  document.getElementById('urlMode').style.display = mode === 'url' ? 'block' : 'none';
-  document.getElementById('textMode').style.display = mode === 'text' ? 'block' : 'none';
+  // 통합 입력으로 변경됨 — 호환성 유지용
 }
 
 // ─── Channel switch ───
@@ -1094,10 +1154,13 @@ function switchChannel(ch) {
 // ─── Generate (API 연동) ───
 async function doGenerate() {
   const btn = document.getElementById('generateBtn');
-  const urlMode = document.getElementById('urlMode').style.display !== 'none';
-  const mode = urlMode ? 'url' : 'text';
-  const input = urlMode ? document.getElementById('urlInput').value.trim() : document.getElementById('textInput').value.trim();
+  const input = document.getElementById('textInput').value.trim();
   if (!input) { alert('입력 내용을 확인해 주세요.'); return; }
+
+  // URL 자동 감지
+  const urlMatch = input.match(/https?:\\/\\/[^\\s]+/);
+  const mode = urlMatch ? 'url' : 'text';
+  const sendInput = urlMatch ? urlMatch[0] : input;
 
   btn.disabled = true;
   btn.classList.add('loading');
@@ -1107,7 +1170,7 @@ async function doGenerate() {
     const resp = await fetch('/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, input })
+      body: JSON.stringify({ mode, input: sendInput })
     });
     const data = await resp.json();
 
@@ -1154,10 +1217,9 @@ function bindResults(r) {
   currentSlide = 0;
   goToSlide(0);
 
-  // 체크박스 체크 시에만 이미지 순차 생성
-  if (document.getElementById('imgCheck') && document.getElementById('imgCheck').checked) {
-    generateCardImages();
-  }
+  // AI 이미지 생성 버튼 표시
+  var aiBtn = document.getElementById('btnAiImage');
+  if (aiBtn) { aiBtn.style.display = 'inline-block'; aiBtn.textContent = 'AI 이미지 생성'; }
 
   // Instagram caption
   document.getElementById('instaCaption').value = toDisplayText(r.instagram?.caption);
@@ -1317,12 +1379,15 @@ function toggleHistoryExpand() {
 
 function doLogout() {
   try { firebase.auth().signOut(); } catch(e) {}
+  if (bsnChannel) bsnChannel.postMessage('logout');
   localStorage.removeItem('bsn_user_name');
   localStorage.removeItem('bsn_user_id');
   localStorage.removeItem('bsn_user_role');
   localStorage.removeItem('bsn_user_email');
   localStorage.removeItem('bsn_user_picture');
   localStorage.removeItem('bsn_firebase_token');
+  localStorage.removeItem('bsn_session_id');
+  sessionStorage.removeItem('bsn_session_active');
   location.href = '/';
 }
 
@@ -1736,22 +1801,53 @@ async function loadRecommendNews(force) {
   }
 }
 
+var newsShowCount = 10;
+
 function renderNewsList(articles) {
   var wrap = document.getElementById('newsListWrap');
   if (!articles || !articles.length) {
     wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#A8A49C;font-size:13px;">최근 7일간 관련 기사를 찾지 못했습니다</div>';
     return;
   }
-  wrap.innerHTML = articles.map(function(a, i) {
+  var total = articles.length;
+  var badge = document.getElementById('newsCountBadge');
+  if (badge) badge.textContent = total + '건';
+  var show = Math.min(newsShowCount, total);
+  var html = '';
+  for (var i = 0; i < show; i++) {
+    var a = articles[i];
     var tags = (a.matchedTags || []).map(function(t) { return '<span class="news-tag">' + escHtml(t) + '</span>'; }).join('');
-    return '<div class="news-item">' +
+    html += '<div class="news-item">' +
       '<div class="news-item-left">' +
         '<div class="news-item-title" onclick="window.open(' + "'" + escHtml(a.url) + "'" + ',' + "'" + '_blank' + "'" + ')">' + escHtml(a.title) + '</div>' +
         '<div class="news-item-meta"><span>' + escHtml(a.source) + ' \\u00b7 ' + escHtml(a.date) + '</span>' + tags + '</div>' +
       '</div>' +
       '<button class="btn-news-gen" onclick="generateFromNews(' + "'" + escHtml(a.url) + "'" + ')">생성</button>' +
     '</div>';
-  }).join('');
+  }
+  // 더보기 / 숨기기 버튼
+  if (total > 10) {
+    html += '<div style="display:flex;justify-content:center;gap:12px;padding:10px 0;">';
+    if (show < total) {
+      var remaining = total - show;
+      html += '<button onclick="newsShowMore()" style="border:none;background:none;color:#2C4A7C;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">더보기 (' + remaining + '건)</button>';
+    }
+    if (show > 10) {
+      html += '<button onclick="newsShowLess()" style="border:none;background:none;color:#A8A49C;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">숨기기</button>';
+    }
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function newsShowMore() {
+  newsShowCount += 10;
+  if (newsCache.data) renderNewsList(newsCache.data);
+}
+
+function newsShowLess() {
+  newsShowCount = 10;
+  if (newsCache.data) renderNewsList(newsCache.data);
 }
 
 function refreshNews() {
@@ -1760,8 +1856,8 @@ function refreshNews() {
 }
 
 function generateFromNews(url) {
-  switchMode('url');
-  document.getElementById('urlInput').value = url;
+  window.scrollTo(0, 0);
+  document.getElementById('textInput').value = url;
   doGenerate();
 }
 
@@ -1805,8 +1901,12 @@ function showTransactionView() {
   document.getElementById('transactionView').style.display = 'block';
   document.getElementById('navContent').classList.remove('active');
   document.getElementById('navTransaction').classList.add('active');
-  if (!txRegionData) txLoadRegions();
-  txRenderFavorites();
+  if (!txRegionData) {
+    txLoadRegions().then(function() { txInitRankSelectors(); txLoadRanking(); });
+  } else if (!txRankingLoaded) {
+    txInitRankSelectors();
+    txLoadRanking();
+  }
 }
 
 function hideTransactionView() {
@@ -1833,21 +1933,75 @@ function txInitSelectors() {
   txInitCustomRange();
 }
 
+var txStartYear = 0, txStartMon = 0, txEndYear = 0, txEndMon = 0;
+var txMinYear = 2020;
+
 function txInitCustomRange() {
+  if (!document.getElementById('txStartGrid')) return;
   var now = new Date();
-  var startSel = document.getElementById('txStartMonth');
-  var endSel = document.getElementById('txEndMonth');
-  startSel.innerHTML = ''; endSel.innerHTML = '';
-  for (var i = 24; i >= 0; i--) {
-    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    var ym = d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0');
-    var val = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0');
-    startSel.innerHTML += '<option value="' + val + '">' + ym + '</option>';
-    endSel.innerHTML += '<option value="' + val + '">' + ym + '</option>';
+  txEndYear = now.getFullYear();
+  txEndMon = now.getMonth() + 1;
+  txStartYear = txEndYear;
+  txStartMon = txEndMon - 5;
+  if (txStartMon <= 0) { txStartYear--; txStartMon += 12; }
+  txRenderYmPicker('start');
+  txRenderYmPicker('end');
+}
+
+function txRenderYmPicker(type) {
+  var year = type === 'start' ? txStartYear : txEndYear;
+  var mon = type === 'start' ? txStartMon : txEndMon;
+  var now = new Date();
+  var curY = now.getFullYear();
+  var curM = now.getMonth() + 1;
+  document.getElementById(type === 'start' ? 'txStartYearLabel' : 'txEndYearLabel').textContent = year + '년';
+  var grid = document.getElementById(type === 'start' ? 'txStartGrid' : 'txEndGrid');
+  var html = '';
+  for (var m = 1; m <= 12; m++) {
+    var isFuture = (year > curY) || (year === curY && m > curM);
+    var isTooOld = year < txMinYear;
+    var isSelected = (m === mon);
+    var cls = 'tx-ym-btn';
+    if (isSelected) cls += ' selected';
+    if (isFuture || isTooOld) cls += ' disabled';
+    html += '<button class="' + cls + '"' + (isFuture || isTooOld ? '' : ' onclick="txYmSelect(&quot;' + type + '&quot;,' + m + ')"') + '>' + m + '월</button>';
   }
-  var startD = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  startSel.value = startD.getFullYear() + String(startD.getMonth() + 1).padStart(2, '0');
-  endSel.selectedIndex = endSel.options.length - 1;
+  grid.innerHTML = html;
+}
+
+function txYmNav(type, dir) {
+  if (type === 'start') {
+    txStartYear += dir;
+    if (txStartYear < txMinYear) txStartYear = txMinYear;
+    if (txStartYear > new Date().getFullYear()) txStartYear = new Date().getFullYear();
+  } else {
+    txEndYear += dir;
+    if (txEndYear < txMinYear) txEndYear = txMinYear;
+    if (txEndYear > new Date().getFullYear()) txEndYear = new Date().getFullYear();
+  }
+  txRenderYmPicker(type);
+}
+
+function txYmSelect(type, m) {
+  if (type === 'start') { txStartMon = m; }
+  else { txEndMon = m; }
+  txRenderYmPicker(type);
+}
+
+function txGetCustomStart() {
+  return txStartYear + String(txStartMon).padStart(2, '0');
+}
+
+function txGetCustomEnd() {
+  return txEndYear + String(txEndMon).padStart(2, '0');
+}
+
+function txGetCustomStartText() {
+  return txStartYear + '.' + String(txStartMon).padStart(2, '0');
+}
+
+function txGetCustomEndText() {
+  return txEndYear + '.' + String(txEndMon).padStart(2, '0');
 }
 
 function txOnSidoChange(sel, idx) {
@@ -2026,7 +2180,7 @@ async function txDoQuery() {
   var dong = txSelectedRegions[0].dong || '';
   var url = '/api/transaction/query?regions=' + regions;
   if (txCustomMode) {
-    url += '&startMonth=' + document.getElementById('txStartMonth').value + '&endMonth=' + document.getElementById('txEndMonth').value;
+    url += '&startMonth=' + txGetCustomStart() + '&endMonth=' + txGetCustomEnd();
   } else {
     url += '&months=' + txPeriodMonths;
   }
@@ -2077,20 +2231,35 @@ function txFormatPP(pp) {
 }
 
 function txShade(idx, total) {
-  var dR=26,dG=50,dB=88,lR=198,lG=218,lB=240;
+  var dR=30,dG=58,dB=95,lR=163,lG=203,lB=232;
   var t = total <= 1 ? 0 : idx / (total - 1);
   return 'rgb('+Math.round(dR+(lR-dR)*t)+','+Math.round(dG+(lG-dG)*t)+','+Math.round(dB+(lB-dB)*t)+')';
 }
 
 function txGetPeriodLabel() {
   if (txCustomMode) {
-    var s = document.getElementById('txStartMonth');
-    var e = document.getElementById('txEndMonth');
-    return s.options[s.selectedIndex].text + ' ~ ' + e.options[e.selectedIndex].text;
+    return txGetCustomStartText() + ' ~ ' + txGetCustomEndText();
   }
   var now = new Date();
   var from = new Date(now.getFullYear(), now.getMonth() - txPeriodMonths + 1, 1);
   return from.getFullYear() + '.' + String(from.getMonth() + 1).padStart(2, '0') + ' ~ ' + now.getFullYear() + '.' + String(now.getMonth() + 1).padStart(2, '0');
+}
+
+function txGetPrevPeriodLabel() {
+  var now = new Date();
+  if (txCustomMode) {
+    var sv = txGetCustomStart();
+    var ev = txGetCustomEnd();
+    var sy = parseInt(sv.substring(0,4)), sm = parseInt(sv.substring(4,6)) - 1;
+    var ey = parseInt(ev.substring(0,4)), em = parseInt(ev.substring(4,6)) - 1;
+    var span = (ey - sy) * 12 + (em - sm) + 1;
+    var pf = new Date(sy, sm - span, 1);
+    var pt = new Date(sy, sm - 1, 1);
+    return pf.getFullYear() + '.' + String(pf.getMonth()+1).padStart(2,'0') + '~' + pt.getFullYear() + '.' + String(pt.getMonth()+1).padStart(2,'0');
+  }
+  var pFrom = new Date(now.getFullYear(), now.getMonth() - txPeriodMonths * 2 + 1, 1);
+  var pTo = new Date(now.getFullYear(), now.getMonth() - txPeriodMonths, 1);
+  return pFrom.getFullYear() + '.' + String(pFrom.getMonth()+1).padStart(2,'0') + '~' + pTo.getFullYear() + '.' + String(pTo.getMonth()+1).padStart(2,'0');
 }
 
 // ─── 거래 요약 렌더링 ───
@@ -2266,11 +2435,15 @@ function txRenderSummaries() {
 function txBuildStatItems(s) {
   var chVol = s.prevPeriodChange.volume;
   var chPri = s.prevPeriodChange.price;
+  var chAvg = s.prevPeriodChange.avgPrice || 0;
+  var chArea = s.prevPeriodChange.area || 0;
+  var prevLabel = txGetPrevPeriodLabel();
+  var prevPrefix = '전기(' + prevLabel + ') ';
   return [
-    { key: '거래량', label: '거래량', value: s.totalCount + '건', changeText: chVol !== 0 ? '전기 대비 ' + (chVol > 0 ? '+' : '') + chVol + '%' : '전기 대비 -', changeClass: chVol > 0 ? 'up' : chVol < 0 ? 'down' : 'none' },
-    { key: '평균 매매가', label: '평균 매매가', value: txFormatPrice(s.avgPrice), changeText: '전기 대비 -', changeClass: 'none' },
-    { key: '평당 매매가', label: '평당 매매가 (토지)', value: txFormatPP(s.avgPricePerPyeong) + '만', changeText: chPri !== 0 ? '전기 대비 ' + (chPri > 0 ? '+' : '') + chPri + '%' : '전기 대비 -', changeClass: chPri > 0 ? 'up' : chPri < 0 ? 'down' : 'none' },
-    { key: '연면적 평당가', label: '연면적 평당가', value: txFormatPP(s.avgPricePerArea) + '만', changeText: '전기 대비 -', changeClass: 'none' },
+    { key: '거래량', label: '거래량', value: s.totalCount + '건', changeText: chVol !== 0 ? prevPrefix + (chVol > 0 ? '+' : '') + chVol + '%' : prevPrefix + '-', changeClass: chVol > 0 ? 'up' : chVol < 0 ? 'down' : 'none' },
+    { key: '평균 매매가', label: '평균 매매가', value: txFormatPrice(s.avgPrice), changeText: chAvg !== 0 ? prevPrefix + (chAvg > 0 ? '+' : '') + chAvg + '%' : prevPrefix + '-', changeClass: chAvg > 0 ? 'up' : chAvg < 0 ? 'down' : 'none' },
+    { key: '평당 매매가', label: '평당 매매가 (토지)', value: txFormatPP(s.avgPricePerPyeong) + '만', changeText: chPri !== 0 ? prevPrefix + (chPri > 0 ? '+' : '') + chPri + '%' : prevPrefix + '-', changeClass: chPri > 0 ? 'up' : chPri < 0 ? 'down' : 'none' },
+    { key: '연면적 평당가', label: '연면적 평당가', value: txFormatPP(s.avgPricePerArea) + '만', changeText: chArea !== 0 ? prevPrefix + (chArea > 0 ? '+' : '') + chArea + '%' : prevPrefix + '-', changeClass: chArea > 0 ? 'up' : chArea < 0 ? 'down' : 'none' },
     { key: '법인 매수 비율', label: '법인 매수 비율', value: s.buyer.corp.ratio + '%', changeText: s.buyer.corp.count + '건', changeClass: 'none' },
     { key: '법인 매도 비율', label: '법인 매도 비율', value: s.seller.corp.ratio + '%', changeText: s.seller.corp.count + '건', changeClass: 'none' },
     { key: '동별 거래량', label: '동별 거래량', value: Object.keys(s.byDong).length + '개 동', changeText: Object.entries(s.byDong).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,2).map(function(e){return e[0]+' '+e[1].count+'건';}).join(', '), changeClass: 'none' },
@@ -2312,7 +2485,7 @@ function txRenderCompare() {
     { label: '거래건수', fn: function(s) { return s.totalCount + '건'; }},
     { label: '평균 매매가', fn: function(s) { return txFormatPrice(s.avgPrice); }},
     { label: '평당 매매가', fn: function(s) { return txFormatPP(s.avgPricePerPyeong) + '만'; }},
-    { label: '전기 대비', fn: function(s) { var v = s.prevPeriodChange.price; return v > 0 ? '<span style="color:#1D9E75">+' + v + '%</span>' : v < 0 ? '<span style="color:#E24B4A">' + v + '%</span>' : '-'; }},
+    { label: '전기 대비<br><span style="font-size:9px;font-weight:400;color:var(--muted);">' + txGetPrevPeriodLabel() + '</span>', fn: function(s) { var v = s.prevPeriodChange.price; return v > 0 ? '<span style="color:#1D9E75">+' + v + '%</span>' : v < 0 ? '<span style="color:#E24B4A">' + v + '%</span>' : '-'; }},
     { label: '법인 매수', fn: function(s) { return s.buyer.corp.ratio + '% <span style="font-size:10px;color:var(--muted)">(' + s.buyer.corp.count + '건)</span>'; }},
     { label: '법인 매도', fn: function(s) { return s.seller.corp.ratio + '% <span style="font-size:10px;color:var(--muted)">(' + s.seller.corp.count + '건)</span>'; }}
   ];
@@ -2536,12 +2709,783 @@ function txReportToContent() {
   doGenerate();
 }
 
+// ─── Auth ───
+var bsnChannel = null;
+try { bsnChannel = new BroadcastChannel('bsn_auth'); } catch(e) {}
+
+if (bsnChannel) {
+  bsnChannel.onmessage = function(e) {
+    if (e.data === 'ping' && sessionStorage.getItem('bsn_session_active')) {
+      bsnChannel.postMessage('pong');
+    }
+    if (e.data === 'logout') {
+      localStorage.removeItem('bsn_user_name');
+      localStorage.removeItem('bsn_user_id');
+      localStorage.removeItem('bsn_user_role');
+      localStorage.removeItem('bsn_user_email');
+      localStorage.removeItem('bsn_user_picture');
+      localStorage.removeItem('bsn_firebase_token');
+      localStorage.removeItem('bsn_session_id');
+      sessionStorage.removeItem('bsn_session_active');
+      location.href = '/';
+    }
+    if (e.data === 'kicked') {
+      sessionStorage.removeItem('bsn_session_active');
+      document.getElementById('instaKickedOverlay').style.display = 'flex';
+    }
+  };
+}
+
+function checkBrowserSession() {
+  return new Promise(function(resolve) {
+    if (sessionStorage.getItem('bsn_session_active')) {
+      resolve(true);
+      return;
+    }
+    if (!bsnChannel) { resolve(false); return; }
+    var answered = false;
+    function handler(e) {
+      if (e.data === 'pong' && !answered) {
+        answered = true;
+        sessionStorage.setItem('bsn_session_active', 'true');
+        resolve(true);
+      }
+    }
+    bsnChannel.addEventListener('message', handler);
+    bsnChannel.postMessage('ping');
+    setTimeout(function() {
+      bsnChannel.removeEventListener('message', handler);
+      if (!answered) resolve(false);
+    }, 500);
+  });
+}
+
+async function initInstaAuth() {
+  var hasLocal = localStorage.getItem('bsn_user_name') && localStorage.getItem('bsn_user_id');
+
+  if (!hasLocal) {
+    document.getElementById('instaLoginOverlay').style.display = 'flex';
+    return false;
+  }
+
+  var alive = await checkBrowserSession();
+  if (!alive) {
+    localStorage.removeItem('bsn_user_name');
+    localStorage.removeItem('bsn_user_id');
+    localStorage.removeItem('bsn_user_role');
+    localStorage.removeItem('bsn_user_email');
+    localStorage.removeItem('bsn_user_picture');
+    localStorage.removeItem('bsn_firebase_token');
+    localStorage.removeItem('bsn_session_id');
+    document.getElementById('instaLoginOverlay').style.display = 'flex';
+    return false;
+  }
+
+  try {
+    var email = localStorage.getItem('bsn_user_email');
+    var sid = localStorage.getItem('bsn_session_id');
+    if (email && sid) {
+      var sRes = await fetch('/api/auth/check-session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email,sessionId:sid}) });
+      if (!sRes.ok) {
+        var sData = await sRes.json();
+        if (sData.kicked) {
+          sessionStorage.removeItem('bsn_session_active');
+          if (bsnChannel) bsnChannel.postMessage('kicked');
+          document.getElementById('instaKickedOverlay').style.display = 'flex';
+          return false;
+        }
+        doLogout();
+        return false;
+      }
+    }
+  } catch(e) {}
+
+  document.getElementById('instaLoginOverlay').style.display = 'none';
+  return true;
+}
+
+async function doInstaLogin() {
+  var errEl = document.getElementById('instaLoginError');
+  errEl.style.display = 'none';
+  var btn = document.getElementById('instaGoogleBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
+  try {
+    var configRes = await fetch('/api/auth/config');
+    var config = await configRes.json();
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    var auth = firebase.auth();
+    var provider = new firebase.auth.GoogleAuthProvider();
+    var result = await auth.signInWithPopup(provider);
+    var idToken = await result.user.getIdToken();
+
+    var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:idToken}) });
+    var data = await res.json();
+
+    if (!res.ok || !data.user) {
+      document.getElementById('instaLoginOverlay').style.display = 'none';
+      document.getElementById('instaDeniedEmail').textContent = data.email || result.user.email || '';
+      document.getElementById('instaDeniedOverlay').style.display = 'flex';
+      btn.disabled = false; btn.textContent = 'Google로 로그인';
+      return;
+    }
+
+    localStorage.setItem('bsn_user_name', data.user.name || result.user.displayName || '');
+    localStorage.setItem('bsn_user_id', data.user.uid);
+    localStorage.setItem('bsn_user_role', data.user.role);
+    localStorage.setItem('bsn_user_email', data.user.email);
+    localStorage.setItem('bsn_user_picture', data.user.picture || '');
+    localStorage.setItem('bsn_firebase_token', idToken);
+    localStorage.setItem('bsn_session_id', data.user.sessionId || '');
+    sessionStorage.setItem('bsn_session_active', 'true');
+
+    document.getElementById('instaLoginOverlay').style.display = 'none';
+    initCardNav();
+    renderHistoryList();
+    updateStudyBadge();
+    loadRecommendNews(false);
+    if (window.location.hash === '#transaction') showTransactionView();
+  } catch(e) {
+    errEl.textContent = '로그인 중 오류가 발생했습니다';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Google로 로그인';
+  }
+}
+
+// ─── 랭킹 시스템 ───
+var txRankingData = null;
+var txRankingLoaded = false;
+var txRankSortBy = 'totalCount';
+var txRankChecked = [];
+var txRankOpenId = null;
+var txDetailShowAll = false;
+
+function txInitRankSelectors() {
+  if (!txRegionData) return;
+  var sidoSel = document.getElementById('txRankSido');
+  sidoSel.innerHTML = '<option value="전국">전국</option>';
+  Object.keys(txRegionData).forEach(function(sido) {
+    sidoSel.innerHTML += '<option value="' + sido + '"' + (sido === '서울특별시' ? ' selected' : '') + '>' + sido + '</option>';
+  });
+  txOnRankSidoChange();
+}
+
+function txOnRankSidoChange() {
+  var sido = document.getElementById('txRankSido').value;
+  var sggSel = document.getElementById('txRankSgg');
+  if (sido === '전국' || !txRegionData || !txRegionData[sido]) {
+    sggSel.style.display = 'none';
+  } else {
+    sggSel.style.display = '';
+    sggSel.innerHTML = '<option value="">전체</option>';
+    Object.keys(txRegionData[sido]).forEach(function(sgg) {
+      sggSel.innerHTML += '<option value="' + sgg + '">' + sgg + '</option>';
+    });
+  }
+  txLoadRanking();
+}
+
+function txOnRankSggChange() {
+  txLoadRanking();
+}
+
+function txPickStat(el) {
+  document.querySelectorAll('.tx-stat-pill').forEach(function(p) { p.classList.remove('on'); });
+  el.classList.add('on');
+  txRankSortBy = el.dataset.sort;
+  txLoadRanking();
+}
+
+var txRankStartYear = 0, txRankStartMon = 0, txRankEndYear = 0, txRankEndMon = 0;
+var txRankCustomMode = false;
+
+function txOnRankPeriodChange() {
+  var val = document.getElementById('txRankPeriod').value;
+  var customEl = document.getElementById('txRankCustomRange');
+  var customBtn = document.getElementById('txRankCustomBtn');
+  if (val === 'custom') {
+    txRankCustomMode = true;
+    customEl.style.display = 'flex';
+    customBtn.style.display = '';
+    if (!txRankStartYear) txRankInitCustom();
+    txRankRenderPicker('start');
+    txRankRenderPicker('end');
+  } else {
+    txRankCustomMode = false;
+    customEl.style.display = 'none';
+    customBtn.style.display = 'none';
+    txLoadRanking();
+  }
+}
+
+function txRankInitCustom() {
+  var now = new Date();
+  txRankEndYear = now.getFullYear();
+  txRankEndMon = now.getMonth() + 1;
+  txRankStartYear = txRankEndYear;
+  txRankStartMon = txRankEndMon - 5;
+  if (txRankStartMon <= 0) { txRankStartYear--; txRankStartMon += 12; }
+}
+
+function txRankRenderPicker(type) {
+  var year = type === 'start' ? txRankStartYear : txRankEndYear;
+  var mon = type === 'start' ? txRankStartMon : txRankEndMon;
+  var now = new Date();
+  var curY = now.getFullYear();
+  var curM = now.getMonth() + 1;
+  document.getElementById(type === 'start' ? 'txRankStartYearLabel' : 'txRankEndYearLabel').textContent = year + '년';
+  var grid = document.getElementById(type === 'start' ? 'txRankStartGrid' : 'txRankEndGrid');
+  var html = '';
+  for (var m = 1; m <= 12; m++) {
+    var isFuture = (year > curY) || (year === curY && m > curM);
+    var isSelected = (m === mon);
+    var cls = 'tx-ym-btn';
+    if (isSelected) cls += ' selected';
+    if (isFuture) cls += ' disabled';
+    html += '<button class="' + cls + '"' + (isFuture ? '' : ' onclick="txRankYmSelect(\\'' + type + '\\',' + m + ')"') + '>' + m + '월</button>';
+  }
+  grid.innerHTML = html;
+}
+
+function txRankYmNav(type, dir) {
+  var maxY = new Date().getFullYear();
+  if (type === 'start') {
+    txRankStartYear += dir;
+    if (txRankStartYear < 2020) txRankStartYear = 2020;
+    if (txRankStartYear > maxY) txRankStartYear = maxY;
+  } else {
+    txRankEndYear += dir;
+    if (txRankEndYear < 2020) txRankEndYear = 2020;
+    if (txRankEndYear > maxY) txRankEndYear = maxY;
+  }
+  txRankRenderPicker(type);
+}
+
+function txRankYmSelect(type, m) {
+  if (type === 'start') txRankStartMon = m;
+  else txRankEndMon = m;
+  txRankRenderPicker(type);
+}
+
+async function txLoadRanking() {
+  var sido = document.getElementById('txRankSido').value;
+  var sgg = document.getElementById('txRankSgg').value;
+  var months = document.getElementById('txRankPeriod').value;
+  var loading = document.getElementById('txRankLoading');
+  var grid = document.getElementById('txRankGrid');
+
+  loading.style.display = 'block';
+  grid.innerHTML = '';
+  txRankChecked = [];
+  txRankOpenId = null;
+  txUpdateCompareFloat();
+
+  try {
+    var url = '/api/transaction/ranking?sido=' + encodeURIComponent(sido) + '&sortBy=' + txRankSortBy;
+    if (txRankCustomMode) {
+      url += '&startMonth=' + txRankStartYear + String(txRankStartMon).padStart(2,'0');
+      url += '&endMonth=' + txRankEndYear + String(txRankEndMon).padStart(2,'0');
+    } else if (months === 'ytd') {
+      var now = new Date();
+      url += '&startMonth=' + now.getFullYear() + '01';
+      url += '&endMonth=' + now.getFullYear() + String(now.getMonth() + 1).padStart(2,'0');
+    } else {
+      url += '&months=' + months;
+    }
+    if (sgg) url += '&sgg=' + encodeURIComponent(sgg);
+    var resp = await fetch(url);
+    var data = await resp.json();
+    txRankingData = data;
+    txRankingLoaded = true;
+    loading.style.display = 'none';
+
+    var pStart = data.period ? [data.period.start, data.period.end].sort()[0] : '';
+    var pEnd = data.period ? [data.period.start, data.period.end].sort()[1] : '';
+    var pvStart = data.prevPeriod ? [data.prevPeriod.start, data.prevPeriod.end].sort()[0] : '';
+    var pvEnd = data.prevPeriod ? [data.prevPeriod.start, data.prevPeriod.end].sort()[1] : '';
+    var periodLabel = pStart ? pStart.substring(0,4) + '.' + pStart.substring(4) + ' ~ ' + pEnd.substring(0,4) + '.' + pEnd.substring(4) : '';
+    var prevLabel = pvStart ? pvStart.substring(0,4) + '.' + pvStart.substring(4) + ' ~ ' + pvEnd.substring(0,4) + '.' + pvEnd.substring(4) : '';
+    document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
+
+    txRenderRankingGrid();
+  } catch(e) {
+    loading.style.display = 'none';
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">랭킹 데이터를 불러오지 못했습니다.</div>';
+  }
+}
+
+function txGetRankMainValue(stats) {
+  if (txRankSortBy === 'avgPrice') return txFormatPrice(stats.avgPrice);
+  if (txRankSortBy === 'avgPricePerPyeong') return txFormatPP(stats.avgPricePerPyeong) + '만/평';
+  if (txRankSortBy === 'avgPricePerArea') return txFormatPP(stats.avgPricePerArea) + '만/평';
+  return stats.totalCount + '건';
+}
+
+function txGetRankSubValue(stats) {
+  if (txRankSortBy === 'totalCount') return '평당 ' + txFormatPP(stats.avgPricePerPyeong) + '만';
+  if (txRankSortBy === 'avgPrice') return stats.totalCount + '건 거래';
+  if (txRankSortBy === 'avgPricePerPyeong') return stats.totalCount + '건 거래';
+  return stats.totalCount + '건 거래';
+}
+
+function txGetRankChange(stats) {
+  if (!stats.prevPeriodChange.hasPrev) return { text: '전년 데이터 없음', cls: '' };
+  var ch;
+  if (txRankSortBy === 'avgPrice') ch = stats.prevPeriodChange.avgPrice;
+  else if (txRankSortBy === 'avgPricePerPyeong') ch = stats.prevPeriodChange.price;
+  else if (txRankSortBy === 'avgPricePerArea') ch = stats.prevPeriodChange.area;
+  else ch = stats.prevPeriodChange.volume;
+  if (ch === undefined) return { text: '전년대비 -', cls: '' };
+  if (ch === 0) return { text: '전년대비 0%', cls: '' };
+  return { text: '전년대비 ' + (ch > 0 ? '+' : '') + ch + '%', cls: ch > 0 ? 'up' : 'dn' };
+}
+
+function txRenderRankingGrid() {
+  if (!txRankingData || !txRankingData.ranking) return;
+  var grid = document.getElementById('txRankGrid');
+  var ranking = txRankingData.ranking;
+
+  // 현재 열 수 계산 (CSS 미디어 쿼리와 동일한 기준)
+  var cols = 5;
+  var vw = window.innerWidth;
+  if (vw <= 480) cols = 2;
+  else if (vw <= 700) cols = 3;
+
+  // 열린 카드가 속한 행 계산
+  var openRow = txRankOpenId !== null ? Math.floor(txRankOpenId / cols) : -1;
+
+  var html = '';
+  ranking.forEach(function(item, idx) {
+    var rankNum = idx + 1;
+    var rankCls = rankNum === 1 ? 'r1' : rankNum === 2 ? 'r2' : rankNum === 3 ? 'r3' : '';
+    var mainVal = txGetRankMainValue(item.stats);
+    var subVal = txGetRankSubValue(item.stats);
+    var change = txGetRankChange(item.stats);
+    var isChecked = txRankChecked.indexOf(idx) >= 0;
+    var isOpen = txRankOpenId === idx;
+
+    html += '<div class="tx-rank-card' + (isOpen ? ' open' : '') + '" data-idx="' + idx + '" onclick="txOnRankCardClick(' + idx + ')">';
+    html += '<div class="tx-rank-check' + (isChecked ? ' on' : '') + '" onclick="txOnRankCheck(event,' + idx + ');">' + (isChecked ? '&#10003;' : '') + '</div>';
+    html += '<div class="tx-rank-num ' + rankCls + '">' + rankNum + '위</div>';
+    html += '<div class="tx-rank-name">' + escHtml(item.name) + '</div>';
+    html += '<div class="tx-rank-val">' + mainVal + '</div>';
+    html += '<div class="tx-rank-sub">' + subVal + '</div>';
+    html += '<div class="tx-rank-change ' + change.cls + '">' + change.text + '</div>';
+    html += '</div>';
+
+    // 행의 마지막 카드이거나 전체 마지막 카드일 때 상세 패널 삽입
+    var currentRow = Math.floor(idx / cols);
+    var isRowEnd = (idx + 1) % cols === 0 || idx === ranking.length - 1;
+    if (isRowEnd && currentRow === openRow) {
+      html += '<div class="tx-rank-detail open" id="txRankDetail_' + txRankOpenId + '">';
+      html += '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">상세 분석 로딩 중...</div>';
+      html += '</div>';
+    }
+  });
+
+  grid.innerHTML = html;
+
+  if (txRankOpenId !== null) {
+    txRenderDetailPanel(txRankOpenId);
+  }
+}
+
+function txOnRankCardClick(idx) {
+  if (txRankOpenId === idx) {
+    txRankOpenId = null;
+  } else {
+    txRankOpenId = idx;
+    txDetailShowAll = false;
+  }
+  txRenderRankingGrid();
+}
+
+function txOnRankCheck(e, idx) {
+  e.stopPropagation();
+  var pos = txRankChecked.indexOf(idx);
+  if (pos >= 0) {
+    txRankChecked.splice(pos, 1);
+  } else {
+    if (txRankChecked.length >= 5) { alert('최대 5개까지 비교할 수 있습니다'); return; }
+    txRankChecked.push(idx);
+  }
+  txRenderRankingGrid();
+  txUpdateCompareFloat();
+}
+
+function txUpdateCompareFloat() {
+  var el = document.getElementById('txCompareFloat');
+  if (txRankChecked.length >= 2) {
+    el.classList.add('show');
+    document.querySelector('.tx-compare-btn').textContent = txRankChecked.length + '개 지역 비교 분석';
+  } else {
+    el.classList.remove('show');
+  }
+}
+
+function txRenderDetailPanel(idx) {
+  var panel = document.getElementById('txRankDetail_' + idx);
+  if (!panel || !txRankingData) return;
+  var item = txRankingData.ranking[idx];
+  if (!item || !item.stats) { panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">데이터 없음</div>'; return; }
+  var s = item.stats;
+  var html = '';
+
+  // 헤더
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+  html += '<div style="font-size:15px;font-weight:600;color:var(--text);">' + escHtml(item.name) + ' 상세 분석</div>';
+  html += '<button onclick="event.stopPropagation();txRankOpenId=null;txRenderRankingGrid();" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--sub);padding:4px 8px;border-radius:6px;" onmouseover="this.style.background=\\'rgba(0,0,0,.05)\\'" onmouseout="this.style.background=\\'none\\'">&#10005;</button>';
+  html += '</div>';
+
+  // 핵심 통계 4개
+  var chVol = s.prevPeriodChange.volume || 0;
+  var chAvg = s.prevPeriodChange.avgPrice || 0;
+  var chPP = s.prevPeriodChange.price || 0;
+  var chArea = s.prevPeriodChange.area || 0;
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">';
+  var hasPrev = s.prevPeriodChange.hasPrev;
+  html += txDetailStatBox('거래량', s.totalCount + '건', chVol, hasPrev);
+  html += txDetailStatBox('평균 매매가', txFormatPrice(s.avgPrice), chAvg, hasPrev);
+  html += txDetailStatBox('평당 매매가(토지)', txFormatPP(s.avgPricePerPyeong) + '만', chPP, hasPrev);
+  html += txDetailStatBox('평당 매매가(연면적)', txFormatPP(s.avgPricePerArea) + '만', chArea, hasPrev);
+  html += '</div>';
+
+  // ─── ROW 1: 매수/매도 비율 | 건물용도별 + 용도지역별 ───
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+
+  // 좌: 매수/매도
+  html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">매수/매도 비율</div>';
+  var buyTotal = s.buyer.corp.count + s.buyer.personal.count;
+  var selTotal = s.seller.corp.count + s.seller.personal.count;
+  if (buyTotal > 0) {
+    var bcp = Math.round(s.buyer.corp.count/buyTotal*100); var bpp = 100-bcp;
+    var bC0 = txShade(0,2); var bC1 = txShade(1,2);
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="width:28px;text-align:right;font-size:12px;font-weight:500;color:var(--text);">매수</span>';
+    html += '<div style="flex:1;height:24px;border-radius:4px;display:flex;overflow:hidden;">';
+    html += '<div style="width:'+bcp+'%;background:'+bC0+';position:relative;"><span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+bcp+'%</span></div>';
+    html += '<div style="width:'+bpp+'%;background:'+bC1+';position:relative;"><span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+bpp+'%</span></div>';
+    html += '</div></div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:10px;"><span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+bC0+';"></span>법인 '+bcp+'% <span style="color:var(--sub);font-size:11px;">('+s.buyer.corp.count+'건)</span></span>';
+    html += '<span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+bC1+';"></span>개인 '+bpp+'% <span style="color:var(--sub);font-size:11px;">('+s.buyer.personal.count+'건)</span></span></div>';
+  }
+  if (selTotal > 0) {
+    var scp = Math.round(s.seller.corp.count/selTotal*100); var spp2 = 100-scp;
+    var sC0 = txShade(0,2); var sC1 = txShade(1,2);
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="width:28px;text-align:right;font-size:12px;font-weight:500;color:var(--text);">매도</span>';
+    html += '<div style="flex:1;height:24px;border-radius:4px;display:flex;overflow:hidden;">';
+    html += '<div style="width:'+scp+'%;background:'+sC0+';position:relative;"><span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+scp+'%</span></div>';
+    html += '<div style="width:'+spp2+'%;background:'+sC1+';position:relative;"><span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+spp2+'%</span></div>';
+    html += '</div></div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;"><span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+sC0+';"></span>법인 '+scp+'% <span style="color:var(--sub);font-size:11px;">('+s.seller.corp.count+'건)</span></span>';
+    html += '<span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+sC1+';"></span>개인 '+spp2+'% <span style="color:var(--sub);font-size:11px;">('+s.seller.personal.count+'건)</span></span></div>';
+  }
+  html += '</div>';
+
+  // 우: 건물용도별 + 용도지역별
+  html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+  var TX_USE_SHOW = ['제1종근린생활','제2종근린생활','업무','숙박','교육연구','의료'];
+  var useAll = Object.entries(s.byUse).sort(function(a,b){return b[1]-a[1];});
+  var useShown = []; var useOtherSum = 0;
+  for (var _u=0;_u<useAll.length;_u++) { if (TX_USE_SHOW.indexOf(useAll[_u][0])>=0) useShown.push([useAll[_u][0],useAll[_u][1]]); else useOtherSum+=useAll[_u][1]; }
+  if (useOtherSum>0) useShown.push(['기타',useOtherSum]);
+  useShown.sort(function(a,b){return b[1]-a[1];});
+  if (useShown.length && s.totalCount>0) {
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">건물용도별</div>';
+    html += '<div style="height:24px;border-radius:4px;display:flex;overflow:hidden;margin-bottom:6px;">';
+    for (var ui=0;ui<useShown.length;ui++) { var upct=useShown[ui][1]/s.totalCount*100; html+='<div style="width:'+upct+'%;background:'+txShade(ui,useShown.length)+';position:relative;">'; if(upct>=8) html+='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+Math.round(upct)+'%</span>'; html+='</div>'; }
+    html += '</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:12px;">';
+    for (var ul=0;ul<useShown.length;ul++) { html+='<span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+txShade(ul,useShown.length)+';"></span>'+useShown[ul][0]+' '+Math.round(useShown[ul][1]/s.totalCount*100)+'%</span>'; }
+    html += '</div>';
+  }
+  var TX_LAND_SHOW = ['제1종전용주거','제1종일반주거','제2종일반주거','제3종일반주거','준주거','중심상업','일반상업','준공업'];
+  var landAll = Object.entries(s.byLandUse).sort(function(a,b){return b[1]-a[1];});
+  var landShown = []; var landOtherSum = 0;
+  for (var _l=0;_l<landAll.length;_l++) { if (TX_LAND_SHOW.indexOf(landAll[_l][0])>=0) landShown.push([landAll[_l][0],landAll[_l][1]]); else landOtherSum+=landAll[_l][1]; }
+  if (landOtherSum>0) landShown.push(['기타',landOtherSum]);
+  landShown.sort(function(a,b){return b[1]-a[1];});
+  if (landShown.length && s.totalCount>0) {
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">용도지역별</div>';
+    html += '<div style="height:24px;border-radius:4px;display:flex;overflow:hidden;margin-bottom:6px;">';
+    for (var li=0;li<landShown.length;li++) { var lpct=landShown[li][1]/s.totalCount*100; html+='<div style="width:'+lpct+'%;background:'+txShade(li,landShown.length)+';position:relative;">'; if(lpct>=8) html+='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:500;color:#fff;">'+Math.round(lpct)+'%</span>'; html+='</div>'; }
+    html += '</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px;">';
+    for (var ll=0;ll<landShown.length;ll++) { html+='<span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--text);"><span style="width:8px;height:8px;border-radius:2px;background:'+txShade(ll,landShown.length)+';"></span>'+landShown[ll][0]+' '+Math.round(landShown[ll][1]/s.totalCount*100)+'%</span>'; }
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '</div>';
+
+  // ─── ROW 2: 동별 거래량 | 동별 평당가 ───
+  var dongEntries = Object.entries(s.byDong).sort(function(a,b){return b[1].count-a[1].count;});
+  var dongPriceEntries = Object.entries(s.byDong).filter(function(e){return e[1].ppCount>0;}).map(function(e){return [e[0],Math.round(e[1].totalPP/e[1].ppCount)];}).sort(function(a,b){return b[1]-a[1];});
+  if (dongEntries.length || dongPriceEntries.length) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+    if (dongEntries.length) {
+      var dongMax = dongEntries[0][1].count;
+      html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">동별 거래량 <span style="font-weight:400;font-size:11px;color:var(--sub);">'+dongEntries.length+'개 동</span></div>';
+      dongEntries.forEach(function(e,i) {
+        var pct = s.totalCount>0 ? Math.round(e[1].count/s.totalCount*100) : 0;
+        var barW = dongMax>0 ? Math.round(e[1].count/dongMax*100) : 0;
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+        html += '<span style="width:48px;text-align:right;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+e[0]+'</span>';
+        html += '<div style="flex:1;height:18px;background:rgba(30,58,95,0.06);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+barW+'%;background:'+txShade(i,dongEntries.length)+';border-radius:4px;min-width:2px;"></div></div>';
+        html += '<span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;min-width:60px;">'+pct+'% ('+e[1].count+'건)</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    if (dongPriceEntries.length) {
+      var dongPMax = dongPriceEntries[0][1];
+      html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">동별 평균 평당가 <span style="font-weight:400;font-size:11px;color:var(--sub);">'+dongPriceEntries.length+'개 동</span></div>';
+      dongPriceEntries.forEach(function(e,i) {
+        var barW = dongPMax>0 ? Math.round(e[1]/dongPMax*100) : 0;
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+        html += '<span style="width:48px;text-align:right;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+e[0]+'</span>';
+        html += '<div style="flex:1;height:18px;background:rgba(30,58,95,0.06);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+barW+'%;background:'+txShade(i,dongPriceEntries.length)+';border-radius:4px;min-width:2px;"></div></div>';
+        html += '<span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;min-width:60px;">'+txFormatPP(e[1])+'만/평</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ─── ROW 3: 건축연도별 | 최고/최저 평당가 ───
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+  var yearEntries = Object.entries(s.byBuildYear).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];});
+  html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">건축연도별</div>';
+  if (yearEntries.length) {
+    var yearMax = yearEntries[0][1];
+    yearEntries.forEach(function(e,i) {
+      var pct = s.totalCount>0 ? Math.round(e[1]/s.totalCount*100) : 0;
+      var barW = yearMax>0 ? Math.max(Math.round(e[1]/yearMax*100), 25) : 25;
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+      html += '<div style="flex:1;height:22px;background:rgba(30,58,95,0.06);border-radius:4px;overflow:hidden;position:relative;"><div style="height:100%;width:'+barW+'%;background:'+txShade(i,yearEntries.length)+';border-radius:4px;min-width:2px;display:flex;align-items:center;padding-left:8px;"><span style="font-size:11px;font-weight:500;color:#fff;white-space:nowrap;">'+e[0]+'</span></div></div>';
+      html += '<span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;min-width:60px;">'+pct+'% ('+e[1]+'건)</span>';
+      html += '</div>';
+    });
+  } else { html += '<div style="font-size:12px;color:var(--sub);">데이터 없음</div>'; }
+  html += '</div>';
+
+  html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">평당가 최고/최저</div>';
+  if (s.highest) {
+    html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">';
+    html += '<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(30,58,95,0.08);color:#1E3A5F;flex-shrink:0;">최고</span>';
+    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.highest.pricePerPyeong)+'만/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.highest.deal_amount)+'</span></div>';
+    html += '<div style="font-size:11px;color:var(--sub);">'+escHtml((s.highest.umd_nm||'')+' '+(s.highest.jibun||''))+' · '+escHtml(s.highest.land_use||'')+'</div>';
+    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.highest.plottage_ar||0)+'\u33A1 · 연면적 '+(s.highest.building_ar||0)+'\u33A1 · '+(s.highest.build_year||'')+'년</div></div></div>';
+  }
+  if (s.lowest) {
+    html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;">';
+    html += '<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(226,75,74,0.08);color:#C02020;flex-shrink:0;">최저</span>';
+    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.lowest.pricePerPyeong)+'만/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.lowest.deal_amount)+'</span></div>';
+    html += '<div style="font-size:11px;color:var(--sub);">'+escHtml((s.lowest.umd_nm||'')+' '+(s.lowest.jibun||''))+' · '+escHtml(s.lowest.land_use||'')+'</div>';
+    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.lowest.plottage_ar||0)+'\u33A1 · 연면적 '+(s.lowest.building_ar||0)+'\u33A1 · '+(s.lowest.build_year||'')+'년</div></div></div>';
+  }
+  if (!s.highest && !s.lowest) html += '<div style="font-size:12px;color:var(--sub);">데이터 없음</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // ─── 거래 리스트 ───
+  if (item.transactions && item.transactions.length > 0) {
+    var txs = item.transactions.slice().sort(function(a,b){
+      var da=(a.deal_year||'')+String(a.deal_month||'').padStart(2,'0')+String(a.deal_day||'').padStart(2,'0');
+      var db=(b.deal_year||'')+String(b.deal_month||'').padStart(2,'0')+String(b.deal_day||'').padStart(2,'0');
+      return db.localeCompare(da);
+    });
+    var validTxs = txs.filter(function(t){return !t.cdeal_day||t.cdeal_day.trim()==='';});
+    var showTxs = validTxs.slice(0, txDetailShowAll ? validTxs.length : 10);
+    html += '<div style="background:var(--surface);border-radius:8px;padding:12px 14px;margin-bottom:12px;">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">거래 내역 <span style="font-weight:400;font-size:11px;color:var(--sub);">'+validTxs.length+'건</span></div>';
+    html += '<div class="tx-table-wrap"><table class="tx-table"><thead><tr><th>거래일</th><th>위치·용도·면적</th><th>매매가</th><th>평당가</th></tr></thead><tbody>';
+    showTxs.forEach(function(t) {
+      var pp = t.plottage_ar>0 ? Math.round(t.deal_amount/t.plottage_ar*3.3058) : 0;
+      html += '<tr><td class="tx-date-col">'+String(t.deal_month||'').padStart(2,'0')+'.'+String(t.deal_day||'').padStart(2,'0')+'</td>';
+      html += '<td><div class="tx-loc-main">'+escHtml((t.umd_nm||'')+(t.jibun?' '+t.jibun:''))+'</div>';
+      html += '<div class="tx-loc-sub">'+escHtml(t.building_use||'')+' · 대지 '+(t.plottage_ar||0)+'\u33A1 · '+(t.building_ar||0)+'\u33A1 · '+(t.build_year||'')+'년</div></td>';
+      html += '<td>'+txFormatPrice(t.deal_amount)+'</td>';
+      html += '<td>'+(pp>0?txFormatPP(pp):'-')+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    if (validTxs.length>10 && !txDetailShowAll) {
+      html += '<button onclick="event.stopPropagation();txDetailShowAll=true;txRenderDetailPanel('+idx+');" style="display:block;width:100%;padding:8px;margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;font-family:inherit;">거래 내역 더보기 ('+( validTxs.length-10)+'건 더)</button>';
+    }
+    html += '</div>';
+  }
+
+  // 하단 버튼
+  html += '<div style="display:flex;gap:8px;margin-top:4px;">';
+  html += '<button onclick="event.stopPropagation();txDetailContent('+idx+');" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;font-family:inherit;">콘텐츠 생성</button>';
+  html += '<button onclick="event.stopPropagation();txDetailReport('+idx+');" style="flex:1;padding:10px;border:none;border-radius:8px;background:#1E3A5F;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">리포트 생성</button>';
+  html += '</div>';
+
+  panel.innerHTML = html;
+}
+
+function txDetailStatBox(label, value, change, hasPrev) {
+  var chText = !hasPrev ? '전년 데이터 없음' : change === 0 ? '전년대비 0%' : '전년대비 ' + (change > 0 ? '+' : '') + change + '%';
+  var chCls = !hasPrev ? 'color:var(--sub)' : change > 0 ? 'color:#0F6E56' : change < 0 ? 'color:#E24B4A' : 'color:var(--sub)';
+  return '<div style="background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid rgba(44,74,124,0.06);">' +
+    '<div style="font-size:11px;color:var(--text);font-weight:500;margin-bottom:2px;">' + label + '</div>' +
+    '<div style="font-size:15px;font-weight:600;color:var(--text);">' + value + '</div>' +
+    '<div style="font-size:11px;margin-top:1px;font-weight:500;' + chCls + ';">' + chText + '</div>' +
+    '</div>';
+}
+
+async function txDetailReport(idx) {
+  var item = txRankingData.ranking[idx];
+  if (!item) return;
+  var btn = event.target;
+  btn.disabled = true; btn.textContent = '생성 중...';
+  try {
+    var recentTx = [];
+    if (item.transactions && item.transactions.length) {
+      recentTx = item.transactions.filter(function(t){return !t.cdeal_day||t.cdeal_day.trim()==='';}).sort(function(a,b){
+        var da=(a.deal_year||'')+String(a.deal_month||'').padStart(2,'0')+String(a.deal_day||'').padStart(2,'0');
+        var db=(b.deal_year||'')+String(b.deal_month||'').padStart(2,'0')+String(b.deal_day||'').padStart(2,'0');
+        return db.localeCompare(da);
+      }).slice(0, 5);
+    }
+    var resp = await fetch('/api/transaction/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ regions: [{ sggNm: item.name, stats: item.stats, recentTx: recentTx }] })
+    });
+    var data = await resp.json();
+    if (data.report) {
+      var modal = document.getElementById('txReportModal');
+      if (modal) {
+        document.getElementById('txReportBody').textContent = data.report;
+        modal.classList.add('active');
+      }
+    }
+  } catch(e) {
+    alert('리포트 생성 중 오류가 발생했습니다');
+  }
+  btn.disabled = false; btn.textContent = '리포트 생성';
+}
+
+function txDetailContent(idx) {
+  var item = txRankingData.ranking[idx];
+  if (!item) return;
+  var s = item.stats;
+  var text = item.name + ' 상업업무용 부동산 실거래 분석\\n';
+  text += '거래 ' + s.totalCount + '건, 평균 매매가 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong) + '만\\n';
+  text += '전년대비 거래량 ' + (s.prevPeriodChange.volume > 0 ? '+' : '') + s.prevPeriodChange.volume + '%, 가격 ' + (s.prevPeriodChange.price > 0 ? '+' : '') + s.prevPeriodChange.price + '%\\n';
+  text += '법인 매수 ' + s.buyer.corp.ratio + '%, 법인 매도 ' + s.seller.corp.ratio + '%\\n';
+  if (s.highest) text += '최고 평당가: ' + txFormatPP(s.highest.pricePerPyeong) + '만/평 (' + (s.highest.umd_nm||'') + ')\\n';
+  if (s.lowest) text += '최저 평당가: ' + txFormatPP(s.lowest.pricePerPyeong) + '만/평 (' + (s.lowest.umd_nm||'') + ')\\n';
+  text += '이 데이터를 바탕으로 빌딩 매매 시장 분석 콘텐츠를 작성해줘';
+
+  showContentView();
+  switchMode('text');
+  document.getElementById('textInput').value = text;
+  doGenerate();
+}
+
+function txCompareContent() {
+  var items = txRankChecked.map(function(i) { return txRankingData.ranking[i]; }).filter(Boolean);
+  if (!items.length) return;
+  var text = items.map(function(item) { return item.name; }).join(' vs ') + ' 상업업무용 부동산 비교 분석\\n\\n';
+  items.forEach(function(item) {
+    var s = item.stats;
+    text += '[' + item.name + '] 거래 ' + s.totalCount + '건, 평균 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong) + '만';
+    text += ', 전년대비 거래량 ' + (s.prevPeriodChange.volume > 0 ? '+' : '') + s.prevPeriodChange.volume + '%\\n';
+  });
+  text += '\\n이 데이터를 바탕으로 지역 비교 분석 콘텐츠를 작성해줘';
+
+  showContentView();
+  switchMode('text');
+  document.getElementById('textInput').value = text;
+  doGenerate();
+}
+
+function txShowCompare() {
+  if (txRankChecked.length < 2 || !txRankingData) return;
+  var items = txRankChecked.map(function(i) { return txRankingData.ranking[i]; }).filter(Boolean);
+  if (items.length < 2) return;
+
+  var existing = document.getElementById('txComparePanel');
+  if (existing) { existing.remove(); txRenderRankingGrid(); return; }
+
+  var html = '<div class="tx-compare-panel" id="txComparePanel">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+  html += '<div style="font-size:15px;font-weight:600;color:var(--text);">비교 분석</div>';
+  html += '<button onclick="document.getElementById(\\'txComparePanel\\').remove();" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted);padding:4px 8px;border-radius:6px;">&#10005;</button>';
+  html += '</div>';
+
+  html += '<div style="overflow-x:auto;"><table class="tx-compare-table"><thead><tr><th></th>';
+  items.forEach(function(item) { html += '<th>' + escHtml(item.name) + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  var rows = [
+    { label: '거래건수', fn: function(s) { var v = s.prevPeriodChange.volume; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + s.totalCount + '건</div>' + ch; }},
+    { label: '평균 매매가', fn: function(s) { var v = s.prevPeriodChange.avgPrice || 0; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPrice(s.avgPrice) + '</div>' + ch; }},
+    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(토지)</span>', fn: function(s) { var v = s.prevPeriodChange.price; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerPyeong) + '만</div>' + ch; }},
+    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(연면적)</span>', fn: function(s) { var v = s.prevPeriodChange.area || 0; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerArea) + '만</div>' + ch; }},
+    { label: '매수 명의', fn: function(s) { return '<div style="font-weight:500;color:var(--text);">법인 ' + s.buyer.corp.ratio + '% · 개인 ' + s.buyer.personal.ratio + '%</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">(' + s.buyer.corp.count + '건 · ' + s.buyer.personal.count + '건)</div>'; }},
+    { label: '매도 명의', fn: function(s) { return '<div style="font-weight:500;color:var(--text);">법인 ' + s.seller.corp.ratio + '% · 개인 ' + s.seller.personal.ratio + '%</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">(' + s.seller.corp.count + '건 · ' + s.seller.personal.count + '건)</div>'; }}
+  ];
+
+  rows.forEach(function(row) {
+    html += '<tr><td>' + row.label + '</td>';
+    items.forEach(function(item) { html += '<td>' + row.fn(item.stats) + '</td>'; });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // AI 분석 (자동 로드)
+  html += '<div style="margin-top:12px;padding:12px 14px;background:var(--surface);border-radius:8px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">AI 분석</div>';
+  html += '<div id="txRankInsightText" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;">분석 중...</div>';
+  html += '</div>';
+
+  // 하단 버튼
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+  html += '<button onclick="txCompareContent();" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;font-family:inherit;">콘텐츠 생성</button>';
+  html += '</div>';
+  html += '</div>';
+
+  var grid = document.getElementById('txRankGrid');
+  grid.insertAdjacentHTML('afterbegin', html);
+
+  // AI 분석 자동 실행
+  txRankGetInsight();
+}
+
+async function txRankGetInsight() {
+  var items = txRankChecked.map(function(i) { return txRankingData.ranking[i]; }).filter(Boolean);
+  if (!items.length) return;
+  var el = document.getElementById('txRankInsightText');
+  if (!el) return;
+  el.textContent = '분석 중...';
+  try {
+    var resp = await fetch('/api/transaction/insight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ regions: items.map(function(item) { return { sggNm: item.name, stats: item.stats }; }) })
+    });
+    var data = await resp.json();
+    el.textContent = data.insight || '분석 결과를 불러오지 못했습니다.';
+  } catch(e) {
+    el.textContent = '분석 중 오류가 발생했습니다.';
+  }
+}
+
 // ─── Init ───
-initCardNav();
-renderHistoryList();
-updateStudyBadge();
-loadRecommendNews(false);
-if (window.location.hash === '#transaction') showTransactionView();
+(async function() {
+  var authed = await initInstaAuth();
+  if (authed) {
+    initCardNav();
+    renderHistoryList();
+    updateStudyBadge();
+    loadRecommendNews(false);
+    if (window.location.hash === '#transaction') showTransactionView();
+  }
+})();
 </script>
 
 </body>
