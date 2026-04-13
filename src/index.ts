@@ -344,8 +344,8 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
     }
 
     // 네이버 뉴스 검색
-    const includeKw = ['빌딩','상가','부동산','매매','상권','임대','개발','거래','오피스','리테일','권리금','공실','투자','재건축','재개발','수익률','건물','토지','분양','임차','점포'];
-    const excludeKw = ['아파트','주택','전세','월세','청약','입주','모델하우스','분양권','래미안','자이','힐스테이트','푸르지오'];
+    const includeKw = ['빌딩','상가','오피스','상업용','근린생활','업무용','꼬마빌딩','공실률','임대료','권리금','리테일','수익형','상권','매물','평당가','연면적','대지면적','캡레이트','NOI'];
+    const excludeKw = ['아파트','주택','전세','월세','청약','입주','모델하우스','분양권','래미안','자이','힐스테이트','푸르지오','국회','여당','야당','탄핵','선거','의원','정당','후보','검찰','경찰','수사','재판','판결','구속','기소','피의자','범죄','살인','폭행','성범죄','마약','주가','코스피','코스닥','환율','기준금리','한은','연준','ETF','삼성전자','SK하이닉스','반도체','배터리','자동차','K-POP','축구','야구','올림픽'];
     const sourceMap: Record<string, string> = { 'mk.co.kr':'매일경제','hankyung.com':'한국경제','sedaily.com':'서울경제','mt.co.kr':'머니투데이','edaily.co.kr':'이데일리','newsis.com':'뉴시스','yna.co.kr':'연합뉴스','chosun.com':'조선일보','donga.com':'동아일보','hani.co.kr':'한겨레','khan.co.kr':'경향신문','joongang.co.kr':'중앙일보','dt.co.kr':'디지털타임스','biz.chosun.com':'조선비즈','asiae.co.kr':'아시아경제','fnnews.com':'파이낸셜뉴스','heraldcorp.com':'헤럴드경제','etoday.co.kr':'이투데이' };
 
     function cleanHtml(t: string) { return (t || '').replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, "'"); }
@@ -371,8 +371,10 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
           const diffDays = (now - new Date(item.pubDate).getTime()) / (1000 * 60 * 60 * 24);
           if (diffDays > 7) continue;
           const title = cleanHtml(item.title);
+          const desc = cleanHtml(item.description);
+          const combined = title + ' ' + desc;
           const hasInclude = includeKw.some(k => title.includes(k));
-          const hasExclude = excludeKw.some(k => title.includes(k));
+          const hasExclude = excludeKw.some(k => combined.includes(k));
           if (!hasInclude || hasExclude) continue;
           if (learnedUrls.has(link) || learnedUrls.has(item.originallink)) continue;
           seen.add(link);
@@ -1265,6 +1267,28 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
   }
 });
 
+// ─── 네이버 뉴스 검색 ───
+async function searchNaverNews(query: string, count: number = 5): Promise<{ title: string; description: string; url: string }[]> {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+  try {
+    const resp = await axios.get('https://openapi.naver.com/v1/search/news.json', {
+      params: { query, display: count, sort: 'date' },
+      headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+      timeout: 5000
+    });
+    return (resp.data.items || []).map((item: any) => ({
+      title: (item.title || '').replace(/<[^>]*>/g, ''),
+      description: (item.description || '').replace(/<[^>]*>/g, ''),
+      url: item.originallink || item.link || ''
+    }));
+  } catch (e: any) {
+    console.log('[네이버 뉴스] 검색 실패:', e.message);
+    return [];
+  }
+}
+
 // ─── Brave Search 헬퍼 ───
 async function searchBrave(query: string, count: number = 3): Promise<{ title: string; description: string; url: string }[]> {
   const braveKey = process.env.BRAVE_API_KEY;
@@ -1289,7 +1313,6 @@ async function searchBrave(query: string, count: number = 3): Promise<{ title: s
 async function searchTransactionNews(regionName: string, transactions: any[]): Promise<string> {
   if (!transactions || !transactions.length) return '';
 
-  // 주요 거래 추출: 상위 금액 5건 (해제 건 제외, 10억 이상)
   const notable = transactions
     .filter((t: any) => (!t.cdeal_day || t.cdeal_day.trim() === '') && t.deal_amount >= 100000)
     .sort((a: any, b: any) => b.deal_amount - a.deal_amount)
@@ -1303,36 +1326,71 @@ async function searchTransactionNews(regionName: string, transactions: any[]): P
     const dong = tx.umd_nm || '';
     const amountEok = Math.round(tx.deal_amount / 10000);
     const areaM2 = Math.round(tx.plottage_ar || 0);
+    const amountStr = String(amountEok);
+    const amountComma = amountEok >= 1000 ? amountEok.toLocaleString() : amountStr;
 
-    // 검색어: 지역 + 동 + 금액 기반
-    const query = `${regionName} ${dong} 빌딩 매매 ${amountEok}억`;
-    const articles = await searchBrave(query, 3);
+    let matched: { title: string; url: string; description: string }[] = [];
 
-    // 동 이름이 일치하는 기사만 필터
-    const matched = articles.filter(a => {
-      const text = a.title + ' ' + a.description;
-      return text.includes(dong) && (
-        text.includes(String(amountEok)) ||
-        text.includes(String(areaM2)) ||
-        text.includes(regionName)
-      );
-    });
+    // 1차: 네이버 뉴스 검색 (우선)
+    const naverQueries = [
+      `${regionName} ${dong} ${amountEok}억 매매`,
+      `${dong} 빌딩 ${amountEok}억`,
+      `${regionName} ${dong} 빌딩 매각`
+    ];
+
+    for (const query of naverQueries) {
+      if (matched.length > 0) break;
+      const articles = await searchNaverNews(query, 5);
+      matched = articles.filter(a => {
+        const text = (a.title + ' ' + a.description).replace(/,/g, '');
+        const textOriginal = a.title + ' ' + a.description;
+        return (text.includes(dong) || textOriginal.includes(dong)) && (
+          text.includes(amountStr) ||
+          textOriginal.includes(amountComma) ||
+          text.includes(String(areaM2))
+        );
+      });
+    }
+
+    // 2차: 네이버에서 못 찾으면 Brave 검색 보조
+    if (matched.length === 0) {
+      const braveQueries = [
+        `${regionName} ${dong} ${amountEok}억 매매 빌딩`,
+        `${dong} 빌딩 매각 ${amountEok}억`
+      ];
+      for (const query of braveQueries) {
+        if (matched.length > 0) break;
+        const articles = await searchBrave(query, 5);
+        matched = articles.filter(a => {
+          const text = (a.title + ' ' + a.description).replace(/,/g, '');
+          const textOriginal = a.title + ' ' + a.description;
+          return (text.includes(dong) || textOriginal.includes(dong)) && (
+            text.includes(amountStr) ||
+            textOriginal.includes(amountComma) ||
+            text.includes(String(areaM2))
+          );
+        });
+      }
+    }
 
     if (matched.length > 0) {
       results.push({ tx, articles: matched.slice(0, 2) });
+      console.log(`[거래 뉴스 매칭] ${dong} ${amountEok}억 → ${matched.length}건 매칭 (${matched[0].url.includes('naver') ? '네이버' : '기타'})`);
+    } else {
+      console.log(`[거래 뉴스 매칭] ${dong} ${amountEok}억 → 매칭 없음`);
     }
   }
 
   if (!results.length) return '';
 
-  let context = '\n\n[거래 관련 뉴스]';
+  let context = '\n\n[거래 관련 뉴스 — 아래 거래와 뉴스가 매칭됨. 리포트에 반드시 이 거래를 언급하고 뉴스 내용을 근거로 활용할 것]';
   results.forEach(r => {
     const dong = r.tx.umd_nm || '';
     const amountEok = Math.round(r.tx.deal_amount / 10000);
-    context += `\n\n거래: ${dong} ${r.tx.jibun || ''} / ${amountEok}억 / 대지 ${r.tx.plottage_ar || 0}㎡`;
+    context += `\n\n* 매칭 거래: ${dong} ${r.tx.jibun || ''} / ${amountEok}억 / 대지 ${r.tx.plottage_ar || 0}㎡ / 연면적 ${r.tx.building_ar || 0}㎡`;
     r.articles.forEach(a => {
-      context += `\n- 기사: ${a.title}`;
-      context += `\n  내용: ${a.description}`;
+      context += `\n  기사 제목: ${a.title}`;
+      context += `\n  기사 내용: ${a.description}`;
       context += `\n  URL: ${a.url}`;
     });
   });
@@ -1343,17 +1401,27 @@ async function searchTransactionNews(regionName: string, transactions: any[]): P
 async function searchMarketContext(regionNames: string[]): Promise<string> {
   if (!regionNames.length) return '';
   const results: string[] = [];
-  const queries = regionNames.slice(0, 3).map(name => name + ' 상업용 부동산 시장');
 
-  for (const q of queries) {
-    const articles = await searchBrave(q, 3);
+  // 네이버 뉴스 우선
+  for (const name of regionNames.slice(0, 3)) {
+    const articles = await searchNaverNews(name + ' 상업용 빌딩 시장', 3);
     articles.forEach(a => {
       results.push(`- ${a.title}: ${a.description} (${a.url})`);
     });
   }
 
+  // 네이버 결과가 부족하면 Brave 보조
+  if (results.length < 3) {
+    for (const name of regionNames.slice(0, 2)) {
+      const articles = await searchBrave(name + ' 상업용 부동산 시장 동향', 3);
+      articles.forEach(a => {
+        results.push(`- ${a.title}: ${a.description} (${a.url})`);
+      });
+    }
+  }
+
   if (!results.length) return '';
-  return '\n\n[최신 시장 동향]\n' + results.slice(0, 6).join('\n');
+  return '\n\n[최신 시장 동향]\n' + results.slice(0, 8).join('\n');
 }
 
 // ─── AI 인사이트 ───
@@ -1416,8 +1484,9 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
 
     // 거래 목록 취합 (recentTx 또는 transactions에서)
+    // recentTx + transactions 합쳐서 검색 (중복 제거 불필요, searchTransactionNews가 상위 5건만 선택)
     const allTxForSearch = regions.map((r: any) => {
-      const txList = r.recentTx || r.transactions || [];
+      const txList = [...(r.recentTx || []), ...(r.transactions || [])];
       return { name: r.sggNm || r.name || '', txList };
     });
 

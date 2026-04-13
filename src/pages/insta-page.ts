@@ -3352,7 +3352,7 @@ async function txDetailReport(idx) {
     var resp = await fetch('/api/transaction/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ regions: [{ sggNm: item.name, stats: item.stats, recentTx: recentTx }] })
+      body: JSON.stringify({ regions: [{ sggNm: item.name, stats: item.stats, recentTx: recentTx, transactions: (item.transactions || []).slice(0, 30) }] })
     });
     var data = await resp.json();
     if (data.report) {
