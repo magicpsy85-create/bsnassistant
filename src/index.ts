@@ -181,6 +181,10 @@ app.get('/api/auth/config', (_req: Request, res: Response) => {
 
 // ─── 챗봇 페이지 ───
 app.get('/', (_req: Request, res: Response) => {
+  res.redirect('/insta#transaction');
+});
+
+app.get('/chatbot', (_req: Request, res: Response) => {
   res.send(generateChatbotPageHTML());
 });
 
@@ -1261,33 +1265,95 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
   }
 });
 
-// ─── Brave Search 컨텍스트 보강 ───
-async function searchBraveContext(keywords: string[]): Promise<string> {
+// ─── Brave Search 헬퍼 ───
+async function searchBrave(query: string, count: number = 3): Promise<{ title: string; description: string; url: string }[]> {
   const braveKey = process.env.BRAVE_API_KEY;
-  if (!braveKey || keywords.length === 0) return '';
-
+  if (!braveKey) return [];
   try {
-    const results: string[] = [];
-    const queries = keywords.slice(0, 3);
-
-    for (const kw of queries) {
-      const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
-        params: { q: kw, count: 3, search_lang: 'ko' },
-        headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
-        timeout: 5000
-      });
-      const items = resp.data.web?.results || [];
-      items.forEach((item: any) => {
-        results.push(`- ${item.title || ''}: ${item.description || ''}`);
-      });
-    }
-
-    if (results.length === 0) return '';
-    return '\n\n[최신 뉴스/시장 동향]\n' + results.slice(0, 8).join('\n');
+    const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+      params: { q: query, count, search_lang: 'ko' },
+      headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
+      timeout: 5000
+    });
+    return (resp.data.web?.results || []).map((item: any) => ({
+      title: item.title || '',
+      description: item.description || '',
+      url: item.url || ''
+    }));
   } catch (e: any) {
-    console.log('[Brave Search] 검색 실패:', e.message);
-    return '';
+    console.log('[Brave Search] 실패:', e.message);
+    return [];
   }
+}
+
+async function searchTransactionNews(regionName: string, transactions: any[]): Promise<string> {
+  if (!transactions || !transactions.length) return '';
+
+  // 주요 거래 추출: 상위 금액 5건 (해제 건 제외, 10억 이상)
+  const notable = transactions
+    .filter((t: any) => (!t.cdeal_day || t.cdeal_day.trim() === '') && t.deal_amount >= 100000)
+    .sort((a: any, b: any) => b.deal_amount - a.deal_amount)
+    .slice(0, 5);
+
+  if (!notable.length) return '';
+
+  const results: { tx: any; articles: { title: string; url: string; description: string }[] }[] = [];
+
+  for (const tx of notable) {
+    const dong = tx.umd_nm || '';
+    const amountEok = Math.round(tx.deal_amount / 10000);
+    const areaM2 = Math.round(tx.plottage_ar || 0);
+
+    // 검색어: 지역 + 동 + 금액 기반
+    const query = `${regionName} ${dong} 빌딩 매매 ${amountEok}억`;
+    const articles = await searchBrave(query, 3);
+
+    // 동 이름이 일치하는 기사만 필터
+    const matched = articles.filter(a => {
+      const text = a.title + ' ' + a.description;
+      return text.includes(dong) && (
+        text.includes(String(amountEok)) ||
+        text.includes(String(areaM2)) ||
+        text.includes(regionName)
+      );
+    });
+
+    if (matched.length > 0) {
+      results.push({ tx, articles: matched.slice(0, 2) });
+    }
+  }
+
+  if (!results.length) return '';
+
+  let context = '\n\n[거래 관련 뉴스]';
+  results.forEach(r => {
+    const dong = r.tx.umd_nm || '';
+    const amountEok = Math.round(r.tx.deal_amount / 10000);
+    context += `\n\n거래: ${dong} ${r.tx.jibun || ''} / ${amountEok}억 / 대지 ${r.tx.plottage_ar || 0}㎡`;
+    r.articles.forEach(a => {
+      context += `\n- 기사: ${a.title}`;
+      context += `\n  내용: ${a.description}`;
+      context += `\n  URL: ${a.url}`;
+    });
+  });
+
+  return context;
+}
+
+async function searchMarketContext(regionNames: string[]): Promise<string> {
+  if (!regionNames.length) return '';
+  const results: string[] = [];
+  const queries = regionNames.slice(0, 3).map(name => name + ' 상업용 부동산 시장');
+
+  for (const q of queries) {
+    const articles = await searchBrave(q, 3);
+    articles.forEach(a => {
+      results.push(`- ${a.title}: ${a.description} (${a.url})`);
+    });
+  }
+
+  if (!results.length) return '';
+  return '\n\n[최신 시장 동향]\n' + results.slice(0, 6).join('\n');
 }
 
 // ─── AI 인사이트 ───
@@ -1297,8 +1363,13 @@ app.post('/api/transaction/insight', async (req: Request, res: Response) => {
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
     const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
-    const searchKeywords = regionNames.map((name: string) => name + ' 빌딩 매매 시장');
-    const braveContext = await searchBraveContext(searchKeywords);
+
+    // 병렬: 시장 동향 검색 + 거래 뉴스 검색
+    const [marketContext, ...txNewsResults] = await Promise.all([
+      searchMarketContext(regionNames),
+      ...regions.map((r: any) => searchTransactionNews(r.sggNm || r.name || '', r.transactions || []))
+    ]);
+    const txNewsContext = txNewsResults.filter(Boolean).join('');
 
     const summary = regions.map((r: any) => {
       const s = r.stats;
@@ -1314,26 +1385,18 @@ app.post('/api/transaction/insight', async (req: Request, res: Response) => {
       messages: [
         { role: 'system', content: `당신은 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
 
-[서식 규칙 — 반드시 아래 형식으로 작성]
-1. 정확히 4~5개 포인트로 작성
-2. 각 포인트는 아래 형식을 따름:
-   ① [한줄 핵심 요약]
-   → [원인 분석 또는 배경 설명 1~2문장]
-
-3. 마지막 포인트는 반드시 "향후 전망"으로 작성
+[서식 규칙]
+1. 4~5개 포인트로 작성
+2. 각 포인트: ① [핵심 요약] → [원인 분석 1~2문장]
+3. 마지막 포인트는 향후 전망
+4. 마크다운 문법 금지
 
 [분석 규칙]
-- 전년대비 변동이 있는 모든 항목에 대해 반드시 원인을 분석해라. 단순히 "거래량이 증가했다"가 아니라 왜 증가했는지를 최신 뉴스와 시장 동향을 근거로 설명해라.
-- 법인 매수/매도 비율 변화의 의미를 해석해라.
-- 해당 지역의 개발 호재, 교통 인프라, 상권 변화, 정책 영향 등 구체적 요인을 언급해라.
-- 뻔한 일반론("시장이 활성화되고 있다")은 쓰지 마라. 이 데이터에서만 읽을 수 있는 구체적인 이야기를 해라.
-
-[문체 규칙]
-- 마크다운 문법(**, *, #, - 등) 사용 금지
-- "인사이트", "주목할 만한", "살펴보면", "시사점", "결론적으로" 등 AI투 표현 금지
-- 현장 브로커가 대표에게 구두 보고하는 톤으로 작성
-- 이모지 허용` },
-        { role: 'user', content: `다음 지역의 상업업무용 부동산 실거래 데이터를 분석해주세요:\n\n${summary}${braveContext}` }
+- 전년대비 변동 항목은 반드시 원인을 분석해라
+- 거래 관련 뉴스가 제공되면 해당 거래를 구체적으로 언급하고, 뉴스 내용을 근거로 활용해라
+- 뉴스 URL이 제공되면 분석 마지막에 "참조:" 로 URL을 표시해라
+- AI가 자동 생성한 티가 나는 정형화된 패턴을 피해라. 현장 브로커가 동료에게 브리핑하듯이 직접적이고 실무적인 톤으로 써라.` },
+        { role: 'user', content: `다음 지역의 상업업무용 부동산 실거래 데이터를 분석해주세요:\n\n${summary}${txNewsContext}${marketContext}` }
       ]
     });
 
@@ -1351,11 +1414,19 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
     const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
-    const searchKeywords = [
-      ...regionNames.map((name: string) => name + ' 상업용 부동산'),
-      ...regionNames.map((name: string) => name + ' 개발 호재 교통')
-    ];
-    const braveContext = await searchBraveContext(searchKeywords);
+
+    // 거래 목록 취합 (recentTx 또는 transactions에서)
+    const allTxForSearch = regions.map((r: any) => {
+      const txList = r.recentTx || r.transactions || [];
+      return { name: r.sggNm || r.name || '', txList };
+    });
+
+    // 병렬: 시장 동향 + 거래 뉴스
+    const [marketContext, ...txNewsResults] = await Promise.all([
+      searchMarketContext(regionNames),
+      ...allTxForSearch.map(item => searchTransactionNews(item.name, item.txList))
+    ]);
+    const txNewsContext = txNewsResults.filter(Boolean).join('');
 
     const summary = regions.map((r: any) => {
       const s = r.stats;
@@ -1380,26 +1451,29 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       messages: [
         { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
 
-다음 실거래 데이터와 최신 시장 동향을 바탕으로 시장 리포트를 작성하세요.
-빌딩 매매 중개 관점에서 작성하되, 매수자와 매도자 모두에게 유용한 정보를 포함하세요.
+다음 실거래 데이터와 관련 뉴스를 바탕으로 시장 리포트를 작성하세요.
 
 [구성]
 1. 시장 개요 (2~3문장)
-2. 전년대비 변동 원인 분석 (거래량, 가격 변동의 구체적 원인 2~3개)
-3. 핵심 트렌드 (3~4개 포인트 — 개발 호재, 상권 변화, 정책 영향 등 구체적 요인 기반)
-4. 주목할 거래 (특이 거래 1~2건 — 왜 주목해야 하는지 이유 포함)
-5. 향후 전망 (2~3문장 — 뻔한 전망이 아니라 데이터와 뉴스 근거 기반)
+2. 전년대비 변동 원인 분석 (거래량, 가격 변동의 구체적 원인)
+3. 핵심 트렌드 (3~4개 포인트)
+4. 주목할 거래 (특이 거래 1~2건 — 관련 뉴스가 있으면 해당 기사 내용을 근거로 활용)
+5. 향후 전망 (2~3문장)
+
+[중요 규칙]
+- 거래 관련 뉴스가 제공되면, 해당 거래를 리포트에서 구체적으로 다루고 뉴스 내용을 분석 근거로 사용해라.
+- 리포트 하단에 "참조 기사:" 섹션을 만들어 관련 뉴스 URL을 나열해라. 뉴스가 없으면 이 섹션은 생략해라.
 
 [문체 규칙]
-- 마크다운 문법(**, * 등) 사용 금지. 이모지 허용
-- "인사이트", "살펴보면", "주목할 만한", "시사점", "결론적으로", "종합하면" 등 AI투 표현 금지
-- 현장 실무자가 대표에게 보고하듯이 직접적이고 간결한 문체
-- 단순 데이터 나열이 아니라, "왜 이런 변화가 생겼는지"를 최신 뉴스와 연결하여 설명
-- 일반론("시장이 회복세를 보이고 있다") 대신 구체적 근거("GTX-A 개통 이후 역세권 빌딩 거래가 3개월 연속 증가")를 사용
+- 마크다운 문법(**, * 등) 사용 금지
+- AI가 자동 생성한 티가 나는 정형화된 패턴을 피해라. 어떤 단어든 문맥에 맞으면 자유롭게 써라.
+- 현장 실무자가 대표에게 보고하듯이 직접적이고 간결한 문체로 작성
+- 이모지 허용
 
 [데이터]
 ${summary}
-${braveContext}` }
+${txNewsContext}
+${marketContext}` }
       ]
     });
 

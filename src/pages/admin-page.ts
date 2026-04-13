@@ -200,9 +200,9 @@ export function generateAdminPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="/insta#transaction" class="nav-link">실거래가</a>
-      <a href="/insta" class="nav-link">콘텐츠 생성</a>
-      <a href="/" class="nav-link">챗봇</a>
+      <a href="/insta" class="nav-link">실거래가</a>
+      <a href="/insta#content" class="nav-link">콘텐츠 생성</a>
+      <a href="/chatbot" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link active">관리자</a>
     </div>
     <div class="nav-spacer"></div>

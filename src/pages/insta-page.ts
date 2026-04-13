@@ -206,7 +206,7 @@ export function generateInstaPageHTML(): string {
     /* Kakao */
 
     /* ─── Transaction View ─── */
-    .tx-view{display:none;}
+    .tx-view{display:block;}
     .tx-card{background:var(--surface);border:1px solid rgba(44,74,124,0.06);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
     .tx-fav-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
     .tx-fav-chip{font-size:12px;padding:6px 12px;border-radius:8px;background:rgba(44,74,124,0.06);cursor:pointer;border:none;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:4px;transition:background 0.15s;}
@@ -443,9 +443,9 @@ export function generateInstaPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="javascript:void(0)" class="nav-link" id="navTransaction" onclick="location.href='/insta#transaction';location.reload()">실거래가</a>
-      <a href="javascript:void(0)" class="nav-link active" id="navContent" onclick="location.href='/insta';location.reload()">콘텐츠 생성</a>
-      <a href="/" class="nav-link">챗봇</a>
+      <a href="javascript:void(0)" class="nav-link active" id="navTransaction" onclick="location.href='/insta';location.reload()">실거래가</a>
+      <a href="javascript:void(0)" class="nav-link" id="navContent" onclick="location.href='/insta#content';location.reload()">콘텐츠 생성</a>
+      <a href="/chatbot" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link">관리자</a>
     </div>
     <div class="nav-spacer"></div>
@@ -456,7 +456,7 @@ export function generateInstaPageHTML(): string {
 
 <!-- ═══ INPUT VIEW ═══ -->
 <main>
-<div id="inputView" class="input-view active">
+<div id="inputView" class="input-view active" style="display:none;">
   <div class="page-header">
     <h1>콘텐츠 생성</h1>
     <button class="btn-study" onclick="showLearnView()">
@@ -2843,7 +2843,7 @@ async function doInstaLogin() {
     renderHistoryList();
     updateStudyBadge();
     loadRecommendNews(false);
-    if (window.location.hash === '#transaction') showTransactionView();
+    if (window.location.hash === '#content') showContentView(); else showTransactionView();
   } catch(e) {
     errEl.textContent = '로그인 중 오류가 발생했습니다';
     errEl.style.display = 'block';
@@ -3466,7 +3466,7 @@ async function txRankGetInsight() {
     var resp = await fetch('/api/transaction/insight', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ regions: items.map(function(item) { return { sggNm: item.name, stats: item.stats }; }) })
+      body: JSON.stringify({ regions: items.map(function(item) { return { sggNm: item.name, stats: item.stats, transactions: (item.transactions || []).slice(0, 20) }; }) })
     });
     var data = await resp.json();
     el.textContent = data.insight || '분석 결과를 불러오지 못했습니다.';
@@ -3483,7 +3483,7 @@ async function txRankGetInsight() {
     renderHistoryList();
     updateStudyBadge();
     loadRecommendNews(false);
-    if (window.location.hash === '#transaction') showTransactionView();
+    if (window.location.hash === '#content') showContentView(); else showTransactionView();
   }
 })();
 </script>
