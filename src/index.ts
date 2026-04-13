@@ -119,8 +119,28 @@ app.post('/api/auth/verify', async (req: Request, res: Response) => {
     const membersSnap = await firestore.collection('members').where('email', '==', email).limit(1).get();
 
     if (membersSnap.empty) {
-      console.log('[인증 거부] 명단에 없는 계정:', email);
-      return res.status(403).json({ error: '등록되지 않은 계정입니다', email: email });
+      // access_requests에 기록
+      const existingReq = await firestore.collection('access_requests').where('email', '==', email).limit(1).get();
+      if (existingReq.empty) {
+        await firestore.collection('access_requests').add({
+          email: email,
+          googleName: name || '',
+          picture: picture || '',
+          status: 'pending',
+          requestedAt: new Date().toISOString(),
+          processedAt: null,
+          processedBy: null
+        });
+        console.log('[외부 승인 요청] 신규:', email, name);
+      } else {
+        const doc = existingReq.docs[0];
+        const data = doc.data();
+        if (data.status === 'rejected') {
+          await doc.ref.update({ status: 'pending', requestedAt: new Date().toISOString(), googleName: name || data.googleName, picture: picture || data.picture });
+          console.log('[외부 승인 요청] 재요청:', email);
+        }
+      }
+      return res.status(403).json({ error: '등록되지 않은 계정입니다. 관리자의 승인을 기다려주세요.', email: email });
     }
 
     const memberDoc = membersSnap.docs[0];
@@ -314,6 +334,95 @@ app.post('/api/content/geocode', async (req: Request, res: Response) => {
 // ─── 카카오 JS 키 전달 API ───
 app.get('/api/kakao-key', (_req: Request, res: Response) => {
   res.json({ key: process.env.KAKAO_JS_API_KEY || '' });
+});
+
+// ─── 외부 승인 관리 ───
+app.get('/api/admin/access-requests', async (_req: Request, res: Response) => {
+  try {
+    const snap = await firestore.collection('access_requests').orderBy('requestedAt', 'desc').get();
+    res.json(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/access-requests/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, position, department, team, phone, joinDate, role, processedBy } = req.body;
+    if (!name) return res.status(400).json({ error: '성명은 필수입니다' });
+    if (!department) return res.status(400).json({ error: '소속은 필수입니다' });
+    if (!position) return res.status(400).json({ error: '직책은 필수입니다' });
+    if (!phone) return res.status(400).json({ error: '연락처는 필수입니다' });
+
+    const reqDoc = firestore.collection('access_requests').doc(id);
+    const reqSnap = await reqDoc.get();
+    if (!reqSnap.exists) return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    const reqData = reqSnap.data()!;
+
+    // 최대 no 구하기
+    const membersSnap = await firestore.collection('members').get();
+    let maxNo = 0;
+    membersSnap.docs.forEach(d => { const n = d.data().no || 0; if (n > maxNo) maxNo = n; });
+
+    const phoneLast4 = phone.replace(/[^0-9]/g, '').slice(-4);
+
+    // 자동 팀 생성
+    const AUTO_TEAM_POSITIONS = ['대표', '상무', '이사', '팀장'];
+    const autoTeam = AUTO_TEAM_POSITIONS.includes(position) ? name + '팀' : (team || '');
+
+    const newMember = {
+      no: maxNo + 1,
+      name,
+      position,
+      department,
+      team: autoTeam,
+      phone,
+      phoneLast4,
+      joinDate: joinDate || new Date().toISOString().split('T')[0],
+      birthDate: '',
+      email: reqData.email,
+      role: role || '사용자',
+      lastLoginAt: null,
+      sessionId: null
+    };
+    await firestore.collection('members').add(newMember);
+
+    await reqDoc.update({
+      status: 'approved',
+      approvedName: name,
+      processedAt: new Date().toISOString(),
+      processedBy: processedBy || '관리자'
+    });
+
+    console.log('[외부 승인 완료]', reqData.email, '→', name, department, position);
+    res.json({ success: true, member: newMember });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/access-requests/:id/reject', async (req: Request, res: Response) => {
+  try {
+    const { processedBy } = req.body;
+    await firestore.collection('access_requests').doc(req.params.id).update({
+      status: 'rejected',
+      processedAt: new Date().toISOString(),
+      processedBy: processedBy || '관리자'
+    });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/admin/access-requests/:id', async (req: Request, res: Response) => {
+  try {
+    await firestore.collection('access_requests').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── AI 뉴스 추천 API ───

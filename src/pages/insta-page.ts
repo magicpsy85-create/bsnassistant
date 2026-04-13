@@ -255,6 +255,9 @@ export function generateInstaPageHTML(): string {
     @media(max-width:480px){.tx-rank-grid{grid-template-columns:repeat(2,1fr);}}
     .tx-rank-card{background:var(--surface);border:1px solid rgba(44,74,124,0.08);border-radius:12px;padding:12px;cursor:pointer;transition:all 0.12s;position:relative;}
     .tx-rank-card:hover{border-color:rgba(44,74,124,0.25);}
+    .tx-rank-card:has(.tx-rank-check:hover){border-color:rgba(44,74,124,0.08);}
+    .tx-rank-check:hover{border-color:var(--navy);background:var(--navy-light);transform:scale(1.15);transition:all 0.12s;}
+    .tx-rank-check.on:hover{background:var(--navy-dark);border-color:var(--navy-dark);transform:scale(1.15);}
     .tx-rank-card.open{border-color:var(--navy);border-width:1.5px;}
     .tx-rank-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px;}
     .tx-rank-num.r1{color:#BA7517;}.tx-rank-num.r2{color:#5F5E5A;}.tx-rank-num.r3{color:#993C1D;}

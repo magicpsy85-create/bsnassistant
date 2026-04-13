@@ -231,6 +231,7 @@ export function generateAdminPageHTML(): string {
     <button class="tab active" onclick="switchTab('records')">상담 기록</button>
     <button class="tab" onclick="switchTab('rules')">규정 설정</button>
     <button class="tab" onclick="switchTab('members')">사용자 관리</button>
+    <button class="tab" onclick="switchTab('access')">외부 승인<span id="accessBadge" style="display:none;margin-left:4px;background:#E24B4A;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;"></span></button>
   </div>
 
   <!-- 상담 기록 -->
@@ -300,6 +301,80 @@ export function generateAdminPageHTML(): string {
         </table>
       </div>
       <div class="pagination" id="memberPagination"></div>
+    </div>
+  </div>
+
+  <!-- 외부 승인 -->
+  <div id="access-section" class="section">
+    <div class="card">
+      <div class="card-title">외부 승인 요청</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:8px;font-size:11px;color:var(--muted);font-weight:600;">이메일</th>
+              <th style="text-align:left;padding:8px;font-size:11px;color:var(--muted);font-weight:600;">Google 이름</th>
+              <th style="text-align:center;padding:8px;font-size:11px;color:var(--muted);font-weight:600;">요청일</th>
+              <th style="text-align:center;padding:8px;font-size:11px;color:var(--muted);font-weight:600;">상태</th>
+              <th style="text-align:center;padding:8px;font-size:11px;color:var(--muted);font-weight:600;">처리</th>
+            </tr>
+          </thead>
+          <tbody id="accessBody"></tbody>
+        </table>
+      </div>
+      <div id="accessEmpty" style="display:none;text-align:center;padding:40px;color:var(--muted);font-size:13px;">외부 승인 요청이 없습니다</div>
+    </div>
+
+    <!-- 승인 폼 모달 -->
+    <div id="approveModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100;display:none;align-items:center;justify-content:center;">
+      <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,0.15);">
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px;">외부 승인</div>
+        <div id="approveEmail" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">성명 <span style="color:#E24B4A;">*</span></div>
+            <input type="text" id="approveName" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;" placeholder="성명">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">소속 <span style="color:#E24B4A;">*</span></div>
+            <select id="approveDept" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+              <option value="">선택</option>
+              <option value="빌딩">빌딩</option>
+              <option value="PENT">PENT</option>
+              <option value="CARE">CARE</option>
+              <option value="경영">경영</option>
+              <option value="외부">외부</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">직책 <span style="color:#E24B4A;">*</span></div>
+            <input type="text" id="approvePosition" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;" placeholder="직책">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">연락처 <span style="color:#E24B4A;">*</span></div>
+            <input type="text" id="approvePhone" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;" placeholder="010-0000-0000">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">위촉일</div>
+            <input type="date" id="approveJoinDate" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--sub);margin-bottom:2px;">권한</div>
+            <select id="approveRole" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+              <option value="사용자">사용자</option>
+              <option value="관리자">관리자</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="closeApproveModal()" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;color:var(--sub);cursor:pointer;font-family:inherit;">취소</button>
+          <button onclick="submitApproval()" id="approveSubmitBtn" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">승인</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -571,6 +646,7 @@ async function init() {
     try { await loadRules(); } catch(e2) { console.error('[loadRules]', e2); }
     try { await loadMemberList(); } catch(e2) { console.error('[loadMemberList]', e2); }
   }
+  loadAccessRequests();
 }
 
 function doLogout() {
@@ -613,6 +689,9 @@ async function switchTab(name) {
   if (name === 'rules') {
     await loadDraftMembers();
     renderDrafts();
+  }
+  if (name === 'access') {
+    loadAccessRequests();
   }
 }
 
@@ -1552,6 +1631,133 @@ function exportMembersCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = 'bsn-members.csv';
   a.click();
+}
+
+// ═══ 외부 승인 ═══
+var accessRequests = [];
+var approveTargetId = null;
+
+async function loadAccessRequests() {
+  try {
+    var resp = await fetch('/api/admin/access-requests');
+    accessRequests = await resp.json();
+    renderAccessList();
+    updateAccessBadge();
+  } catch(e) { console.error('외부 승인 로드 실패:', e); }
+}
+
+function updateAccessBadge() {
+  var pending = accessRequests.filter(function(r) { return r.status === 'pending'; }).length;
+  var badge = document.getElementById('accessBadge');
+  if (pending > 0) {
+    badge.style.display = 'inline';
+    badge.textContent = String(pending);
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderAccessList() {
+  var body = document.getElementById('accessBody');
+  var empty = document.getElementById('accessEmpty');
+  if (!accessRequests.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  body.innerHTML = accessRequests.map(function(r) {
+    var date = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('ko-KR') : '-';
+    var statusHtml = '';
+    var actionsHtml = '';
+    if (r.status === 'pending') {
+      statusHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;background:#FFF7ED;color:#C2410C;">대기</span>';
+      actionsHtml = '<button onclick="openApproveModal(\\'' + r.id + '\\',\\'' + (r.email||'').replace(/'/g,"\\\\'") + '\\',\\'' + (r.googleName||'').replace(/'/g,"\\\\'") + '\\')" style="padding:3px 10px;border:none;border-radius:6px;background:var(--navy);color:#fff;font-size:11px;cursor:pointer;font-family:inherit;margin-right:4px;">승인</button>' +
+        '<button onclick="rejectAccess(\\'' + r.id + '\\')" style="padding:3px 10px;border:1px solid #F7C1C1;border-radius:6px;background:#FCEBEB;font-size:11px;color:#E24B4A;cursor:pointer;font-family:inherit;">거부</button>';
+    } else if (r.status === 'approved') {
+      statusHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;background:#E6F1FB;color:#2C4A7C;">승인 (' + (r.approvedName||'') + ')</span>';
+      actionsHtml = '<button onclick="deleteAccess(\\'' + r.id + '\\')" style="padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit;">삭제</button>';
+    } else {
+      statusHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;background:#FCEBEB;color:#E24B4A;">거부</span>';
+      actionsHtml = '<button onclick="deleteAccess(\\'' + r.id + '\\')" style="padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit;">삭제</button>';
+    }
+    return '<tr style="border-bottom:0.5px solid var(--border);">' +
+      '<td style="padding:8px;color:var(--text);">' + (r.email||'') + '</td>' +
+      '<td style="padding:8px;color:var(--text);">' + (r.googleName||'-') + '</td>' +
+      '<td style="padding:8px;text-align:center;color:var(--muted);font-size:12px;">' + date + '</td>' +
+      '<td style="padding:8px;text-align:center;">' + statusHtml + '</td>' +
+      '<td style="padding:8px;text-align:center;">' + actionsHtml + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function openApproveModal(id, email, googleName) {
+  approveTargetId = id;
+  document.getElementById('approveEmail').textContent = email;
+  document.getElementById('approveName').value = googleName || '';
+  document.getElementById('approveDept').value = '';
+  document.getElementById('approvePosition').value = '';
+  document.getElementById('approvePhone').value = '';
+  document.getElementById('approveJoinDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('approveRole').value = '사용자';
+  document.getElementById('approveModal').style.display = 'flex';
+}
+
+function closeApproveModal() {
+  document.getElementById('approveModal').style.display = 'none';
+  approveTargetId = null;
+}
+
+async function submitApproval() {
+  if (!approveTargetId) return;
+  var name = document.getElementById('approveName').value.trim();
+  var dept = document.getElementById('approveDept').value;
+  var position = document.getElementById('approvePosition').value.trim();
+  var phone = document.getElementById('approvePhone').value.trim();
+  var joinDate = document.getElementById('approveJoinDate').value;
+  var role = document.getElementById('approveRole').value;
+
+  if (!name) { alert('성명을 입력해주세요'); return; }
+  if (!dept) { alert('소속을 선택해주세요'); return; }
+  if (!position) { alert('직책을 입력해주세요'); return; }
+  if (!phone) { alert('연락처를 입력해주세요'); return; }
+
+  var btn = document.getElementById('approveSubmitBtn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+
+  try {
+    var currentUser = localStorage.getItem('bsn_user_name') || '관리자';
+    var resp = await fetch('/api/admin/access-requests/' + approveTargetId + '/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, position: position, department: dept, phone: phone, joinDate: joinDate, role: role, processedBy: currentUser })
+    });
+    var data = await resp.json();
+    if (!resp.ok) { alert(data.error || '승인 실패'); btn.disabled = false; btn.textContent = '승인'; return; }
+    closeApproveModal();
+    loadAccessRequests();
+    alert(name + '님이 구성원으로 등록되었습니다.');
+  } catch(e) {
+    alert('승인 처리 중 오류 발생');
+  }
+  btn.disabled = false; btn.textContent = '승인';
+}
+
+async function rejectAccess(id) {
+  if (!confirm('이 요청을 거부하시겠습니까?')) return;
+  try {
+    var currentUser = localStorage.getItem('bsn_user_name') || '관리자';
+    await fetch('/api/admin/access-requests/' + id + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ processedBy: currentUser })
+    });
+    loadAccessRequests();
+  } catch(e) { alert('거부 처리 중 오류 발생'); }
+}
+
+async function deleteAccess(id) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  try {
+    await fetch('/api/admin/access-requests/' + id, { method: 'DELETE' });
+    loadAccessRequests();
+  } catch(e) { alert('삭제 중 오류 발생'); }
 }
 
 // ─── 유틸 ───
