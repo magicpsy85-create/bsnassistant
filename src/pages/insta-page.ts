@@ -2861,6 +2861,8 @@ var txRankSortBy = 'totalCount';
 var txRankChecked = [];
 var txRankOpenId = null;
 var txDetailShowAll = false;
+var txReportCache = {};
+var txInsightCache = {};
 
 function txInitRankSelectors() {
   if (!txRegionData) return;
@@ -2980,6 +2982,8 @@ async function txLoadRanking() {
   grid.innerHTML = '';
   txRankChecked = [];
   txRankOpenId = null;
+  txReportCache = {};
+  txInsightCache = {};
   txUpdateCompareFloat();
 
   try {
@@ -3338,11 +3342,20 @@ function txDetailStatBox(label, value, change, hasPrev) {
     '</div>';
 }
 
-async function txDetailReport(idx) {
+async function txDetailReport(idx, forceNew) {
   var item = txRankingData.ranking[idx];
   if (!item) return;
-  var btn = event.target;
-  btn.disabled = true; btn.textContent = '생성 중...';
+  var cacheKey = item.name + '_' + (document.getElementById('txRankPeriod').value || 'ytd');
+
+  // 캐시 확인
+  if (!forceNew && txReportCache[cacheKey]) {
+    document.getElementById('txReportBody').innerHTML = txReportCache[cacheKey] + '<div style="margin-top:12px;text-align:center;"><button onclick="txDetailReport(' + idx + ',true)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 생성</button></div>';
+    document.getElementById('txReportModal').classList.add('active');
+    return;
+  }
+
+  var btn = event ? event.target : null;
+  if (btn) { btn.disabled = true; btn.textContent = '생성 중...'; }
   try {
     var recentTx = [];
     if (item.transactions && item.transactions.length) {
@@ -3359,16 +3372,14 @@ async function txDetailReport(idx) {
     });
     var data = await resp.json();
     if (data.report) {
-      var modal = document.getElementById('txReportModal');
-      if (modal) {
-        document.getElementById('txReportBody').textContent = data.report;
-        modal.classList.add('active');
-      }
+      txReportCache[cacheKey] = data.report;
+      document.getElementById('txReportBody').innerHTML = data.report + '<div style="margin-top:12px;text-align:center;"><button onclick="txDetailReport(' + idx + ',true)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 생성</button></div>';
+      document.getElementById('txReportModal').classList.add('active');
     }
   } catch(e) {
     alert('리포트 생성 중 오류가 발생했습니다');
   }
-  btn.disabled = false; btn.textContent = '리포트 생성';
+  if (btn) { btn.disabled = false; btn.textContent = '리포트 생성'; }
 }
 
 function txDetailContent(idx) {
@@ -3462,8 +3473,16 @@ function txShowCompare() {
 async function txRankGetInsight() {
   var items = txRankChecked.map(function(i) { return txRankingData.ranking[i]; }).filter(Boolean);
   if (!items.length) return;
+  var cacheKey = items.map(function(item) { return item.name; }).sort().join('_') + '_' + (document.getElementById('txRankPeriod').value || 'ytd');
   var el = document.getElementById('txRankInsightText');
   if (!el) return;
+
+  // 캐시 확인
+  if (txInsightCache[cacheKey]) {
+    el.innerHTML = txInsightCache[cacheKey] + '<div style="margin-top:8px;text-align:right;"><button onclick="delete txInsightCache[\\'' + cacheKey.replace(/'/g, "\\\\'") + '\\'];txRankGetInsight();" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 분석</button></div>';
+    return;
+  }
+
   el.textContent = '분석 중...';
   try {
     var resp = await fetch('/api/transaction/insight', {
@@ -3472,7 +3491,9 @@ async function txRankGetInsight() {
       body: JSON.stringify({ regions: items.map(function(item) { return { sggNm: item.name, stats: item.stats, transactions: (item.transactions || []).slice(0, 20) }; }) })
     });
     var data = await resp.json();
-    el.textContent = data.insight || '분석 결과를 불러오지 못했습니다.';
+    var result = data.insight || '분석 결과를 불러오지 못했습니다.';
+    txInsightCache[cacheKey] = result;
+    el.innerHTML = result + '<div style="margin-top:8px;text-align:right;"><button onclick="delete txInsightCache[\\'' + cacheKey.replace(/'/g, "\\\\'") + '\\'];txRankGetInsight();" style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 분석</button></div>';
   } catch(e) {
     el.textContent = '분석 중 오류가 발생했습니다.';
   }
