@@ -446,8 +446,8 @@ export function generateInstaPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="javascript:void(0)" class="nav-link active" id="navTransaction" onclick="window.location.hash='';window.location.replace('/insta');">실거래가</a>
-      <a href="javascript:void(0)" class="nav-link" id="navContent" onclick="window.location.replace('/insta#content');">콘텐츠 생성</a>
+      <a href="javascript:void(0)" class="nav-link active" id="navTransaction" onclick="location.href='/insta?_='+Date.now();">실거래가</a>
+      <a href="javascript:void(0)" class="nav-link" id="navContent" onclick="location.href='/insta?_='+Date.now()+'#content';">콘텐츠 생성</a>
       <a href="/chatbot" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link">관리자</a>
     </div>
