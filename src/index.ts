@@ -38,6 +38,10 @@ import { getTransactions, getTransactionsByPeriod, formatYm } from './molit-api'
 import db from './db';
 import { firestore, auth as firebaseAuth } from './firebase-admin';
 
+// ─── 랭킹 서버 메모리 캐시 ───
+const rankingCache = new Map<string, { data: any; ts: number }>();
+const RANKING_CACHE_TTL = 60 * 60 * 1000; // 1시간
+
 const app = express();
 const PORT = 3000;
 
@@ -215,7 +219,7 @@ app.get('/admin', (_req: Request, res: Response) => {
 
 // ─── 콘텐츠 생성 페이지 ───
 app.get('/insta', (_req: Request, res: Response) => {
-  res.send(generateInstaPageHTML());
+  res.send(generateInstaPageHTML(JSON.stringify(regionData)));
 });
 
 // ─── 콘텐츠 생성 API ───
@@ -1221,6 +1225,14 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
     const months = parseInt(String(req.query.months || '6'));
     const sortBy = String(req.query.sortBy || 'totalCount');
     const sgg = req.query.sgg ? String(req.query.sgg) : null;
+
+    // 서버 메모리 캐시 확인
+    const cacheKey = 'rank_' + sido + '_' + (sgg || 'all') + '_' + months + '_' + sortBy;
+    const cached = rankingCache.get(cacheKey);
+    if (cached && (Date.now() - cached.ts) < RANKING_CACHE_TTL) {
+      console.log('[랭킹 캐시] 히트:', cacheKey);
+      return res.json(cached.data);
+    }
     const startMonth = req.query.startMonth ? String(req.query.startMonth) : null;
     const endMonth = req.query.endMonth ? String(req.query.endMonth) : null;
 
@@ -1279,13 +1291,9 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
       sidoRanking.sort(sortFn);
 
-      res.json({
-        type: 'sido',
-        sido: '전국',
-        period: { start: ymList[ymList.length - 1], end: ymList[0] },
-        prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
-        ranking: sidoRanking
-      });
+      const result = { type: 'sido' as const, sido: '전국', period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, ranking: sidoRanking };
+      rankingCache.set(cacheKey, { data: result, ts: Date.now() });
+      res.json(result);
       return;
     }
 
@@ -1324,15 +1332,9 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
       dongRanking.sort(sortFn);
 
-      res.json({
-        type: 'dong',
-        sido,
-        sgg,
-        period: { start: ymList[ymList.length - 1], end: ymList[0] },
-        prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
-        fullStats,
-        ranking: dongRanking
-      });
+      const result = { type: 'dong' as const, sido, sgg, period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, fullStats, ranking: dongRanking };
+      rankingCache.set(cacheKey, { data: result, ts: Date.now() });
+      res.json(result);
       return;
     }
 
@@ -1363,13 +1365,9 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
     ranking.sort(sortFn);
 
-    res.json({
-      type: 'sgg',
-      sido,
-      period: { start: ymList[ymList.length - 1], end: ymList[0] },
-      prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] },
-      ranking
-    });
+    const result = { type: 'sgg' as const, sido, period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, ranking };
+    rankingCache.set(cacheKey, { data: result, ts: Date.now() });
+    res.json(result);
   } catch (e: any) {
     console.error('[랭킹 API 오류]', e);
     res.status(500).json({ error: e.message });
@@ -1408,11 +1406,20 @@ async function searchBrave(query: string, count: number = 3): Promise<{ title: s
       headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
       timeout: 5000
     });
-    return (resp.data.web?.results || []).map((item: any) => ({
+    const articles = (resp.data.web?.results || []).map((item: any) => ({
       title: item.title || '',
       description: item.description || '',
       url: item.url || ''
     }));
+    // 주택/아파트 도메인 필터링
+    const discardDomains = ['zippoom.com','hogangnono.com','neonet.co.kr','drapt.com','zigbang.com','dabangapp.com','peterpanz.com','kbland.kr','apt2you.com','applyhome.co.kr','apartmentary.com','budongsanple.com','richhouse.co.kr','jutek.kr','jeonse.com','realtyprice.kr'];
+    const filtered = articles.filter((a: { url: string }) => {
+      try {
+        const hostname = new URL(a.url).hostname.replace('www.','');
+        return !discardDomains.some(d => hostname.includes(d));
+      } catch { return true; }
+    });
+    return filtered;
   } catch (e: any) {
     console.log('[Brave Search] 실패:', e.message);
     return [];
@@ -1550,7 +1557,7 @@ app.post('/api/transaction/insight', async (req: Request, res: Response) => {
 
     const summary = regions.map((r: any) => {
       const s = r.stats;
-      return `[${r.sggNm || r.name || ''}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n거래건수: ${s.totalCount}건, 평균매매가: ${s.avgPrice}만원, 평당매매가: ${s.avgPricePerPyeong}만원\n법인매수: ${s.buyer.corp.ratio}%, 법인매도: ${s.seller.corp.ratio}%\n전년대비 거래량: ${s.prevPeriodChange.volume > 0 ? '+' : ''}${s.prevPeriodChange.volume}%, 전년대비 가격: ${s.prevPeriodChange.price > 0 ? '+' : ''}${s.prevPeriodChange.price}%`;
+      return `[${r.sggNm || r.name || ''}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n거래건수: ${s.totalCount}건, 평균매매가: ${formatAmount(s.avgPrice)}, 평당매매가: ${formatAmount(s.avgPricePerPyeong)}\n법인매수: ${s.buyer.corp.ratio}%, 법인매도: ${s.seller.corp.ratio}%\n전년대비 거래량: ${s.prevPeriodChange.volume > 0 ? '+' : ''}${s.prevPeriodChange.volume}%, 전년대비 가격: ${s.prevPeriodChange.price > 0 ? '+' : ''}${s.prevPeriodChange.price}%`;
     }).join('\n\n');
 
     const OpenAI = require('openai');
@@ -1584,41 +1591,104 @@ app.post('/api/transaction/insight', async (req: Request, res: Response) => {
   }
 });
 
+// ─── 가격 포맷 (만원 단위 → 읽기 좋은 형식) ───
+function formatAmount(amount: number): string {
+  if (amount >= 10000) {
+    const eok = Math.round(amount / 1000) / 10;
+    return (eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1)) + '억';
+  }
+  return Math.round(amount).toLocaleString() + '만원';
+}
+
+// ─── 리포트용 뉴스 검색 헬퍼 ───
+const DISCARD_DOMAINS =['zippoom.com','hogangnono.com','neonet.co.kr','drapt.com','zigbang.com','dabangapp.com','peterpanz.com','kbland.kr','apt2you.com','applyhome.co.kr','apartmentary.com','budongsanple.com','richhouse.co.kr','jutek.kr','jeonse.com','realtyprice.kr'];
+
+async function searchNaverForReport(query: string, count: number = 5): Promise<{ title: string; description: string; url: string }[]> {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+  try {
+    const resp = await axios.get('https://openapi.naver.com/v1/search/news.json', {
+      params: { query, display: count, sort: 'date' },
+      headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+      timeout: 5000
+    });
+    return (resp.data.items || []).map((item: any) => ({
+      title: (item.title || '').replace(/<[^>]*>/g, ''),
+      description: (item.description || '').replace(/<[^>]*>/g, ''),
+      url: item.originallink || item.link || ''
+    }));
+  } catch (e: any) {
+    console.log('[리포트 네이버] 검색 실패:', e.message);
+    return [];
+  }
+}
+
+async function searchBraveForReport(query: string, count: number = 5): Promise<{ title: string; description: string; url: string }[]> {
+  const braveKey = process.env.BRAVE_API_KEY;
+  if (!braveKey) return [];
+  try {
+    const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+      params: { q: query, count, search_lang: 'ko' },
+      headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
+      timeout: 5000
+    });
+    const results = (resp.data.web?.results || []).map((it: any) => ({
+      title: it.title || '',
+      description: it.description || '',
+      url: it.url || ''
+    }));
+    return results.filter((a: { url: string }) => {
+      try {
+        const hostname = new URL(a.url).hostname.replace('www.', '');
+        return !DISCARD_DOMAINS.some(d => hostname.includes(d));
+      } catch { return true; }
+    });
+  } catch (e: any) {
+    console.log('[리포트 Brave] 검색 실패:', e.message);
+    return [];
+  }
+}
+
 // ─── 리포트 생성 ───
 app.post('/api/transaction/report', async (req: Request, res: Response) => {
   try {
-    const { regions } = req.body;
+    const { regions, period, prevPeriod } = req.body;
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
-    const regionNames = regions.map((r: any) => r.sggNm || r.name || '').filter(Boolean);
+    const periodText = period ? `${period.start.substring(0,4)}년 ${parseInt(period.start.substring(4))}월 ~ ${period.end.substring(0,4)}년 ${parseInt(period.end.substring(4))}월` : '';
+    const prevPeriodText = prevPeriod ? `${prevPeriod.start.substring(0,4)}년 ${parseInt(prevPeriod.start.substring(4))}월 ~ ${prevPeriod.end.substring(0,4)}년 ${parseInt(prevPeriod.end.substring(4))}월` : '';
 
-    // 거래 목록 취합 (recentTx 또는 transactions에서)
-    // recentTx + transactions 합쳐서 검색 (중복 제거 불필요, searchTransactionNews가 상위 5건만 선택)
-    const allTxForSearch = regions.map((r: any) => {
-      const txList = [...(r.recentTx || []), ...(r.transactions || [])];
-      return { name: r.sggNm || r.name || '', txList };
-    });
-
-    // 병렬: 시장 동향 + 거래 뉴스
-    const [marketContext, ...txNewsResults] = await Promise.all([
-      searchMarketContext(regionNames),
-      ...allTxForSearch.map(item => searchTransactionNews(item.name, item.txList))
-    ]);
-    const txNewsContext = txNewsResults.filter(Boolean).join('');
+    const regionNames = regions.map((r: any) => r.sggNm || '').filter(Boolean);
 
     const summary = regions.map((r: any) => {
       const s = r.stats;
-      const dongInfo = s.byDong ? Object.entries(s.byDong).map(([d, v]: any) => `${d}: ${v.count}건, 평균 ${v.ppCount > 0 ? Math.round(v.totalPP / v.ppCount) : 0}만/평`).join(', ') : '';
-      const useInfo = s.byUse ? Object.entries(s.byUse).map(([u, c]) => `${u} ${c}건`).join(', ') : '';
-      let txDetail = '';
-      if (s.highest) txDetail += `\n최고 평당가 거래: ${s.highest.umd_nm || ''} ${s.highest.jibun || ''}, ${s.highest.land_use || ''}, 대지 ${s.highest.plottage_ar || 0}㎡, ${Math.round(s.highest.pricePerPyeong)}만/평, ${s.highest.deal_amount}만원`;
-      if (s.lowest) txDetail += `\n최저 평당가 거래: ${s.lowest.umd_nm || ''} ${s.lowest.jibun || ''}, ${s.lowest.land_use || ''}, 대지 ${s.lowest.plottage_ar || 0}㎡, ${Math.round(s.lowest.pricePerPyeong)}만/평, ${s.lowest.deal_amount}만원`;
-      if (r.recentTx && r.recentTx.length) {
-        txDetail += '\n최근 주요 거래:';
-        r.recentTx.forEach((t: any) => { txDetail += `\n- ${t.umd_nm || ''} ${t.jibun || ''} / ${t.building_use || ''} / 대지${t.plottage_ar || 0}㎡ / ${t.deal_amount}만원 / ${t.deal_year}.${String(t.deal_month).padStart(2,'0')}`; });
-      }
-      return `[${r.sggNm || r.name || ''}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n총 ${s.totalCount}건 (해제 ${s.cancelCount || 0}건)\n평균매매가: ${s.avgPrice}만원, 토지평당: ${s.avgPricePerPyeong}만, 연면적평당: ${s.avgPricePerArea}만\n전년대비 거래량 ${s.prevPeriodChange.volume}%, 가격 ${s.prevPeriodChange.price}%\n법인매수 ${s.buyer.corp.ratio}%, 법인매도 ${s.seller.corp.ratio}%\n동별: ${dongInfo}\n용도: ${useInfo}${txDetail}`;
+      const dongInfo = Object.entries(s.byDong).map(([d, v]: any) => `${d}: ${v.count}건, 평균 ${v.ppCount > 0 ? formatAmount(Math.round(v.totalPP / v.ppCount)) : '0만원'}/평`).join(', ');
+      const useInfo = Object.entries(s.byUse).map(([u, c]) => `${u} ${c}건`).join(', ');
+      return `[${r.sggNm}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n총 ${s.totalCount}건 (해제 ${s.cancelCount}건)\n평균매매가: ${formatAmount(s.avgPrice)}, 토지평당: ${formatAmount(s.avgPricePerPyeong)}, 연면적평당: ${formatAmount(s.avgPricePerArea)}\n전기대비 거래량 ${s.prevPeriodChange.volume}%, 가격 ${s.prevPeriodChange.price}%\n법인매수 ${s.buyer.corp.ratio}%, 법인매도 ${s.seller.corp.ratio}%\n동별: ${dongInfo}\n용도: ${useInfo}`;
     }).join('\n\n');
+
+    // 뉴스 검색 (네이버 + Brave 병렬)
+    const newsPromises: Promise<{ title: string; description: string; url: string }[]>[] = [];
+    for (const name of regionNames.slice(0, 2)) {
+      newsPromises.push(searchNaverForReport(name + ' 빌딩 매매', 3));
+      newsPromises.push(searchBraveForReport(name + ' 상업용 부동산 거래', 3));
+    }
+    newsPromises.push(searchBraveForReport('서울 오피스 시장 동향 2026', 3));
+
+    const newsResults = await Promise.all(newsPromises);
+    const allNews = newsResults.flat();
+    const uniqueNews = allNews.filter((n, i) => allNews.findIndex(x => x.title === n.title) === i).slice(0, 8);
+
+    let newsContext = '';
+    if (uniqueNews.length > 0) {
+      newsContext = '\n\n[최신 시장 뉴스 — 리포트에 시장 맥락으로 활용할 것]\n';
+      uniqueNews.forEach((n, i) => {
+        newsContext += `${i + 1}. ${n.title}: ${n.description}\n   URL: ${n.url}\n`;
+      });
+    }
+
+    console.log('[리포트] 뉴스 검색 결과:', uniqueNews.length + '건');
 
     const OpenAI = require('openai');
     const openai = new OpenAI();
@@ -1629,29 +1699,29 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       messages: [
         { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
 
-다음 실거래 데이터와 관련 뉴스를 바탕으로 시장 리포트를 작성하세요.
+다음 실거래 데이터와 최신 뉴스를 바탕으로 시장 리포트를 작성하세요.
+빌딩 매매 중개 관점에서 작성하되, 매수자와 매도자 모두에게 유용한 정보를 포함하세요.
+뉴스 내용이 있으면 실거래 데이터와 연결하여 시장 맥락을 설명하세요.
+참조한 뉴스가 있으면 리포트 하단에 [참조 기사] 섹션으로 제목과 URL을 나열하세요.
 
-[구성]
+분석 기간: ${periodText}
+전년 동기: ${prevPeriodText}
+
+구성:
 1. 시장 개요 (2~3문장)
-2. 전년대비 변동 원인 분석 (거래량, 가격 변동의 구체적 원인)
-3. 핵심 트렌드 (3~4개 포인트)
-4. 주목할 거래 (특이 거래 1~2건 — 관련 뉴스가 있으면 해당 기사 내용을 근거로 활용)
-5. 향후 전망 (2~3문장)
+2. 핵심 트렌드 (3~4개 포인트)
+3. 주목할 거래 (특이 거래 1~2건)
+4. 시장 전망 (2~3문장)
+5. 참조 기사 (뉴스 URL 목록)
 
-[중요 규칙]
-- 거래 관련 뉴스가 제공되면, 해당 거래를 리포트에서 구체적으로 다루고 뉴스 내용을 분석 근거로 사용해라.
-- 리포트 하단에 "참조 기사:" 섹션을 만들어 관련 뉴스 URL을 나열해라. 뉴스가 없으면 이 섹션은 생략해라.
-
-[문체 규칙]
+문체 규칙:
 - 마크다운 문법(**, * 등) 사용 금지
-- AI가 자동 생성한 티가 나는 정형화된 패턴을 피해라. 어떤 단어든 문맥에 맞으면 자유롭게 써라.
+- "인사이트", "살펴보면", "주목할 만한", "시사점", "결론적으로", "종합하면" 등 AI투 표현 금지
 - 현장 실무자가 대표에게 보고하듯이 직접적이고 간결한 문체로 작성
-- 이모지 허용
+- 사람이 직접 쓴 보고서처럼 자연스러운 한국어 사용
 
-[데이터]
-${summary}
-${txNewsContext}
-${marketContext}` }
+실거래 데이터:
+${summary}${newsContext}` }
       ]
     });
 

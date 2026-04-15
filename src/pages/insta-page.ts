@@ -1,4 +1,4 @@
-export function generateInstaPageHTML(): string {
+export function generateInstaPageHTML(regionJson?: string): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -206,7 +206,12 @@ export function generateInstaPageHTML(): string {
     /* Kakao */
 
     /* ─── Transaction View ─── */
-    .tx-view{display:block;}
+    .tx-view{display:none;}
+    .tx-detail-panel{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+    html[data-view="tx"] #inputView{display:none !important;}
+    html[data-view="tx"] #transactionView{display:block !important;}
+    html[data-view="tx"] #navContent{background:transparent;color:var(--sub);font-weight:500;}
+    html[data-view="tx"] #navTransaction{background:var(--navy-light);color:var(--navy);font-weight:600;}
     .tx-card{background:var(--surface);border:1px solid rgba(44,74,124,0.06);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
     .tx-fav-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
     .tx-fav-chip{font-size:12px;padding:6px 12px;border-radius:8px;background:rgba(44,74,124,0.06);cursor:pointer;border:none;font-family:inherit;color:var(--text);display:flex;align-items:center;gap:4px;transition:background 0.15s;}
@@ -282,6 +287,9 @@ export function generateInstaPageHTML(): string {
     .tx-compare-table td:first-child{text-align:left;font-weight:500;color:var(--sub);font-size:11px;}
     .tx-loading{text-align:center;padding:40px 0;color:var(--muted);font-size:13px;}
     .tx-loading .spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+    .tx-skeleton-card{background:var(--surface);border:1px solid rgba(44,74,124,0.06);border-radius:12px;padding:14px;min-height:80px;}
+    .tx-skeleton-line{background:linear-gradient(90deg,#F0EDE6 25%,#E8E4DC 50%,#F0EDE6 75%);background-size:200% 100%;border-radius:6px;animation:txShimmer 1.5s infinite;}
+    @keyframes txShimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
     .tx-empty{text-align:center;padding:48px 0;}
     .tx-empty-icon{font-size:36px;margin-bottom:12px;}
     .tx-empty-text{font-size:14px;color:var(--text);margin-bottom:6px;}
@@ -294,7 +302,7 @@ export function generateInstaPageHTML(): string {
     .tx-stat-card{background:#F7F6F3;border-radius:8px;padding:12px;position:relative;cursor:pointer;transition:background 0.15s;}
     .tx-stat-card:hover{background:#EFEDE8;}
     .tx-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
-    .tx-stat-value{font-size:22px;font-weight:500;color:var(--text);}
+    .tx-stat-value{font-size:22px;font-weight:400;color:#1A1A2E;}
     .tx-stat-change{font-size:11px;margin-top:2px;}
     .tx-stat-change.up{color:#1D9E75;}
     .tx-stat-change.down{color:#E24B4A;}
@@ -308,7 +316,7 @@ export function generateInstaPageHTML(): string {
     .tx-pill.use{background:#E6F1FB;color:#0C447C;}
     .tx-pill.cancel{background:#FCEBEB;color:#791F1F;}
     .tx-bar-section{margin-bottom:16px;}
-    .tx-bar-section-title{font-size:12px;font-weight:600;color:var(--sub);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+    .tx-bar-section-title{font-size:12px;font-weight:500;color:#2C2C2C;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
     .tx-bar-section-title .tx-bar-icon{font-size:11px;opacity:0.6;}
     .tx-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
     .tx-bar-label{font-size:11px;color:var(--text);min-width:80px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -319,10 +327,10 @@ export function generateInstaPageHTML(): string {
     .tx-hl-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;flex-shrink:0;}
     .tx-hl-badge.hi{color:#E24B4A;background:rgba(226,75,74,0.08);}
     .tx-hl-badge.lo{color:#3B7DD8;background:rgba(59,125,216,0.08);}
-    .tx-hl-value{font-size:15px;font-weight:500;color:var(--text);}
+    .tx-hl-value{font-size:15px;font-weight:400;color:#1A1A2E;}
     .tx-hl-sub{font-size:11px;color:var(--muted);}
     .tx-bar-meta{font-size:10px;color:var(--muted);min-width:70px;flex-shrink:0;text-align:left;white-space:nowrap;}
-    .tx-bar-meta strong{color:var(--text);font-weight:600;}
+    .tx-bar-meta strong{color:#1A1A2E;font-weight:400;}
     .tx-stats-toggle-btn{width:100%;padding:10px;border:1px dashed rgba(44,74,124,0.25);border-radius:10px;background:none;color:var(--navy);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;}
     .tx-stats-toggle-btn:hover{background:rgba(44,74,124,0.04);border-color:var(--navy);}
     .tx-stats-toggle-btn .arrow{font-size:10px;transition:transform 0.2s;}
@@ -343,11 +351,11 @@ export function generateInstaPageHTML(): string {
     .tx-table{width:100%;border-collapse:collapse;table-layout:fixed;}
     .tx-table th{background:#F7F6F3;padding:7px 10px;font-size:10px;font-weight:600;color:var(--sub);text-align:left;border-bottom:0.5px solid var(--border);}
     .tx-table th:nth-child(1){width:55px;}
-    .tx-table th:nth-child(3){width:60px;text-align:right;}
-    .tx-table th:nth-child(4){width:55px;text-align:right;}
+    .tx-table th:nth-child(3){width:75px;text-align:right;}
+    .tx-table th:nth-child(4){width:70px;text-align:right;}
     .tx-table td{padding:9px 10px;font-size:12px;border-top:0.5px solid rgba(0,0,0,0.04);}
-    .tx-table td:nth-child(3){text-align:right;font-weight:500;}
-    .tx-table td:nth-child(4){text-align:right;font-size:11px;color:var(--muted);}
+    .tx-table td:nth-child(3){text-align:right;font-weight:500;white-space:nowrap;}
+    .tx-table td:nth-child(4){text-align:right;font-size:11px;color:var(--muted);white-space:nowrap;}
     .tx-row-cancel{opacity:0.4;}
     .tx-row-cancel td:nth-child(3){text-decoration:line-through;}
     .tx-loc-main{font-size:12px;color:var(--text);}
@@ -403,11 +411,16 @@ export function generateInstaPageHTML(): string {
     .login-btn img{width:18px;height:18px;}
     .login-error{display:none;font-size:12px;color:#E24B4A;margin-top:8px;}
   </style>
+  <script>
+    if (window.location.hash === '#transaction') {
+      document.documentElement.setAttribute('data-view','tx');
+    }
+  </script>
 </head>
 <body>
 
 <!-- 로그인 -->
-<div class="login-overlay" id="instaLoginOverlay">
+<div class="login-overlay" id="instaLoginOverlay" style="display:none;">
   <div class="login-box">
     <h3>BSN Assistant</h3>
     <p>콘텐츠 생성 및 실거래가 조회를 위해<br>Google 계정으로 로그인하세요.</p>
@@ -446,8 +459,8 @@ export function generateInstaPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="javascript:void(0)" class="nav-link active" id="navTransaction" onclick="location.href='/insta?_='+Date.now();">실거래가</a>
-      <a href="javascript:void(0)" class="nav-link" id="navContent" onclick="location.href='/insta?_='+Date.now()+'#content';">콘텐츠 생성</a>
+      <a href="javascript:void(0)" class="nav-link" id="navTransaction" onclick="showTransactionView()">실거래가</a>
+      <a href="javascript:void(0)" class="nav-link active" id="navContent" onclick="showContentView()">콘텐츠 생성</a>
       <a href="/chatbot" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link">관리자</a>
     </div>
@@ -459,7 +472,7 @@ export function generateInstaPageHTML(): string {
 
 <!-- ═══ INPUT VIEW ═══ -->
 <main>
-<div id="inputView" class="input-view active" style="display:none;">
+<div id="inputView" class="input-view active">
   <div class="page-header">
     <h1>콘텐츠 생성</h1>
     <button class="btn-study" onclick="showLearnView()">
@@ -786,6 +799,7 @@ export function generateInstaPageHTML(): string {
 <!-- Kakao -->
 
 <script>
+var cfBaseUrl = '${process.env.FUNCTION_URL || ''}';
 (function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
@@ -1001,7 +1015,7 @@ async function generateSingleCardImage() {
 
     // Gemini 생성
     console.log('[카드 개별] Gemini 생성:', idx + 1);
-    var resp = await fetch('/api/content/generate-card', {
+    var resp = await fetch((cfBaseUrl || '') + '/api/content/generate-card', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1099,7 +1113,7 @@ async function generateCardImages() {
         if (!mapB64) { await new Promise(function(r){setTimeout(r,2000)}); mapB64 = await captureKakaoMap(mapRegion); }
         if (mapB64) { cardImages[i] = mapB64; if (cardsData[i]) cardsData[i]._mapCard = true; if (currentSlide === i) { spinner.classList.remove('active'); goToSlide(i); } continue; }
       }
-      var resp = await fetch('/api/content/generate-card', {
+      var resp = await fetch((cfBaseUrl || '') + '/api/content/generate-card', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cardIndex: i, topic: currentTopic, tag: card.tag || CARD_TAGS[i], title: card.title || '', style: card.style || 'dark', imageIdea: imageIdeas[i] || '' })
       });
@@ -1170,7 +1184,7 @@ async function doGenerate() {
   btn.textContent = '리서치 및 분석 중...';
 
   try {
-    const resp = await fetch('/api/content/generate', {
+    const resp = await fetch((cfBaseUrl || '') + '/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode, input: sendInput })
@@ -1867,7 +1881,7 @@ function generateFromNews(url) {
 // ═══════════════════════════════════════════
 // ─── TRANSACTION VIEW ───
 // ═══════════════════════════════════════════
-var txRegionData = null;
+var txRegionData = ${regionJson || 'null'};
 var txSelectedRegions = []; // [{sido,sgg,sggCd,dong,sggNm}]
 var txPeriodMonths = 6;
 var txCustomMode = false;
@@ -1891,22 +1905,25 @@ function txGetFavorites() {
 function txSetFavorites(arr) { localStorage.setItem('bsn_favorite_regions', JSON.stringify(arr)); }
 
 function showContentView() {
+  document.documentElement.removeAttribute('data-view');
+  if (window.location.hash) history.replaceState(null, '', '/insta');
   document.getElementById('transactionView').style.display = 'none';
   document.getElementById('inputView').style.display = 'block';
   document.getElementById('navContent').classList.add('active');
   document.getElementById('navTransaction').classList.remove('active');
+  window.scrollTo(0, 0);
 }
 
 function showTransactionView() {
+  document.documentElement.setAttribute('data-view','tx');
   document.getElementById('inputView').style.display = 'none';
   document.getElementById('resultView').style.display = 'none';
   document.getElementById('learnView').style.display = 'none';
   document.getElementById('transactionView').style.display = 'block';
   document.getElementById('navContent').classList.remove('active');
   document.getElementById('navTransaction').classList.add('active');
-  if (!txRegionData) {
-    txLoadRegions().then(function() { txInitRankSelectors(); txLoadRanking(); });
-  } else if (!txRankingLoaded) {
+  window.scrollTo(0, 0);
+  if (!txRankingLoaded) {
     txInitRankSelectors();
     txLoadRanking();
   }
@@ -2225,12 +2242,25 @@ async function txDoQuery() {
 }
 
 function txFormatPrice(amount) {
-  if (amount >= 10000) return Math.round(amount / 10000) + '억';
-  return amount.toLocaleString() + '만';
+  if (amount >= 10000) {
+    var eok = Math.round(amount / 1000) / 10;
+    return (eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1)) + '억';
+  }
+  return Math.round(amount).toLocaleString() + '만원';
 }
 
 function txFormatPP(pp) {
-  return Math.round(pp).toLocaleString();
+  if (pp >= 10000) {
+    var eok = Math.round(pp / 1000) / 10;
+    return (eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1)) + '억';
+  }
+  return Math.round(pp).toLocaleString() + '만';
+}
+
+function toP(m2) {
+  if (!m2 || m2 <= 0) return '';
+  var p = Math.round(m2 / 3.3058 * 10) / 10;
+  return '(' + (p % 1 === 0 ? p.toFixed(0) : p.toFixed(1)) + '평)';
 }
 
 function txShade(idx, total) {
@@ -2394,7 +2424,7 @@ function txRenderSummaries() {
       html += '<div class="tx-bar-section"><div class="tx-bar-section-title"><span class="tx-bar-icon">&#9632;</span> 동별 평균 평당가 <span style="font-weight:400;font-size:11px;color:var(--muted);">상위 ' + dongPriceEntries.length + '개</span></div>';
       dongPriceEntries.forEach(function(e,i) {
         var barW = dongPMax > 0 ? Math.round(e[1] / dongPMax * 100) : 0;
-        html += '<div class="tx-bar-row"><div class="tx-bar-label">' + e[0] + '</div><div class="tx-bar-track"><div class="tx-bar-fill" style="width:' + barW + '%;background:' + txShade(i,dongPriceEntries.length) + ';"></div></div><div class="tx-bar-meta"><strong>' + txFormatPP(e[1]) + '만</strong>/평</div></div>';
+        html += '<div class="tx-bar-row"><div class="tx-bar-label">' + e[0] + '</div><div class="tx-bar-track"><div class="tx-bar-fill" style="width:' + barW + '%;background:' + txShade(i,dongPriceEntries.length) + ';"></div></div><div class="tx-bar-meta"><strong>' + txFormatPP(e[1]) + '</strong>/평</div></div>';
       });
       html += '</div>';
     }
@@ -2416,14 +2446,14 @@ function txRenderSummaries() {
     if (s.highest || s.lowest) {
       html += '<div class="tx-bar-section"><div class="tx-bar-section-title"><span class="tx-bar-icon">&#9632;</span> 평당가 최고/최저</div>';
       if (s.highest) {
-        html += '<div class="tx-highlight-row"><span class="tx-hl-badge hi">최고</span><div class="tx-hl-detail"><div class="tx-hl-value">' + txFormatPP(s.highest.pricePerPyeong) + '만/평 <span class="tx-hl-price">' + txFormatPrice(s.highest.deal_amount) + '</span></div>';
+        html += '<div class="tx-highlight-row"><span class="tx-hl-badge hi">최고</span><div class="tx-hl-detail"><div class="tx-hl-value">' + txFormatPP(s.highest.pricePerPyeong) + '/평 <span class="tx-hl-price">' + txFormatPrice(s.highest.deal_amount) + '</span></div>';
         html += '<div class="tx-hl-sub">' + escHtml((s.highest.umd_nm||'') + ' ' + (s.highest.jibun||'')) + ' · ' + escHtml(s.highest.land_use||'') + '</div>';
-        html += '<div class="tx-hl-sub">대지 ' + (s.highest.plottage_ar||0) + '㎡ · 연면적 ' + (s.highest.building_ar||0) + '㎡ · ' + (s.highest.build_year||'') + '년</div></div></div>';
+        html += '<div class="tx-hl-sub">대지 ' + (s.highest.plottage_ar||0) + '㎡' + toP(s.highest.plottage_ar) + '</div><div class="tx-hl-sub">연면적 ' + (s.highest.building_ar||0) + '㎡' + toP(s.highest.building_ar) + ' · ' + (s.highest.build_year||'') + '년</div></div></div>';
       }
       if (s.lowest) {
-        html += '<div class="tx-highlight-row"><span class="tx-hl-badge lo">최저</span><div class="tx-hl-detail"><div class="tx-hl-value">' + txFormatPP(s.lowest.pricePerPyeong) + '만/평 <span class="tx-hl-price">' + txFormatPrice(s.lowest.deal_amount) + '</span></div>';
+        html += '<div class="tx-highlight-row"><span class="tx-hl-badge lo">최저</span><div class="tx-hl-detail"><div class="tx-hl-value">' + txFormatPP(s.lowest.pricePerPyeong) + '/평 <span class="tx-hl-price">' + txFormatPrice(s.lowest.deal_amount) + '</span></div>';
         html += '<div class="tx-hl-sub">' + escHtml((s.lowest.umd_nm||'') + ' ' + (s.lowest.jibun||'')) + ' · ' + escHtml(s.lowest.land_use||'') + '</div>';
-        html += '<div class="tx-hl-sub">대지 ' + (s.lowest.plottage_ar||0) + '㎡ · 연면적 ' + (s.lowest.building_ar||0) + '㎡ · ' + (s.lowest.build_year||'') + '년</div></div></div>';
+        html += '<div class="tx-hl-sub">대지 ' + (s.lowest.plottage_ar||0) + '㎡' + toP(s.lowest.plottage_ar) + '</div><div class="tx-hl-sub">연면적 ' + (s.lowest.building_ar||0) + '㎡' + toP(s.lowest.building_ar) + ' · ' + (s.lowest.build_year||'') + '년</div></div></div>';
       }
       html += '</div>';
     }
@@ -2445,16 +2475,16 @@ function txBuildStatItems(s) {
   return [
     { key: '거래량', label: '거래량', value: s.totalCount + '건', changeText: chVol !== 0 ? prevPrefix + (chVol > 0 ? '+' : '') + chVol + '%' : prevPrefix + '-', changeClass: chVol > 0 ? 'up' : chVol < 0 ? 'down' : 'none' },
     { key: '평균 매매가', label: '평균 매매가', value: txFormatPrice(s.avgPrice), changeText: chAvg !== 0 ? prevPrefix + (chAvg > 0 ? '+' : '') + chAvg + '%' : prevPrefix + '-', changeClass: chAvg > 0 ? 'up' : chAvg < 0 ? 'down' : 'none' },
-    { key: '평당 매매가', label: '평당 매매가 (토지)', value: txFormatPP(s.avgPricePerPyeong) + '만', changeText: chPri !== 0 ? prevPrefix + (chPri > 0 ? '+' : '') + chPri + '%' : prevPrefix + '-', changeClass: chPri > 0 ? 'up' : chPri < 0 ? 'down' : 'none' },
-    { key: '연면적 평당가', label: '연면적 평당가', value: txFormatPP(s.avgPricePerArea) + '만', changeText: chArea !== 0 ? prevPrefix + (chArea > 0 ? '+' : '') + chArea + '%' : prevPrefix + '-', changeClass: chArea > 0 ? 'up' : chArea < 0 ? 'down' : 'none' },
+    { key: '평당 매매가', label: '평당 매매가 (토지)', value: txFormatPP(s.avgPricePerPyeong), changeText: chPri !== 0 ? prevPrefix + (chPri > 0 ? '+' : '') + chPri + '%' : prevPrefix + '-', changeClass: chPri > 0 ? 'up' : chPri < 0 ? 'down' : 'none' },
+    { key: '연면적 평당가', label: '연면적 평당가', value: txFormatPP(s.avgPricePerArea), changeText: chArea !== 0 ? prevPrefix + (chArea > 0 ? '+' : '') + chArea + '%' : prevPrefix + '-', changeClass: chArea > 0 ? 'up' : chArea < 0 ? 'down' : 'none' },
     { key: '법인 매수 비율', label: '법인 매수 비율', value: s.buyer.corp.ratio + '%', changeText: s.buyer.corp.count + '건', changeClass: 'none' },
     { key: '법인 매도 비율', label: '법인 매도 비율', value: s.seller.corp.ratio + '%', changeText: s.seller.corp.count + '건', changeClass: 'none' },
     { key: '동별 거래량', label: '동별 거래량', value: Object.keys(s.byDong).length + '개 동', changeText: Object.entries(s.byDong).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,2).map(function(e){return e[0]+' '+e[1].count+'건';}).join(', '), changeClass: 'none' },
-    { key: '동별 평균 매매가', label: '동별 평균 매매가', value: Object.keys(s.byDong).length + '개 동', changeText: Object.entries(s.byDong).filter(function(e){return e[1].ppCount>0;}).sort(function(a,b){return (b[1].totalPP/b[1].ppCount)-(a[1].totalPP/a[1].ppCount);}).slice(0,2).map(function(e){return e[0]+' '+txFormatPP(e[1].totalPP/e[1].ppCount)+'만';}).join(', '), changeClass: 'none' },
+    { key: '동별 평균 매매가', label: '동별 평균 매매가', value: Object.keys(s.byDong).length + '개 동', changeText: Object.entries(s.byDong).filter(function(e){return e[1].ppCount>0;}).sort(function(a,b){return (b[1].totalPP/b[1].ppCount)-(a[1].totalPP/a[1].ppCount);}).slice(0,2).map(function(e){return e[0]+' '+txFormatPP(e[1].totalPP/e[1].ppCount);}).join(', '), changeClass: 'none' },
     { key: '건축연도별', label: '건축연도별', value: Object.entries(s.byBuildYear).sort(function(a,b){return b[1]-a[1];})[0][0] + ' 최다', changeText: Object.entries(s.byBuildYear).filter(function(e){return e[1]>0;}).map(function(e){return e[0]+' '+e[1]+'건';}).join(', '), changeClass: 'none' },
     { key: '용도지역별', label: '용도지역별', value: Object.entries(s.byLandUse).sort(function(a,b){return b[1]-a[1];})[0] ? Object.entries(s.byLandUse).sort(function(a,b){return b[1]-a[1];})[0][0] : '-', changeText: Object.entries(s.byLandUse).filter(function(e){return e[1]>0;}).slice(0,3).map(function(e){return e[0]+' '+e[1]+'건';}).join(', '), changeClass: 'none' },
-    { key: '최고 평당가 거래', label: '최고 평당가', value: s.highest ? txFormatPP(s.highest.pricePerPyeong) + '만/평' : '-', changeText: s.highest ? (s.highest.umd_nm||'') + ' ' + txFormatPrice(s.highest.deal_amount) : '-', changeClass: 'none' },
-    { key: '최저 평당가 거래', label: '최저 평당가', value: s.lowest ? txFormatPP(s.lowest.pricePerPyeong) + '만/평' : '-', changeText: s.lowest ? (s.lowest.umd_nm||'') + ' ' + txFormatPrice(s.lowest.deal_amount) : '-', changeClass: 'none' }
+    { key: '최고 평당가 거래', label: '최고 평당가', value: s.highest ? txFormatPP(s.highest.pricePerPyeong) + '/평' : '-', changeText: s.highest ? (s.highest.umd_nm||'') + ' ' + txFormatPrice(s.highest.deal_amount) : '-', changeClass: 'none' },
+    { key: '최저 평당가 거래', label: '최저 평당가', value: s.lowest ? txFormatPP(s.lowest.pricePerPyeong) + '/평' : '-', changeText: s.lowest ? (s.lowest.umd_nm||'') + ' ' + txFormatPrice(s.lowest.deal_amount) : '-', changeClass: 'none' }
   ];
 }
 
@@ -2487,7 +2517,7 @@ function txRenderCompare() {
   var rows = [
     { label: '거래건수', fn: function(s) { return s.totalCount + '건'; }},
     { label: '평균 매매가', fn: function(s) { return txFormatPrice(s.avgPrice); }},
-    { label: '평당 매매가', fn: function(s) { return txFormatPP(s.avgPricePerPyeong) + '만'; }},
+    { label: '평당 매매가', fn: function(s) { return txFormatPP(s.avgPricePerPyeong); }},
     { label: '전기 대비<br><span style="font-size:9px;font-weight:400;color:var(--muted);">' + txGetPrevPeriodLabel() + '</span>', fn: function(s) { var v = s.prevPeriodChange.price; return v > 0 ? '<span style="color:#1D9E75">+' + v + '%</span>' : v < 0 ? '<span style="color:#E24B4A">' + v + '%</span>' : '-'; }},
     { label: '법인 매수', fn: function(s) { return s.buyer.corp.ratio + '% <span style="font-size:10px;color:var(--muted)">(' + s.buyer.corp.count + '건)</span>'; }},
     { label: '법인 매도', fn: function(s) { return s.seller.corp.ratio + '% <span style="font-size:10px;color:var(--muted)">(' + s.seller.corp.count + '건)</span>'; }}
@@ -2607,7 +2637,7 @@ function txRenderList() {
     html += '<tr class="' + (isCancelled ? 'tx-row-cancel' : '') + '">';
     html += '<td class="tx-date-col">' + String(t.deal_month||'').padStart(2,'0') + '.' + String(t.deal_day||'').padStart(2,'0') + '</td>';
     html += '<td><div class="tx-loc-main">' + escHtml((t.umd_nm||'') + (t.jibun ? ' ' + t.jibun : ''));
-    html += '</div><div class="tx-loc-sub">' + escHtml(t.building_use||'') + ' · 대지 ' + (t.plottage_ar||0) + '\\u33A1 · ' + (t.building_ar||0) + '\\u33A1 · ' + (t.build_year||'') + '년</div></td>';
+    html += '</div><div class="tx-loc-sub">' + escHtml(t.building_use||'') + ' · 대지 ' + (t.plottage_ar||0) + '\\u33A1' + toP(t.plottage_ar) + ' · ' + (t.building_ar||0) + '\\u33A1' + toP(t.building_ar) + ' · ' + (t.build_year||'') + '년</div></td>';
     html += '<td>' + (isCancelled ? '<s>' + txFormatPrice(t.deal_amount) + '</s>' : txFormatPrice(t.deal_amount)) + '</td>';
     html += '<td>' + (isCancelled ? '<span class="tx-cancel-tag">해제</span>' : (pp > 0 ? txFormatPP(pp) : '-')) + '</td>';
     html += '</tr>';
@@ -2663,7 +2693,7 @@ function txToContent() {
   var s = r.stats;
   var text = r.displayName + ' 실거래 데이터 기반 콘텐츠:\\n';
   text += '기간: ' + txGetPeriodLabel() + '\\n';
-  text += '거래 ' + s.totalCount + '건, 평균 매매가 ' + txFormatPrice(s.avgPrice) + ', 평당 ' + txFormatPP(s.avgPricePerPyeong) + '만\\n';
+  text += '거래 ' + s.totalCount + '건, 평균 매매가 ' + txFormatPrice(s.avgPrice) + ', 평당 ' + txFormatPP(s.avgPricePerPyeong) + '\\n';
   text += '법인 매수 ' + s.buyer.corp.ratio + '%, 전기 대비 거래량 ' + (s.prevPeriodChange.volume > 0 ? '+' : '') + s.prevPeriodChange.volume + '%\\n';
   text += '이 데이터를 바탕으로 빌딩 매매 시장 분석 콘텐츠를 작성해줘';
 
@@ -2708,7 +2738,7 @@ function txReportToContent() {
   document.getElementById('txReportModal').classList.remove('active');
   showContentView();
   switchMode('text');
-  document.getElementById('textInput').value = txReportCache || '';
+  document.getElementById('textInput').value = document.getElementById('txReportBody').textContent || '';
   doGenerate();
 }
 
@@ -2978,13 +3008,44 @@ async function txLoadRanking() {
   var loading = document.getElementById('txRankLoading');
   var grid = document.getElementById('txRankGrid');
 
-  loading.style.display = 'block';
-  grid.innerHTML = '';
   txRankChecked = [];
   txRankOpenId = null;
-  txReportCache = {};
-  txInsightCache = {};
   txUpdateCompareFloat();
+
+  // sessionStorage 캐시 확인
+  var cacheKey = 'txRank_' + sido + '_' + (sgg || 'all') + '_' + months + '_' + txRankSortBy;
+  try {
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      if (parsed && parsed._ts && (Date.now() - parsed._ts) < 3600000) {
+        txRankingData = parsed;
+        txRankingLoaded = true;
+        loading.style.display = 'none';
+        var pl = parsed.period || {};
+        var pvl = parsed.prevPeriod || {};
+        var periodLabel = pl.start ? pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4) : '';
+        var prevLabel = pvl.start ? pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4) : '';
+        document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
+        try {
+          txRenderRankingGrid();
+          console.log('[랭킹] sessionStorage 캐시 사용:', cacheKey);
+        } catch(cacheErr) {
+          console.error('[랭킹] 캐시 렌더링 에러:', cacheErr.message, cacheErr.stack);
+          sessionStorage.removeItem(cacheKey);
+        }
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // 스켈레톤 UI 표시
+  loading.style.display = 'none';
+  var skHtml = '';
+  for (var si = 0; si < 10; si++) {
+    skHtml += '<div class="tx-skeleton-card"><div class="tx-skeleton-line" style="width:30%;height:14px;margin-bottom:10px;"></div><div class="tx-skeleton-line" style="width:60%;height:20px;margin-bottom:8px;"></div><div class="tx-skeleton-line" style="width:45%;height:12px;"></div></div>';
+  }
+  grid.innerHTML = skHtml;
 
   try {
     var url = '/api/transaction/ranking?sido=' + encodeURIComponent(sido) + '&sortBy=' + txRankSortBy;
@@ -2992,43 +3053,56 @@ async function txLoadRanking() {
       url += '&startMonth=' + txRankStartYear + String(txRankStartMon).padStart(2,'0');
       url += '&endMonth=' + txRankEndYear + String(txRankEndMon).padStart(2,'0');
     } else if (months === 'ytd') {
-      var now = new Date();
-      url += '&startMonth=' + now.getFullYear() + '01';
-      url += '&endMonth=' + now.getFullYear() + String(now.getMonth() + 1).padStart(2,'0');
+      var nowY = new Date();
+      url += '&startMonth=' + nowY.getFullYear() + '01';
+      url += '&endMonth=' + nowY.getFullYear() + String(nowY.getMonth() + 1).padStart(2,'0');
     } else {
       url += '&months=' + months;
     }
     if (sgg) url += '&sgg=' + encodeURIComponent(sgg);
     var resp = await fetch(url);
+    console.log('[랭킹] fetch status:', resp.status);
     var data = await resp.json();
+    console.log('[랭킹] 데이터:', data.type, data.ranking ? data.ranking.length + '건' : 'ranking 없음');
     txRankingData = data;
     txRankingLoaded = true;
-    loading.style.display = 'none';
 
-    var pStart = data.period ? [data.period.start, data.period.end].sort()[0] : '';
-    var pEnd = data.period ? [data.period.start, data.period.end].sort()[1] : '';
-    var pvStart = data.prevPeriod ? [data.prevPeriod.start, data.prevPeriod.end].sort()[0] : '';
-    var pvEnd = data.prevPeriod ? [data.prevPeriod.start, data.prevPeriod.end].sort()[1] : '';
-    var periodLabel = pStart ? pStart.substring(0,4) + '.' + pStart.substring(4) + ' ~ ' + pEnd.substring(0,4) + '.' + pEnd.substring(4) : '';
-    var prevLabel = pvStart ? pvStart.substring(0,4) + '.' + pvStart.substring(4) + ' ~ ' + pvEnd.substring(0,4) + '.' + pvEnd.substring(4) : '';
+    // sessionStorage 캐시 저장
+    try { data._ts = Date.now(); sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch(e) {}
+
+    var pl = data.period || {};
+    var pvl = data.prevPeriod || {};
+    var periodLabel = pl.start ? pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4) : '';
+    var prevLabel = pvl.start ? pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4) : '';
     document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
 
-    txRenderRankingGrid();
+    console.log('[랭킹] 렌더링 시작, ranking 수:', txRankingData.ranking ? txRankingData.ranking.length : 'null');
+    try {
+      txRenderRankingGrid();
+      console.log('[랭킹] 렌더링 완료');
+      console.log('[랭킹] grid innerHTML 길이:', grid.innerHTML.length);
+      console.log('[랭킹] grid 첫 200자:', grid.innerHTML.substring(0, 200));
+      console.log('[랭킹] transactionView display:', document.getElementById('transactionView').style.display);
+      console.log('[랭킹] transactionView computed:', window.getComputedStyle(document.getElementById('transactionView')).display);
+    } catch(renderErr) {
+      console.error('[랭킹] 렌더링 에러:', renderErr.message, renderErr.stack);
+      grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">렌더링 오류: ' + renderErr.message + '</div>';
+    }
   } catch(e) {
-    loading.style.display = 'none';
+    console.error('[랭킹] fetch 에러:', e.message);
     grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">랭킹 데이터를 불러오지 못했습니다.</div>';
   }
 }
 
 function txGetRankMainValue(stats) {
   if (txRankSortBy === 'avgPrice') return txFormatPrice(stats.avgPrice);
-  if (txRankSortBy === 'avgPricePerPyeong') return txFormatPP(stats.avgPricePerPyeong) + '만/평';
-  if (txRankSortBy === 'avgPricePerArea') return txFormatPP(stats.avgPricePerArea) + '만/평';
+  if (txRankSortBy === 'avgPricePerPyeong') return txFormatPP(stats.avgPricePerPyeong) + '/평';
+  if (txRankSortBy === 'avgPricePerArea') return txFormatPP(stats.avgPricePerArea) + '/평';
   return stats.totalCount + '건';
 }
 
 function txGetRankSubValue(stats) {
-  if (txRankSortBy === 'totalCount') return '평당 ' + txFormatPP(stats.avgPricePerPyeong) + '만';
+  if (txRankSortBy === 'totalCount') return '평당 ' + txFormatPP(stats.avgPricePerPyeong);
   if (txRankSortBy === 'avgPrice') return stats.totalCount + '건 거래';
   if (txRankSortBy === 'avgPricePerPyeong') return stats.totalCount + '건 거래';
   return stats.totalCount + '건 거래';
@@ -3152,8 +3226,8 @@ function txRenderDetailPanel(idx) {
   var hasPrev = s.prevPeriodChange.hasPrev;
   html += txDetailStatBox('거래량', s.totalCount + '건', chVol, hasPrev);
   html += txDetailStatBox('평균 매매가', txFormatPrice(s.avgPrice), chAvg, hasPrev);
-  html += txDetailStatBox('평당 매매가(토지)', txFormatPP(s.avgPricePerPyeong) + '만', chPP, hasPrev);
-  html += txDetailStatBox('평당 매매가(연면적)', txFormatPP(s.avgPricePerArea) + '만', chArea, hasPrev);
+  html += txDetailStatBox('평당 매매가(토지)', txFormatPP(s.avgPricePerPyeong), chPP, hasPrev);
+  html += txDetailStatBox('평당 매매가(연면적)', txFormatPP(s.avgPricePerArea), chArea, hasPrev);
   html += '</div>';
 
   // ─── ROW 1: 매수/매도 비율 | 건물용도별 + 용도지역별 ───
@@ -3250,7 +3324,7 @@ function txRenderDetailPanel(idx) {
         html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
         html += '<span style="width:48px;text-align:right;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+e[0]+'</span>';
         html += '<div style="flex:1;height:18px;background:rgba(30,58,95,0.06);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+barW+'%;background:'+txShade(i,dongPriceEntries.length)+';border-radius:4px;min-width:2px;"></div></div>';
-        html += '<span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;min-width:60px;">'+txFormatPP(e[1])+'만/평</span>';
+        html += '<span style="font-size:12px;font-weight:500;color:var(--text);flex-shrink:0;min-width:60px;">'+txFormatPP(e[1])+'/평</span>';
         html += '</div>';
       });
       html += '</div>';
@@ -3281,16 +3355,16 @@ function txRenderDetailPanel(idx) {
   if (s.highest) {
     html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">';
     html += '<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(30,58,95,0.08);color:#1E3A5F;flex-shrink:0;">최고</span>';
-    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.highest.pricePerPyeong)+'만/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.highest.deal_amount)+'</span></div>';
+    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.highest.pricePerPyeong)+'/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.highest.deal_amount)+'</span></div>';
     html += '<div style="font-size:11px;color:var(--sub);">'+escHtml((s.highest.umd_nm||'')+' '+(s.highest.jibun||''))+' · '+escHtml(s.highest.land_use||'')+'</div>';
-    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.highest.plottage_ar||0)+'\u33A1 · 연면적 '+(s.highest.building_ar||0)+'\u33A1 · '+(s.highest.build_year||'')+'년</div></div></div>';
+    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.highest.plottage_ar||0)+'\u33A1'+toP(s.highest.plottage_ar)+'</div><div style="font-size:11px;color:var(--sub);">연면적 '+(s.highest.building_ar||0)+'\u33A1'+toP(s.highest.building_ar)+' · '+(s.highest.build_year||'')+'년</div></div></div>';
   }
   if (s.lowest) {
     html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;">';
     html += '<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(226,75,74,0.08);color:#C02020;flex-shrink:0;">최저</span>';
-    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.lowest.pricePerPyeong)+'만/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.lowest.deal_amount)+'</span></div>';
+    html += '<div style="flex:1;line-height:1.5;"><div style="font-size:12px;font-weight:500;color:var(--text);">'+txFormatPP(s.lowest.pricePerPyeong)+'/평 <span style="font-weight:400;color:var(--sub);">'+txFormatPrice(s.lowest.deal_amount)+'</span></div>';
     html += '<div style="font-size:11px;color:var(--sub);">'+escHtml((s.lowest.umd_nm||'')+' '+(s.lowest.jibun||''))+' · '+escHtml(s.lowest.land_use||'')+'</div>';
-    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.lowest.plottage_ar||0)+'\u33A1 · 연면적 '+(s.lowest.building_ar||0)+'\u33A1 · '+(s.lowest.build_year||'')+'년</div></div></div>';
+    html += '<div style="font-size:11px;color:var(--sub);">대지 '+(s.lowest.plottage_ar||0)+'\u33A1'+toP(s.lowest.plottage_ar)+'</div><div style="font-size:11px;color:var(--sub);">연면적 '+(s.lowest.building_ar||0)+'\u33A1'+toP(s.lowest.building_ar)+' · '+(s.lowest.build_year||'')+'년</div></div></div>';
   }
   if (!s.highest && !s.lowest) html += '<div style="font-size:12px;color:var(--sub);">데이터 없음</div>';
   html += '</div>';
@@ -3312,7 +3386,7 @@ function txRenderDetailPanel(idx) {
       var pp = t.plottage_ar>0 ? Math.round(t.deal_amount/t.plottage_ar*3.3058) : 0;
       html += '<tr><td class="tx-date-col">'+String(t.deal_month||'').padStart(2,'0')+'.'+String(t.deal_day||'').padStart(2,'0')+'</td>';
       html += '<td><div class="tx-loc-main">'+escHtml((t.umd_nm||'')+(t.jibun?' '+t.jibun:''))+'</div>';
-      html += '<div class="tx-loc-sub">'+escHtml(t.building_use||'')+' · 대지 '+(t.plottage_ar||0)+'\u33A1 · '+(t.building_ar||0)+'\u33A1 · '+(t.build_year||'')+'년</div></td>';
+      html += '<div class="tx-loc-sub">'+escHtml(t.building_use||'')+' · 대지 '+(t.plottage_ar||0)+'\u33A1'+toP(t.plottage_ar)+' · '+(t.building_ar||0)+'\u33A1'+toP(t.building_ar)+' · '+(t.build_year||'')+'년</div></td>';
       html += '<td>'+txFormatPrice(t.deal_amount)+'</td>';
       html += '<td>'+(pp>0?txFormatPP(pp):'-')+'</td></tr>';
     });
@@ -3387,11 +3461,11 @@ function txDetailContent(idx) {
   if (!item) return;
   var s = item.stats;
   var text = item.name + ' 상업업무용 부동산 실거래 분석\\n';
-  text += '거래 ' + s.totalCount + '건, 평균 매매가 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong) + '만\\n';
+  text += '거래 ' + s.totalCount + '건, 평균 매매가 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong) + '\\n';
   text += '전년대비 거래량 ' + (s.prevPeriodChange.volume > 0 ? '+' : '') + s.prevPeriodChange.volume + '%, 가격 ' + (s.prevPeriodChange.price > 0 ? '+' : '') + s.prevPeriodChange.price + '%\\n';
   text += '법인 매수 ' + s.buyer.corp.ratio + '%, 법인 매도 ' + s.seller.corp.ratio + '%\\n';
-  if (s.highest) text += '최고 평당가: ' + txFormatPP(s.highest.pricePerPyeong) + '만/평 (' + (s.highest.umd_nm||'') + ')\\n';
-  if (s.lowest) text += '최저 평당가: ' + txFormatPP(s.lowest.pricePerPyeong) + '만/평 (' + (s.lowest.umd_nm||'') + ')\\n';
+  if (s.highest) text += '최고 평당가: ' + txFormatPP(s.highest.pricePerPyeong) + '/평 (' + (s.highest.umd_nm||'') + ')\\n';
+  if (s.lowest) text += '최저 평당가: ' + txFormatPP(s.lowest.pricePerPyeong) + '/평 (' + (s.lowest.umd_nm||'') + ')\\n';
   text += '이 데이터를 바탕으로 빌딩 매매 시장 분석 콘텐츠를 작성해줘';
 
   showContentView();
@@ -3406,7 +3480,7 @@ function txCompareContent() {
   var text = items.map(function(item) { return item.name; }).join(' vs ') + ' 상업업무용 부동산 비교 분석\\n\\n';
   items.forEach(function(item) {
     var s = item.stats;
-    text += '[' + item.name + '] 거래 ' + s.totalCount + '건, 평균 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong) + '만';
+    text += '[' + item.name + '] 거래 ' + s.totalCount + '건, 평균 ' + txFormatPrice(s.avgPrice) + ', 평당(토지) ' + txFormatPP(s.avgPricePerPyeong);
     text += ', 전년대비 거래량 ' + (s.prevPeriodChange.volume > 0 ? '+' : '') + s.prevPeriodChange.volume + '%\\n';
   });
   text += '\\n이 데이터를 바탕으로 지역 비교 분석 콘텐츠를 작성해줘';
@@ -3438,8 +3512,8 @@ function txShowCompare() {
   var rows = [
     { label: '거래건수', fn: function(s) { var v = s.prevPeriodChange.volume; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + s.totalCount + '건</div>' + ch; }},
     { label: '평균 매매가', fn: function(s) { var v = s.prevPeriodChange.avgPrice || 0; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPrice(s.avgPrice) + '</div>' + ch; }},
-    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(토지)</span>', fn: function(s) { var v = s.prevPeriodChange.price; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerPyeong) + '만</div>' + ch; }},
-    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(연면적)</span>', fn: function(s) { var v = s.prevPeriodChange.area || 0; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerArea) + '만</div>' + ch; }},
+    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(토지)</span>', fn: function(s) { var v = s.prevPeriodChange.price; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerPyeong) + '</div>' + ch; }},
+    { label: '평당 매매가<br><span style="font-size:10px;font-weight:400;color:var(--muted);">(연면적)</span>', fn: function(s) { var v = s.prevPeriodChange.area || 0; var ch = v !== 0 ? '<div style="font-size:10px;margin-top:2px;' + (v > 0 ? 'color:#0F6E56' : 'color:#E24B4A') + ';">전년대비 ' + (v > 0 ? '+' : '') + v + '%</div>' : ''; return '<div style="font-weight:500;color:var(--text);">' + txFormatPP(s.avgPricePerArea) + '</div>' + ch; }},
     { label: '매수 명의', fn: function(s) { return '<div style="font-weight:500;color:var(--text);">법인 ' + s.buyer.corp.ratio + '% · 개인 ' + s.buyer.personal.ratio + '%</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">(' + s.buyer.corp.count + '건 · ' + s.buyer.personal.count + '건)</div>'; }},
     { label: '매도 명의', fn: function(s) { return '<div style="font-weight:500;color:var(--text);">법인 ' + s.seller.corp.ratio + '% · 개인 ' + s.seller.personal.ratio + '%</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">(' + s.seller.corp.count + '건 · ' + s.seller.personal.count + '건)</div>'; }}
   ];
@@ -3507,7 +3581,19 @@ async function txRankGetInsight() {
     renderHistoryList();
     updateStudyBadge();
     loadRecommendNews(false);
-    if (window.location.hash === '#content') showContentView(); else showTransactionView();
+
+    // 기존 깨진 캐시 제거
+    try { Object.keys(sessionStorage).forEach(function(k) { if (k.startsWith('txRank_')) sessionStorage.removeItem(k); }); } catch(e) {}
+    var hash = window.location.hash;
+    if (hash === '#transaction') {
+      showTransactionView();
+    }
+    // 페이지 이동 시 hash 체크 보강 (챗봇/관리자에서 진입 시)
+    setTimeout(function() {
+      if (window.location.hash === '#transaction' && document.getElementById('transactionView').style.display !== 'block') {
+        showTransactionView();
+      }
+    }, 200);
   }
 })();
 </script>

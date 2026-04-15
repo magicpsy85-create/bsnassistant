@@ -134,7 +134,7 @@ export function generateChatbotPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="/insta" class="nav-link">실거래가</a>
+      <a href="/insta#transaction" class="nav-link">실거래가</a>
       <a href="/insta#content" class="nav-link">콘텐츠 생성</a>
       <a href="/chatbot" class="nav-link active">챗봇</a>
       <a href="/admin" class="nav-link">관리자</a>
@@ -361,26 +361,15 @@ async function initLogin() {
         return;
       }
     }
-    var token = localStorage.getItem('bsn_firebase_token');
-    if (token) {
-      var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
-      if (res.ok) {
-        var data = await res.json();
-        if (data.user) {
-          userRole = data.user.role;
-          localStorage.setItem('bsn_user_role', userRole);
-          localStorage.setItem('bsn_session_id', data.user.sessionId || '');
-          sessionStorage.setItem('bsn_session_active', 'true');
-          document.getElementById('navUserName').textContent = userName; document.getElementById('navUserName').style.display = 'inline';
-          document.getElementById('logoutBtn').style.display = 'block';
-          restoreChatHistory();
-          startSessionCheck();
-          return;
-        }
-      }
-    }
-  } catch(e) {}
-  doLogout();
+    userRole = localStorage.getItem('bsn_user_role') || '';
+    sessionStorage.setItem('bsn_session_active', 'true');
+    document.getElementById('navUserName').textContent = userName; document.getElementById('navUserName').style.display = 'inline';
+    document.getElementById('logoutBtn').style.display = 'block';
+    restoreChatHistory();
+    startSessionCheck();
+  } catch(e) {
+    doLogout();
+  }
 }
 
 async function doGoogleLogin() {

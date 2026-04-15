@@ -54,9 +54,8 @@ JSON만 반환하세요.
 ${input}`;
 
     const res = await client.chat.completions.create({
-      model: MODEL,
+      model: 'gpt-4o-mini',
       max_completion_tokens: 1000,
-      reasoning_effort: 'low' as any,
       messages: [
         { role: 'user', content: analyzePrompt }
       ]
@@ -114,25 +113,25 @@ async function doResearch(analysis: AnalysisResult): Promise<ResearchData> {
       const regionCode = extractRegionCode(analysis.topic);
       if (!regionCode) return [];
       const now = new Date();
-      const results: any[] = [];
-      for (let i = 0; i < 3; i++) {
+      const monthPromises = [0, 1, 2].map(i => {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const dealYmd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
-        try {
-          const resp = await axios.get(
-            'http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcNrgTrade',
-            { params: { serviceKey: apiKey, LAWD_CD: regionCode, DEAL_YMD: dealYmd, pageNo: 1, numOfRows: 10 }, timeout: 5000 }
-          );
+        return axios.get(
+          'http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcNrgTrade',
+          { params: { serviceKey: apiKey, LAWD_CD: regionCode, DEAL_YMD: dealYmd, pageNo: 1, numOfRows: 10 }, timeout: 5000 }
+        ).then(resp => {
           const items = resp.data?.response?.body?.items?.item;
           if (Array.isArray(items)) {
-            results.push(...items.map((it: any) => ({
+            return items.map((it: any) => ({
               area: `${it['시군구']} ${it['법정동'] || ''}`.trim(),
               price: `${it['거래금액'] || ''}만원`.trim(),
               date: `${it['년']}년 ${it['월']}월`
-            })));
+            }));
           }
-        } catch { /* skip month */ }
-      }
+          return [];
+        }).catch(() => []);
+      });
+      const results = (await Promise.all(monthPromises)).flat();
       return results.slice(0, 10);
     } catch { return []; }
   })();
@@ -441,7 +440,7 @@ JSON 외의 텍스트, 마크다운 코드블록(\`\`\`)은 포함하지 마세�
 
   const res = await client.chat.completions.create({
     model: MODEL,
-    max_completion_tokens: 16000,
+    max_completion_tokens: 12000,
     reasoning_effort: 'low' as any,
     messages: [
       { role: 'user', content: fullSystemContent + '\n\n' + userContent }

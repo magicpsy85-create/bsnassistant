@@ -4,9 +4,11 @@ import { app } from './index';
 export const api = onRequest(
   {
     region: 'us-central1',
-    memory: '512MiB',
-    timeoutSeconds: 120,
-    invoker: 'public'
+    memory: '1GiB',
+    timeoutSeconds: 300,
+    invoker: 'public',
+    cors: true,
+    minInstances: 1
   },
   app
 );

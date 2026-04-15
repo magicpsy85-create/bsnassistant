@@ -200,7 +200,7 @@ export function generateAdminPageHTML(): string {
       <span class="logo-text">BSN <span>Assistant</span></span>
     </a>
     <div class="nav-links">
-      <a href="/insta" class="nav-link">실거래가</a>
+      <a href="/insta#transaction" class="nav-link">실거래가</a>
       <a href="/insta#content" class="nav-link">콘텐츠 생성</a>
       <a href="/chatbot" class="nav-link">챗봇</a>
       <a href="/admin" class="nav-link active">관리자</a>
@@ -562,25 +562,14 @@ async function checkAdminAccess() {
     } catch(e) {}
   }
 
-  var token = localStorage.getItem('bsn_firebase_token');
-  if (!token) return await showAdminLogin();
-
-  try {
-    var res = await fetch('/api/auth/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({idToken:token}) });
-    if (!res.ok) return await showAdminLogin();
-    var data = await res.json();
-    if (!data.user || data.user.role !== '관리자') {
-      document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><div style="font-size:36px;margin-bottom:12px;">&#128683;</div><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.<br>현재 계정: ' + esc(data.user.email || '') + '</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
-      return false;
-    }
-    localStorage.setItem('bsn_user_role', data.user.role);
-    localStorage.setItem('bsn_session_id', data.user.sessionId || '');
-    sessionStorage.setItem('bsn_session_active', 'true');
-    document.getElementById('adminUserName').textContent = data.user.name || localStorage.getItem('bsn_user_name') || '';
-    return true;
-  } catch(e) {
-    return await showAdminLogin();
+  var role = localStorage.getItem('bsn_user_role');
+  if (role !== '관리자') {
+    var email = localStorage.getItem('bsn_user_email') || '';
+    document.querySelector('.container').innerHTML = '<div class="card" style="text-align:center;padding:60px;"><div style="font-size:36px;margin-bottom:12px;">&#128683;</div><h2 style="margin-bottom:12px;">관리자 전용 페이지</h2><p style="color:var(--sub);margin-bottom:20px;">관리자 권한이 있는 계정만 접근할 수 있습니다.<br>현재 계정: ' + esc(email) + '</p><a href="/" class="btn btn-primary">챗봇으로 돌아가기</a></div>';
+    return false;
   }
+  document.getElementById('adminUserName').textContent = localStorage.getItem('bsn_user_name') || '';
+  return true;
 }
 
 function showAdminLogin() {
