@@ -560,6 +560,60 @@ app.delete('/api/learn/articles/:id', (req: Request, res: Response) => {
   res.json({ success: true, remaining });
 });
 
+// ─── 잘못 분류된 학습 데이터 조회/정리 ───
+app.get('/api/learn/corrupted', async (_req: Request, res: Response) => {
+  try {
+    const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
+    if (!fs.existsSync(learnedPath)) {
+      return res.json({ corrupted: [], total: 0 });
+    }
+    const raw = fs.readFileSync(learnedPath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const articles = parsed.articles || [];
+    const corrupted = articles.filter((a: any) => {
+      const url = (a.url || '').toLowerCase();
+      const summary = a.summary || '';
+      const br = a.building_relevance || '';
+      const isPdfUrl = url.endsWith('.pdf') || url.includes('.pdf?') || url.includes('.pdf#');
+      const sourceIsUrl = a.sourceType === 'url';
+      const hasBadSummary = summary.includes('PDF 형식') || summary.includes('분석 불가') || summary.includes('확인할 수 없') || summary.includes('판별할 수 없') || br.includes('영향 분석이 불가');
+      return (isPdfUrl && sourceIsUrl) || hasBadSummary;
+    });
+    res.json({ corrupted, total: articles.length, corruptedCount: corrupted.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/learn/corrupted', async (_req: Request, res: Response) => {
+  try {
+    const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
+    if (!fs.existsSync(learnedPath)) {
+      return res.json({ removed: 0 });
+    }
+    const raw = fs.readFileSync(learnedPath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const articles = parsed.articles || [];
+    const before = articles.length;
+    const filtered = articles.filter((a: any) => {
+      const url = (a.url || '').toLowerCase();
+      const summary = a.summary || '';
+      const br = a.building_relevance || '';
+      const isPdfUrl = url.endsWith('.pdf') || url.includes('.pdf?') || url.includes('.pdf#');
+      const sourceIsUrl = a.sourceType === 'url';
+      const hasBadSummary = summary.includes('PDF 형식') || summary.includes('분석 불가') || summary.includes('확인할 수 없') || summary.includes('판별할 수 없') || br.includes('영향 분석이 불가');
+      return !((isPdfUrl && sourceIsUrl) || hasBadSummary);
+    });
+    parsed.articles = filtered;
+    fs.writeFileSync(learnedPath, JSON.stringify(parsed, null, 2), 'utf-8');
+    const removed = before - filtered.length;
+    console.log('[학습 정리] 잘못 분류된 항목', removed, '건 삭제');
+    res.json({ removed, remaining: filtered.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── 카카오맵 서버 캡처 API (puppeteer-core) ───
 import puppeteer from 'puppeteer-core';
 
@@ -1624,28 +1678,175 @@ async function searchNaverForReport(query: string, count: number = 5): Promise<{
   }
 }
 
+// ─── 리포트용 PDF 검색 (Brave LLM Context + filetype:pdf) ───
+async function searchBravePDFForReport(query: string, count: number = 3): Promise<{ title: string; description: string; url: string }[]> {
+  const braveKey = process.env.BRAVE_API_KEY;
+  if (!braveKey) return [];
+  try {
+    const pdfQuery = query + ' filetype:pdf';
+    const resp = await axios.get('https://api.search.brave.com/res/v1/llm/context', {
+      params: { q: pdfQuery, count },
+      headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
+      timeout: 10000
+    });
+
+    const groundingData = resp.data?.grounding?.generic || resp.data?.results || [];
+
+    const results = groundingData.map((it: any) => {
+      const snippets = Array.isArray(it.snippets) ? it.snippets : [];
+      const fullContent = snippets.map((s: any) => typeof s === 'string' ? s : (s.text || s.content || '')).join(' ').trim();
+      const description = fullContent.length > 0 ? fullContent.substring(0, 2000) : (it.description || '');
+      return {
+        title: it.title || '',
+        description,
+        url: it.url || ''
+      };
+    });
+
+    // PDF URL만 필터링 (filetype:pdf에도 HTML 결과가 섞일 수 있음)
+    const pdfOnly = results.filter((r: any) => {
+      const url = (r.url || '').toLowerCase();
+      return url.endsWith('.pdf') || url.includes('.pdf?') || url.includes('.pdf#');
+    });
+
+    console.log('[리포트 PDF]', pdfOnly.length, '건 (질의:', pdfQuery.substring(0,50) + ')');
+    return pdfOnly;
+  } catch (e: any) {
+    console.log('[리포트 PDF] 실패:', e.message);
+    return [];
+  }
+}
+
+// ─── 리포트 regions에서 상위 동(洞) 이름 추출 + Brave 인덱스 친화적 정규화 ───
+function extractTopDongs(regions: any[]): string[] {
+  const dongCounts: Record<string, number> = {};
+  for (const r of regions) {
+    if (!r.stats?.byDong) continue;
+    for (const [dong, info] of Object.entries(r.stats.byDong as Record<string, any>)) {
+      dongCounts[dong] = (dongCounts[dong] || 0) + (info?.count || 0);
+    }
+  }
+  const sorted = Object.entries(dongCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([d]) => d);
+  const normalized = sorted.map(d => d.replace(/\d+(가|동)$/, '').trim());
+  return [...new Set(normalized)].filter(Boolean);
+}
+
+// ─── 리포트용 Places Search (Brave Local Place Search) ───
+let _placesDebugLogged = false;
+async function searchBravePlacesForReport(locationName: string, query: string = '', count: number = 10): Promise<{ name: string; address: string; category: string; rating: string }[]> {
+  const braveKey = process.env.BRAVE_API_KEY;
+  if (!braveKey || !locationName) return [];
+  try {
+    const params: any = { location: locationName, count, country: 'KR', search_lang: 'ko' };
+    if (query) params.q = query;
+
+    const resp = await axios.get('https://api.search.brave.com/res/v1/local/place_search', {
+      params,
+      headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
+      timeout: 8000
+    });
+
+    if (!_placesDebugLogged) {
+      _placesDebugLogged = true;
+      const keys = Object.keys(resp.data || {});
+      console.log('[리포트 Places] 첫 응답 구조 — top-level keys:', keys.join(', '));
+      const firstArr = resp.data?.results || resp.data?.places || resp.data?.locations || [];
+      if (firstArr.length > 0) {
+        console.log('[리포트 Places] 첫 항목 필드:', Object.keys(firstArr[0]).slice(0, 15).join(', '));
+      }
+    }
+
+    const placesData = resp.data?.results || resp.data?.places || resp.data?.locations || [];
+
+    const places = placesData.map((p: any) => {
+      const name = p.title || p.name || p.displayName || '';
+
+      let address = '';
+      if (typeof p.address === 'string') {
+        address = p.address;
+      } else if (p.address && typeof p.address === 'object') {
+        address = [p.address.streetAddress, p.address.addressLocality, p.address.addressRegion]
+          .filter(Boolean).join(' ');
+      } else if (p.postal_address) {
+        address = typeof p.postal_address === 'string' ? p.postal_address : (p.postal_address.displayAddress || '');
+      } else if (p.formattedAddress) {
+        address = p.formattedAddress;
+      }
+
+      const category = Array.isArray(p.categories) ? p.categories.join(', ') :
+                       (typeof p.category === 'string' ? p.category : '');
+
+      const rating = p.rating?.ratingValue || p.rating || '';
+
+      return {
+        name,
+        address,
+        category,
+        rating: rating ? String(rating) : ''
+      };
+    }).filter((p: any) => p.name);
+
+    console.log('[리포트 Places]', places.length, '건 (위치:', locationName + ', 쿼리:', query + ')');
+    return places;
+  } catch (e: any) {
+    if (e.response?.status === 403) {
+      console.log('[리포트 Places] 403 Forbidden — Brave Search 플랜 미가입 또는 Places 기능 비활성. Places 기능 스킵');
+    } else {
+      console.log('[리포트 Places] 실패:', e.message);
+    }
+    return [];
+  }
+}
+
 async function searchBraveForReport(query: string, count: number = 5): Promise<{ title: string; description: string; url: string }[]> {
   const braveKey = process.env.BRAVE_API_KEY;
   if (!braveKey) return [];
   try {
-    const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
+    const resp = await axios.get('https://api.search.brave.com/res/v1/llm/context', {
       params: { q: query, count, search_lang: 'ko' },
       headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
-      timeout: 5000
+      timeout: 10000
     });
-    const results = (resp.data.web?.results || []).map((it: any) => ({
-      title: it.title || '',
-      description: it.description || '',
-      url: it.url || ''
-    }));
-    return results.filter((a: { url: string }) => {
+
+    // LLM Context API 응답: grounding.generic[] 구조 (web/search의 web.results 대신)
+    // 각 항목: { url, title, snippets: [text_chunks], ... }
+    const groundingData = resp.data?.grounding?.generic || resp.data?.results || [];
+
+    const results = groundingData.map((it: any) => {
+      // snippets 배열을 하나의 연속된 콘텐츠로 결합 (기사 본문 청크들)
+      const snippets = Array.isArray(it.snippets) ? it.snippets : [];
+      const fullContent = snippets.map((s: any) => typeof s === 'string' ? s : (s.text || s.content || '')).join(' ').trim();
+
+      // 토큰 절약: 최대 1500자로 제한 (기존 스니펫 100자 대비 10~15배 풍부한 컨텍스트)
+      const description = fullContent.length > 0
+        ? fullContent.substring(0, 1500)
+        : (it.description || it.meta_description || '');
+
+      return {
+        title: it.title || '',
+        description,
+        url: it.url || ''
+      };
+    });
+
+    const filtered = results.filter((a: { title: string; description: string; url: string }) => {
       try {
         const hostname = new URL(a.url).hostname.replace('www.', '');
         return !DISCARD_DOMAINS.some(d => hostname.includes(d));
       } catch { return true; }
     });
+
+    const avgLen = filtered.length > 0
+      ? Math.round(filtered.reduce((s: number, r: { description: string }) => s + r.description.length, 0) / filtered.length)
+      : 0;
+    console.log('[리포트 Brave LLM Context]', filtered.length, '건 수신 (평균', avgLen, '자)');
+
+    return filtered;
   } catch (e: any) {
-    console.log('[리포트 Brave] 검색 실패:', e.message);
+    console.log('[리포트 Brave LLM Context] 실패:', e.message, '— 빈 배열 반환');
     return [];
   }
 }
@@ -1656,8 +1857,15 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     const { regions, period, prevPeriod } = req.body;
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
-    const periodText = period ? `${period.start.substring(0,4)}년 ${parseInt(period.start.substring(4))}월 ~ ${period.end.substring(0,4)}년 ${parseInt(period.end.substring(4))}월` : '';
-    const prevPeriodText = prevPeriod ? `${prevPeriod.start.substring(0,4)}년 ${parseInt(prevPeriod.start.substring(4))}월 ~ ${prevPeriod.end.substring(0,4)}년 ${parseInt(prevPeriod.end.substring(4))}월` : '';
+    // 항상 빠른 날짜 → 늦은 날짜 순서로 정렬
+    const formatPeriod = (p: any): string => {
+      if (!p) return '';
+      let s = p.start, e = p.end;
+      if (parseInt(s) > parseInt(e)) { const t = s; s = e; e = t; }
+      return `${s.substring(0,4)}년 ${parseInt(s.substring(4))}월 ~ ${e.substring(0,4)}년 ${parseInt(e.substring(4))}월`;
+    };
+    const periodText = formatPeriod(period);
+    const prevPeriodText = formatPeriod(prevPeriod);
 
     const regionNames = regions.map((r: any) => r.sggNm || '').filter(Boolean);
 
@@ -1668,7 +1876,7 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       return `[${r.sggNm}${r.dongFilter ? ' ' + r.dongFilter : ''}]\n총 ${s.totalCount}건 (해제 ${s.cancelCount}건)\n평균매매가: ${formatAmount(s.avgPrice)}, 토지평당: ${formatAmount(s.avgPricePerPyeong)}, 연면적평당: ${formatAmount(s.avgPricePerArea)}\n전기대비 거래량 ${s.prevPeriodChange.volume}%, 가격 ${s.prevPeriodChange.price}%\n법인매수 ${s.buyer.corp.ratio}%, 법인매도 ${s.seller.corp.ratio}%\n동별: ${dongInfo}\n용도: ${useInfo}`;
     }).join('\n\n');
 
-    // 뉴스 검색 (네이버 + Brave 병렬)
+    // 뉴스 + PDF 리포트 병렬 검색
     const newsPromises: Promise<{ title: string; description: string; url: string }[]>[] = [];
     for (const name of regionNames.slice(0, 2)) {
       newsPromises.push(searchNaverForReport(name + ' 빌딩 매매', 3));
@@ -1676,9 +1884,41 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     }
     newsPromises.push(searchBraveForReport('서울 오피스 시장 동향 2026', 3));
 
-    const newsResults = await Promise.all(newsPromises);
+    // PDF 시장 리포트 검색 (CBRE/JLL/Savills/젠스타메이트 등 전문 리서치)
+    const pdfPromises: Promise<{ title: string; description: string; url: string }[]>[] = [];
+    pdfPromises.push(searchBravePDFForReport('Seoul office market report 2026', 3));
+    pdfPromises.push(searchBravePDFForReport('서울 오피스 시장 리포트 2026', 2));
+    if (regionNames.length > 0) {
+      pdfPromises.push(searchBravePDFForReport(regionNames[0] + ' 상업용 부동산 시장 분석', 2));
+    }
+
+    // Places 검색 — 동(洞) 정규화로 Brave 한국 POI 인덱스 히트율 향상
+    const placesPromises: Promise<{ name: string; address: string; category: string; rating: string }[]>[] = [];
+
+    const topDongs = extractTopDongs(regions);
+    if (topDongs.length > 0) {
+      for (const dong of topDongs.slice(0, 2)) {
+        placesPromises.push(searchBravePlacesForReport(dong, '카페', 6));
+      }
+    } else {
+      for (const name of regionNames.slice(0, 1)) {
+        placesPromises.push(searchBravePlacesForReport(name, '카페', 6));
+      }
+    }
+
+    placesPromises.push(searchBravePlacesForReport('서울', '플래그십', 5));
+
+    const [newsResults, pdfResults, placesResults] = await Promise.all([
+      Promise.all(newsPromises),
+      Promise.all(pdfPromises),
+      Promise.all(placesPromises)
+    ]);
+
     const allNews = newsResults.flat();
     const uniqueNews = allNews.filter((n, i) => allNews.findIndex(x => x.title === n.title) === i).slice(0, 8);
+
+    const allPDFs = pdfResults.flat();
+    const uniquePDFs = allPDFs.filter((p, i) => allPDFs.findIndex(x => x.url === p.url) === i).slice(0, 4);
 
     let newsContext = '';
     if (uniqueNews.length > 0) {
@@ -1688,7 +1928,168 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       });
     }
 
-    console.log('[리포트] 뉴스 검색 결과:', uniqueNews.length + '건');
+    if (uniquePDFs.length > 0) {
+      newsContext += '\n\n[전문 기관 리서치 리포트 (PDF) — 시장 전망·정량 분석에 활용할 것]\n';
+      uniquePDFs.forEach((p, i) => {
+        newsContext += `${i + 1}. ${p.title}: ${p.description}\n   URL: ${p.url}\n`;
+      });
+    }
+
+    const allPlaces = placesResults.flat();
+    const uniquePlaces = allPlaces.filter((p, i) =>
+      allPlaces.findIndex(x => x.name === p.name && x.address === p.address) === i
+    ).slice(0, 20);
+
+    if (uniquePlaces.length > 0) {
+      newsContext += '\n\n[지역 상권 데이터 — 상업시설·POI 현황, 시장 개요/핵심 트렌드 섹션의 상권 맥락 분석에만 활용. 리포트 본문에 개별 POI 이름/주소 직접 나열 금지. 상권 특성·밀집도·업종 구성 같은 상위 개념으로 요약해 인용할 것]\n';
+      uniquePlaces.forEach((p, i) => {
+        const parts = [p.name];
+        if (p.category) parts.push('카테고리: ' + p.category);
+        if (p.address) parts.push('주소: ' + p.address);
+        if (p.rating) parts.push('별점: ' + p.rating);
+        newsContext += `${i + 1}. ${parts.join(' / ')}\n`;
+      });
+    }
+
+    console.log('[리포트] 뉴스:', uniqueNews.length + '건, PDF:', uniquePDFs.length + '건, Places:', uniquePlaces.length + '건');
+
+    // 백그라운드로 PDF 다운로드 + 본문 학습 (리포트 응답을 블로킹하지 않음)
+    // Cloud Functions 환경에서는 파일 쓰기 불가하므로 스킵
+    const isServerless = !!(process.env.K_SERVICE || process.env.FUNCTION_NAME || process.env.FUNCTIONS_EMULATOR);
+
+    if (uniquePDFs.length > 0 && !isServerless) {
+      setImmediate(async () => {
+        try {
+          let existingPdfFilenames = new Set<string>();
+          try {
+            const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
+            if (fs.existsSync(learnedPath)) {
+              const raw = fs.readFileSync(learnedPath, 'utf-8');
+              const parsed = JSON.parse(raw);
+              (parsed.articles || []).forEach((a: any) => {
+                if (a.url && a.url.startsWith('pdf://')) {
+                  existingPdfFilenames.add(a.url.replace('pdf://', ''));
+                }
+              });
+            }
+          } catch (e: any) {
+            console.log('[PDF 자동 학습] 기존 DB 로드 실패:', e.message);
+          }
+
+          const pdfFiles: { originalname: string; buffer: Buffer }[] = [];
+          for (const pdf of uniquePDFs) {
+            if (!pdf.url) continue;
+
+            let filename = pdf.url.split('/').pop() || 'report.pdf';
+            filename = filename.split('?')[0].split('#')[0];
+            if (!filename.toLowerCase().endsWith('.pdf')) filename += '.pdf';
+            const titlePrefix = pdf.title ? pdf.title.substring(0, 40).replace(/[\\/:*?"<>|]/g, '').trim() : '';
+            const fullname = titlePrefix ? `${titlePrefix}__${filename}` : filename;
+
+            if (existingPdfFilenames.has(fullname)) {
+              console.log('[PDF 자동 학습] 중복 스킵:', fullname.substring(0, 60));
+              continue;
+            }
+
+            try {
+              console.log('[PDF 다운로드]', pdf.url.substring(0, 80));
+              const dlResp = await axios.get(pdf.url, {
+                responseType: 'arraybuffer',
+                timeout: 30000,
+                maxContentLength: 20 * 1024 * 1024,
+                headers: { 'User-Agent': 'Mozilla/5.0 BSN-Assistant/1.0' }
+              });
+              const buffer = Buffer.from(dlResp.data);
+              if (buffer.length < 1024) {
+                console.log('[PDF 자동 학습] 너무 작음 스킵:', fullname.substring(0, 60));
+                continue;
+              }
+              pdfFiles.push({ originalname: fullname, buffer });
+            } catch (dlErr: any) {
+              console.log('[PDF 자동 학습] 다운로드 실패:', pdf.url.substring(0, 60), '-', dlErr.message);
+            }
+          }
+
+          if (pdfFiles.length === 0) {
+            console.log('[PDF 자동 학습] 다운로드 가능한 신규 PDF 없음');
+            return;
+          }
+
+          try {
+            const result = await addArticlesFromPdf(pdfFiles);
+            if (result.added > 0) console.log('[PDF 자동 학습] 신규', result.added, '건 저장, 중복', result.skipped, '건, 실패', result.failed, '건');
+            else if (result.skipped > 0) console.log('[PDF 자동 학습] 모두 중복:', result.skipped, '건');
+            if (result.errors && result.errors.length > 0) {
+              result.errors.forEach((err: any) => console.log('[PDF 자동 학습 에러]', err));
+            }
+          } catch (e: any) {
+            console.log('[PDF 자동 학습] addArticlesFromPdf 실패:', e.message);
+          }
+        } catch (outerErr: any) {
+          console.log('[PDF 자동 학습] 예기치 않은 에러:', outerErr.message);
+        }
+      });
+    } else if (uniquePDFs.length > 0 && isServerless) {
+      console.log('[PDF 자동 학습] Cloud Functions 환경 감지 — 파일 쓰기 불가로 스킵 (리포트는 정상 생성됨)');
+    }
+
+    // 백그라운드로 뉴스 기사 자동 학습 (리포트 응답을 블로킹하지 않음)
+    if (uniqueNews.length > 0 && !isServerless) {
+      setImmediate(async () => {
+        try {
+          let existingUrlSet = new Set<string>();
+          try {
+            const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
+            if (fs.existsSync(learnedPath)) {
+              const raw = fs.readFileSync(learnedPath, 'utf-8');
+              const parsed = JSON.parse(raw);
+              (parsed.articles || []).forEach((a: any) => {
+                if (a.url) existingUrlSet.add(a.url);
+              });
+            }
+          } catch (e: any) {
+            console.log('[뉴스 자동 학습] 기존 DB 로드 실패:', e.message);
+          }
+
+          const newsUrls = uniqueNews.map(n => n.url).filter(u => {
+            if (!u) return false;
+            if (existingUrlSet.has(u)) return false;
+            const lower = u.toLowerCase();
+            if (lower.endsWith('.pdf') || lower.includes('.pdf?') || lower.includes('.pdf#')) return false;
+            try {
+              const urlObj = new URL(u);
+              const hostname = urlObj.hostname;
+              if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1') return false;
+              if (hostname.includes('search.naver.com')) return false;
+            } catch { return false; }
+            return true;
+          });
+
+          if (newsUrls.length === 0) {
+            console.log('[뉴스 자동 학습] 신규 학습 대상 없음 (모두 중복이거나 학습 불가 URL)');
+            return;
+          }
+
+          const urlsToLearn = newsUrls.slice(0, 5);
+          console.log('[뉴스 자동 학습] 시작:', urlsToLearn.length, '건 (전체', newsUrls.length, '건 중)');
+
+          try {
+            const result = await addArticlesFromUrls(urlsToLearn);
+            if (result.added > 0) console.log('[뉴스 자동 학습] 신규', result.added, '건 저장, 중복', result.skipped, '건, 실패', result.failed, '건');
+            else if (result.skipped > 0) console.log('[뉴스 자동 학습] 모두 중복:', result.skipped, '건');
+            if (result.errors && result.errors.length > 0) {
+              result.errors.slice(0, 3).forEach((err: any) => console.log('[뉴스 자동 학습 에러]', (err || '').toString().substring(0, 120)));
+            }
+          } catch (e: any) {
+            console.log('[뉴스 자동 학습] addArticlesFromUrls 실패:', e.message);
+          }
+        } catch (outerErr: any) {
+          console.log('[뉴스 자동 학습] 예기치 않은 에러:', outerErr.message);
+        }
+      });
+    } else if (uniqueNews.length > 0 && isServerless) {
+      console.log('[뉴스 자동 학습] Cloud Functions 환경 감지 — 파일 쓰기 불가로 스킵');
+    }
 
     const OpenAI = require('openai');
     const openai = new OpenAI();
@@ -1697,30 +2098,79 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
       reasoning_effort: 'low' as any,
       max_completion_tokens: 4000,
       messages: [
-        { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다.
+        { role: 'user', content: `당신은 BSN빌사남부동산중개법인의 상업업무용 부동산(빌딩) 매매 시장 분석 전문가입니다. 대표에게 직접 브리핑하는 톤으로 작성합니다.
 
-다음 실거래 데이터와 최신 뉴스를 바탕으로 시장 리포트를 작성하세요.
-빌딩 매매 중개 관점에서 작성하되, 매수자와 매도자 모두에게 유용한 정보를 포함하세요.
-뉴스 내용이 있으면 실거래 데이터와 연결하여 시장 맥락을 설명하세요.
-참조한 뉴스가 있으면 리포트 하단에 [참조 기사] 섹션으로 제목과 URL을 나열하세요.
-
-분석 기간: ${periodText}
+[분석 기간 — 리포트 전체에서 이 기간 외 날짜 표기 절대 금지]
+당기: ${periodText}
 전년 동기: ${prevPeriodText}
 
-구성:
-1. 시장 개요 (2~3문장)
-2. 핵심 트렌드 (3~4개 포인트)
-3. 주목할 거래 (특이 거래 1~2건)
-4. 시장 전망 (2~3문장)
-5. 참조 기사 (뉴스 URL 목록)
+리포트 본문에서 "2026년 1~3월", "2026년 2월", "2026년 상반기" 등 임의의 기간 표기 금지.
+분석 기준 기간은 위 당기("${periodText}")를 그대로 사용.
+뉴스 기사 날짜는 문맥상 필요시 인용 가능하나 분석 기간 표기는 반드시 당기 그대로.
 
-문체 규칙:
-- 마크다운 문법(**, * 등) 사용 금지
-- "인사이트", "살펴보면", "주목할 만한", "시사점", "결론적으로", "종합하면" 등 AI투 표현 금지
-- 현장 실무자가 대표에게 보고하듯이 직접적이고 간결한 문체로 작성
-- 사람이 직접 쓴 보고서처럼 자연스러운 한국어 사용
+[뉴스 활용 원칙]
+아래 [최신 시장 뉴스]에 기사 본문에서 추출한 상세 콘텐츠(1500자 수준)가 제공됩니다. 리포트의 핵심 근거로 활용하세요:
+- 뉴스의 구체적 거래(건물명/매각가/매수자), 기업명, 금액을 리포트에 인용
+- 뉴스에서 언급된 금리/정책/시장 분위기를 실거래 데이터 흐름과 연결
+- 여러 뉴스를 종합해 하나의 시장 서사로 구성
+- 뉴스에 없는 사실 절대 생성 금지 (실거래 데이터 외 수치 임의 생성 금지)
+- 각 섹션마다 최소 1개 이상 뉴스 내용을 인용
 
-실거래 데이터:
+[출처 표기 규칙 — 엄격 준수]
+본문에 "(매체명)" 형태의 인라인 출처 표기 절대 금지.
+뉴스 내용은 자연스럽게 본문에 녹이되, 출처는 마지막 [참조 기사] 섹션에서만 정리.
+
+잘못된 예: 성동구청의 대기업 입점 제한 조치(뉴스토픽코리아)로 인해...
+올바른 예: 성동구청의 대기업 입점 제한 조치로 인해...
+
+[리포트 구성 — 각 섹션마다 뉴스 인용 포함]
+
+1. 시장 개요 (3~4문장)
+   거래량/가격 흐름 + 뉴스에서 확인된 시장 분위기
+
+2. 핵심 트렌드 (3~4개, 각 2~3문장)
+   각 트렌드마다 뉴스의 구체적 사례/거래/기업 인용
+   법인 비율, 용도 비중, 동별 집중도 등 실거래 + 뉴스 교차 분석
+
+3. 주목할 거래 (2~3건)
+   실거래 최고가/특이 거래 + 뉴스의 주요 매각 사례
+
+4. 정책·금리·시장 이슈 (3~4문장)
+   뉴스에서 확인된 정책 변화, 금리 동향, 시장 이슈
+   지역 빌딩 시장에 미치는 영향을 BSN 관점에서 해석
+
+5. 시장 전망 (2~3문장)
+   앞 4개 섹션 근거를 종합한 BSN의 판단
+   매수자/매도자에게 어떤 포지셔닝이 유리한지
+
+6. 참조 기사
+   리포트에서 실제 인용한 기사만 제목과 URL로 나열
+   형식: "기사 제목: URL"
+
+[절대 금지 — 마크다운 및 리스트 문자]
+아래 문자는 리포트 어디에도 사용 금지:
+하이픈 불릿 (-), 별표 (*, **), 샾 (#, ##, ###), 대시 시작 줄 (—, –)
+
+각 섹션 본문은 반드시 자연스러운 문장/문단 형태.
+나열이 필요한 경우에도 문장으로 연결.
+
+잘못된 예:
+- 거래 23건 발생
+- 법인 매수 70%
+
+올바른 예:
+당기 거래는 23건 발생했으며, 법인 매수 비율이 70%로 시장을 주도했다.
+
+섹션 구분은 번호("1.", "2.", "3.")와 섹션 제목만 사용.
+섹션 내부 모든 내용은 문단 형태로 작성.
+
+[문체 규칙]
+"인사이트", "살펴보면", "주목할 만한", "시사점", "결론적으로", "종합하면", "~한 측면이 있다", "~라고 볼 수 있다" 같은 AI투 표현 금지.
+현장 실무자가 대표에게 브리핑하듯 직접적·단정적·구체적으로.
+수치는 정확히 ("약", "대략" 없이).
+사람이 직접 쓴 내부 보고서처럼.
+
+[실거래 데이터]
 ${summary}${newsContext}` }
       ]
     });

@@ -397,10 +397,15 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .tx-btn-filled:hover{background:var(--navy-dark);}
     .tx-report-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;}
     .tx-report-modal.active{display:flex;}
-    .tx-report-content{background:#fff;border-radius:14px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;padding:24px;}
-    .tx-report-content h3{font-size:16px;font-weight:600;}
-    .tx-report-body{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
-    .tx-report-actions{display:flex;gap:8px;margin-top:16px;}
+    .tx-report-content{background:#fff;border-radius:14px;max-width:600px;width:90%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;padding:0;}
+    .tx-report-header{padding:20px 24px;border-bottom:0.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+    .tx-report-header h3{font-size:16px;font-weight:600;margin:0;}
+    .tx-report-body-wrap{flex:1;overflow-y:auto;padding:18px 24px;}
+    .tx-report-period{font-size:12px;color:var(--muted);margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px solid var(--border);letter-spacing:0.2px;}
+    .tx-report-body{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+    .tx-report-body a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;}
+    .tx-report-body a:hover{color:var(--navy-dark,#1a3259);}
+    .tx-report-actions{display:flex;gap:8px;padding:16px 24px;border-top:0.5px solid var(--border);flex-shrink:0;background:#fff;}
     .tx-report-actions button{flex:1;padding:10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
     .login-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(244,242,237,0.97);display:flex;align-items:center;justify-content:center;z-index:9999;}
     .login-box{background:#fff;border-radius:16px;padding:40px;max-width:360px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.08);text-align:center;}
@@ -782,11 +787,14 @@ export function generateInstaPageHTML(regionJson?: string): string {
 <!-- 리포트 모달 -->
 <div class="tx-report-modal" id="txReportModal">
   <div class="tx-report-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <h3 style="margin:0;">시장 리포트</h3>
+    <div class="tx-report-header">
+      <h3>시장 리포트</h3>
       <button style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:16px;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;" onmouseover="this.style.background='#F7F6F3'" onmouseout="this.style.background='#fff'" onclick="document.getElementById('txReportModal').classList.remove('active')">&#10005;</button>
     </div>
-    <div class="tx-report-body" id="txReportBody"></div>
+    <div class="tx-report-body-wrap">
+      <div id="txReportPeriod" class="tx-report-period" style="display:none;"></div>
+      <div class="tx-report-body" id="txReportBody"></div>
+    </div>
     <div class="tx-report-actions">
       <button class="tx-btn-outline" onclick="txCopyReport()">복사하기</button>
       <button class="tx-btn-filled" onclick="txReportToContent()">콘텐츠로 변환</button>
@@ -1887,6 +1895,8 @@ var txPeriodMonths = 6;
 var txCustomMode = false;
 var txQueryResults = null;
 var txInsightCache = null;
+// 랭킹 상세 카드별 리포트 캐시 (key: ranking 배열 idx, value: 리포트 텍스트)
+var txDetailReportCache = {};
 var txReportCache = null;
 var txHideCancelled = true;
 var txShowAllRows = false;
@@ -1905,6 +1915,13 @@ function txGetFavorites() {
 function txSetFavorites(arr) { localStorage.setItem('bsn_favorite_regions', JSON.stringify(arr)); }
 
 function showContentView() {
+  var alreadyActive = document.getElementById('navContent').classList.contains('active')
+    && document.getElementById('inputView').style.display !== 'none'
+    && document.getElementById('transactionView').style.display === 'none';
+  if (alreadyActive) {
+    window.location.href = '/insta';
+    return;
+  }
   document.documentElement.removeAttribute('data-view');
   if (window.location.hash) history.replaceState(null, '', '/insta');
   document.getElementById('transactionView').style.display = 'none';
@@ -1915,7 +1932,15 @@ function showContentView() {
 }
 
 function showTransactionView() {
+  var alreadyActive = document.getElementById('navTransaction').classList.contains('active')
+    && document.getElementById('transactionView').style.display === 'block';
+  if (alreadyActive) {
+    window.location.href = '/insta#transaction';
+    window.location.reload();
+    return;
+  }
   document.documentElement.setAttribute('data-view','tx');
+  if (window.location.hash !== '#transaction') history.replaceState(null, '', '/insta#transaction');
   document.getElementById('inputView').style.display = 'none';
   document.getElementById('resultView').style.display = 'none';
   document.getElementById('learnView').style.display = 'none';
@@ -2184,7 +2209,7 @@ function txLoadFavorite(idx) {
 // ─── 조회 실행 ───
 async function txDoQuery() {
   if (!txSelectedRegions.length) return;
-  txInsightCache = null; txReportCache = null; txShowAllRows = false;
+  txInsightCache = null; txReportCache = null; txDetailReportCache = {}; txShowAllRows = false;
   var btn = document.getElementById('txQueryBtn');
   btn.disabled = true; btn.innerHTML = '<div class="spin" style="width:16px;height:16px;border-width:2px;"></div> 조회 중...';
   document.getElementById('txResultArea').style.display = 'block';
@@ -2704,24 +2729,62 @@ function txToContent() {
 }
 
 // ─── 리포트 생성 ───
+function txLinkifyReport(text) {
+  var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  var lines = escaped.split('\\n');
+  var processed = lines.map(function(line) {
+    var m = line.match(/(https?:\\/\\/[^\\s]+)/);
+    if (!m) return line;
+    var url = m[1];
+    var urlStart = m.index;
+    var before = line.substring(0, urlStart);
+    var after = line.substring(urlStart + url.length);
+    var cleanUrl = url.replace(/[.,;:)\\]\\s]+$/, '');
+    var urlTail = url.substring(cleanUrl.length);
+    var title = before.replace(/[\\s:\\-—–]+$/, '').trim();
+    var leadingWhitespace = before.match(/^(\\s*)/)[1];
+    var linkHtml = '<a href="' + cleanUrl + '" target="_blank" rel="noopener noreferrer">' + (title || cleanUrl) + '</a>';
+    return leadingWhitespace + linkHtml + urlTail + after;
+  });
+  return processed.join('\\n');
+}
+
+function txShowReport(reportText) {
+  var periodEl = document.getElementById('txReportPeriod');
+  if (txRankingData && txRankingData.period) {
+    var ps = txRankingData.period.start, pe = txRankingData.period.end;
+    if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
+    var label = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
+    periodEl.textContent = '분석 기간: ' + label;
+    periodEl.style.display = 'block';
+  } else {
+    periodEl.style.display = 'none';
+  }
+  document.getElementById('txReportBody').innerHTML = txLinkifyReport(reportText);
+  document.getElementById('txReportModal').classList.add('active');
+}
+
 async function txGenerateReport() {
   if (!txQueryResults) return;
   if (txReportCache) {
-    document.getElementById('txReportBody').textContent = txReportCache;
-    document.getElementById('txReportModal').classList.add('active');
+    txShowReport(txReportCache);
     return;
   }
   var btn = document.querySelector('.tx-btn-filled');
   btn.disabled = true; btn.textContent = '생성 중...';
   try {
+    var body = { regions: txQueryResults };
+    if (txRankingData) {
+      body.period = txRankingData.period;
+      body.prevPeriod = txRankingData.prevPeriod;
+    }
     var resp = await fetch('/api/transaction/report', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ regions: txQueryResults })
+      body: JSON.stringify(body)
     });
     var data = await resp.json();
     txReportCache = data.report || '';
-    document.getElementById('txReportBody').textContent = txReportCache;
-    document.getElementById('txReportModal').classList.add('active');
+    txShowReport(txReportCache);
     btn.textContent = '리포트 생성하기'; btn.disabled = false;
   } catch(e) {
     btn.textContent = '리포트 생성하기'; btn.disabled = false;
@@ -2730,7 +2793,7 @@ async function txGenerateReport() {
 }
 
 function txCopyReport() {
-  var text = document.getElementById('txReportBody').textContent;
+  var text = txReportCache || document.getElementById('txReportBody').textContent;
   navigator.clipboard.writeText(text).then(function() { showToast('복사 완료'); });
 }
 
@@ -2738,7 +2801,7 @@ function txReportToContent() {
   document.getElementById('txReportModal').classList.remove('active');
   showContentView();
   switchMode('text');
-  document.getElementById('textInput').value = document.getElementById('txReportBody').textContent || '';
+  document.getElementById('textInput').value = txReportCache || document.getElementById('txReportBody').textContent || '';
   doGenerate();
 }
 
@@ -3024,8 +3087,19 @@ async function txLoadRanking() {
         loading.style.display = 'none';
         var pl = parsed.period || {};
         var pvl = parsed.prevPeriod || {};
-        var periodLabel = pl.start ? pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4) : '';
-        var prevLabel = pvl.start ? pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4) : '';
+        // 항상 빠른 날짜 → 늦은 날짜 순서로 표시
+        var periodLabel = '';
+        var prevLabel = '';
+        if (pl.start) {
+          var ps = pl.start, pe = pl.end;
+          if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
+          periodLabel = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
+        }
+        if (pvl.start) {
+          var pps = pvl.start, ppe = pvl.end;
+          if (parseInt(pps) > parseInt(ppe)) { var tt = pps; pps = ppe; ppe = tt; }
+          prevLabel = pps.substring(0,4) + '.' + pps.substring(4) + ' ~ ' + ppe.substring(0,4) + '.' + ppe.substring(4);
+        }
         document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
         try {
           txRenderRankingGrid();
@@ -3072,8 +3146,19 @@ async function txLoadRanking() {
 
     var pl = data.period || {};
     var pvl = data.prevPeriod || {};
-    var periodLabel = pl.start ? pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4) : '';
-    var prevLabel = pvl.start ? pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4) : '';
+    // 항상 빠른 날짜 → 늦은 날짜 순서로 표시
+    var periodLabel = '';
+    var prevLabel = '';
+    if (pl.start) {
+      var ps = pl.start, pe = pl.end;
+      if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
+      periodLabel = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
+    }
+    if (pvl.start) {
+      var pps = pvl.start, ppe = pvl.end;
+      if (parseInt(pps) > parseInt(ppe)) { var tt = pps; pps = ppe; ppe = tt; }
+      prevLabel = pps.substring(0,4) + '.' + pps.substring(4) + ' ~ ' + ppe.substring(0,4) + '.' + ppe.substring(4);
+    }
     document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
 
     console.log('[랭킹] 렌더링 시작, ranking 수:', txRankingData.ranking ? txRankingData.ranking.length : 'null');
@@ -3400,7 +3485,12 @@ function txRenderDetailPanel(idx) {
   // 하단 버튼
   html += '<div style="display:flex;gap:8px;margin-top:4px;">';
   html += '<button onclick="event.stopPropagation();txDetailContent('+idx+');" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;font-family:inherit;">콘텐츠 생성</button>';
-  html += '<button onclick="event.stopPropagation();txDetailReport('+idx+');" style="flex:1;padding:10px;border:none;border-radius:8px;background:#1E3A5F;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">리포트 생성</button>';
+  if (txDetailReportCache[idx]) {
+    html += '<button onclick="event.stopPropagation();txDetailReportShow('+idx+');" style="flex:1;padding:10px;border:1px solid #1E3A5F;border-radius:8px;background:#fff;color:#1E3A5F;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">리포트 보기</button>';
+    html += '<button onclick="event.stopPropagation();txDetailReport('+idx+', true);" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;white-space:nowrap;">다시 생성</button>';
+  } else {
+    html += '<button onclick="event.stopPropagation();txDetailReport('+idx+');" style="flex:1;padding:10px;border:none;border-radius:8px;background:#1E3A5F;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">리포트 생성</button>';
+  }
   html += '</div>';
 
   panel.innerHTML = html;
@@ -3416,44 +3506,44 @@ function txDetailStatBox(label, value, change, hasPrev) {
     '</div>';
 }
 
-async function txDetailReport(idx, forceNew) {
+async function txDetailReport(idx, forceRegen) {
   var item = txRankingData.ranking[idx];
   if (!item) return;
-  var cacheKey = item.name + '_' + (document.getElementById('txRankPeriod').value || 'ytd');
-
-  // 캐시 확인
-  if (!forceNew && txReportCache[cacheKey]) {
-    document.getElementById('txReportBody').innerHTML = txReportCache[cacheKey] + '<div style="margin-top:12px;text-align:center;"><button onclick="txDetailReport(' + idx + ',true)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 생성</button></div>';
-    document.getElementById('txReportModal').classList.add('active');
+  if (!forceRegen && txDetailReportCache[idx]) {
+    txReportCache = txDetailReportCache[idx];
+    txShowReport(txDetailReportCache[idx]);
     return;
   }
-
-  var btn = event ? event.target : null;
-  if (btn) { btn.disabled = true; btn.textContent = '생성 중...'; }
+  var btn = event.target;
+  var origText = btn.textContent;
+  btn.disabled = true; btn.textContent = '생성 중...';
   try {
-    var recentTx = [];
-    if (item.transactions && item.transactions.length) {
-      recentTx = item.transactions.filter(function(t){return !t.cdeal_day||t.cdeal_day.trim()==='';}).sort(function(a,b){
-        var da=(a.deal_year||'')+String(a.deal_month||'').padStart(2,'0')+String(a.deal_day||'').padStart(2,'0');
-        var db=(b.deal_year||'')+String(b.deal_month||'').padStart(2,'0')+String(b.deal_day||'').padStart(2,'0');
-        return db.localeCompare(da);
-      }).slice(0, 5);
-    }
     var resp = await fetch('/api/transaction/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ regions: [{ sggNm: item.name, stats: item.stats, recentTx: recentTx, transactions: (item.transactions || []).slice(0, 30) }] })
+      body: JSON.stringify({
+        regions: [{ sggNm: item.name, stats: item.stats }],
+        period: txRankingData.period,
+        prevPeriod: txRankingData.prevPeriod
+      })
     });
     var data = await resp.json();
     if (data.report) {
-      txReportCache[cacheKey] = data.report;
-      document.getElementById('txReportBody').innerHTML = data.report + '<div style="margin-top:12px;text-align:center;"><button onclick="txDetailReport(' + idx + ',true)" style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;color:var(--sub);cursor:pointer;font-family:inherit;">다시 생성</button></div>';
-      document.getElementById('txReportModal').classList.add('active');
+      txDetailReportCache[idx] = data.report;
+      txReportCache = data.report;
+      txShowReport(data.report);
+      if (typeof txRenderRankingGrid === 'function') txRenderRankingGrid();
     }
   } catch(e) {
     alert('리포트 생성 중 오류가 발생했습니다');
   }
-  if (btn) { btn.disabled = false; btn.textContent = '리포트 생성'; }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+function txDetailReportShow(idx) {
+  if (!txDetailReportCache[idx]) return;
+  txReportCache = txDetailReportCache[idx];
+  txShowReport(txDetailReportCache[idx]);
 }
 
 function txDetailContent(idx) {
