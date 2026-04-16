@@ -151,7 +151,10 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .card-preview img.card-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
     .card-tag{display:none;}
     .card-watermark{position:absolute;top:16px;right:16px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:800;opacity:0.4;z-index:1;}
-    .card-main-text{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:800;line-height:1.6;padding:20px 10px;word-break:keep-all;z-index:1;cursor:text;}
+    .card-period{position:absolute;top:16px;left:16px;font-family:'Poppins',-apple-system,sans-serif;font-size:12px;font-weight:500;opacity:0.6;z-index:2;letter-spacing:0.3px;line-height:1.35;text-align:left;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.15);}
+    .card-period-secondary{display:block;font-size:10px;opacity:0.85;margin-top:2px;font-weight:400;}
+    .card-source{position:absolute;bottom:16px;left:16px;font-family:'Poppins',-apple-system,sans-serif;font-size:10px;font-weight:400;opacity:0.5;z-index:2;letter-spacing:0.2px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.15);}
+    .card-main-text{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:800;line-height:1.6;padding:20px 10px;word-break:keep-all;white-space:pre-line;z-index:1;cursor:text;}
     .card-main-text[contenteditable="true"]:focus{outline:1px dashed rgba(255,255,255,0.4);outline-offset:4px;}
     .card-preview.style-light .card-tag[contenteditable="true"]:focus,
     .card-preview.style-light .card-main-text[contenteditable="true"]:focus{outline-color:rgba(0,0,0,0.2);}
@@ -512,18 +515,18 @@ export function generateInstaPageHTML(regionJson?: string): string {
       <div class="tpl-cards">
         <button class="tpl-card active" data-tpl="A" onclick="selectTemplate('A')">
           <span class="tpl-badge">A</span>
-          <div class="tpl-name">데이터 임팩트</div>
-          <div class="tpl-desc">동별/권역 비교, 추세 분석</div>
+          <div class="tpl-name">거래 스토리</div>
+          <div class="tpl-desc">특정 거래 한 건 심층 분석</div>
         </button>
         <button class="tpl-card" data-tpl="B" onclick="selectTemplate('B')">
           <span class="tpl-badge">B</span>
-          <div class="tpl-name">거래 스토리</div>
-          <div class="tpl-desc">특정 거래 사례 심층</div>
+          <div class="tpl-name">데이터 비교</div>
+          <div class="tpl-desc">두 대상 간 지표 대조</div>
         </button>
         <button class="tpl-card" data-tpl="C" onclick="selectTemplate('C')">
           <span class="tpl-badge">C</span>
           <div class="tpl-name">시장 브리핑</div>
-          <div class="tpl-desc">월간/분기 정기 리포트</div>
+          <div class="tpl-desc">월간/분기 + TOP N 랭킹</div>
         </button>
       </div>
       <div class="tpl-examples" id="tplExamples"></div>
@@ -608,6 +611,8 @@ export function generateInstaPageHTML(regionJson?: string): string {
           <button class="card-arrow right" id="cardArrowRight" onclick="goToSlide(currentSlide+1)">&#8250;</button>
           <div class="card-tag" id="cardTag" contenteditable="true" spellcheck="false">문제 제기</div>
           <div class="card-watermark">BSN</div>
+          <div class="card-period" id="cardPeriod" style="display:none;"></div>
+          <div class="card-source" id="cardSource" style="display:none;">국토교통부 상업업무용 매매 실거래가</div>
           <div class="card-main-text" id="cardText" contenteditable="true" spellcheck="false">콘텐츠를 생성하면 여기에 카드뉴스가 표시됩니다</div>
           <div class="card-slide-num" id="cardSlideNum">1 / 7</div>
           <div class="card-nav" id="cardNav"></div>
@@ -862,80 +867,118 @@ var cfBaseUrl = '${process.env.FUNCTION_URL || ''}';
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
 // ─── 템플릿 메타 데이터 + 추천 주제 풀 ───
+// 주제 포맷: { text, region: { sido, sgg, dong? } } 또는 { text, region1, region2 }
+// C 템플릿: rankBy 필드로 정렬 기준 지정
 const TEMPLATE_META = {
+  // A = 단일 지역·상권 분석 (구 또는 동 단위)
   A: {
     examples: [
-      '지역 간 거래량·평당가 비교 분석',
-      '특정 권역의 분기/반기 추세 변화',
-      '법인 vs 개인 매수 비중 등 구조적 지표',
-      '용도별(근생/오피스/판매) 거래 분포',
-      '전년 대비 상승/하락 핵심 지표'
+      '한 지역·상권의 종합 분석',
+      '거래량·평당가·법인 비율 등 12개 지표 조합',
+      '구 내 순위·서울 내 위상 확인',
+      '전년 동기 대비 변화 분석',
+      '반기별 추이 확인'
     ],
     suggestions: [
-      '성동구 TOP 5 동별 평당가 비교',
-      '강남구 오피스 vs 근생 거래 비중 변화',
-      '서울 법인 매수 비율 3년 추이',
-      '송파구 2026년 상반기 거래 밀도',
-      '성수권 vs 도산공원 평당가 격차',
-      '마포구 연도별 평균 매매가 변화',
-      '서초·강남·송파 3구 거래 흐름 비교',
-      '용산구 재개발 권역 가격 동향',
-      '종로·중구 오피스 공실률과 거래량',
-      '영등포 여의도 vs 문래 거래 대조',
-      '성동구 연면적 규모별 평당가 분포',
-      '강북권 TOP 3 동별 수익률',
-      '한강벨트 구별 거래 건수 차이'
+      { text: '강남 상업용 빌딩 시장 현황', region: { sido: '서울특별시', sgg: '강남구' } },
+      { text: '강남 법인 매수 비율과 의미', region: { sido: '서울특별시', sgg: '강남구' } },
+      { text: '서초구 평균 매매가와 순위', region: { sido: '서울특별시', sgg: '서초구' } },
+      { text: '송파구 거래량 흐름 분석', region: { sido: '서울특별시', sgg: '송파구' } },
+      { text: '마포구 용도지역별 거래 분포', region: { sido: '서울특별시', sgg: '마포구' } },
+      { text: '용산구 건축연도별 거래 구성', region: { sido: '서울특별시', sgg: '용산구' } },
+      { text: '종로구 최고·최저 평당가 거래', region: { sido: '서울특별시', sgg: '종로구' } },
+      { text: '영등포구 상업용 부동산 현황', region: { sido: '서울특별시', sgg: '영등포구' } },
+      { text: '성동구 전년 대비 변화율', region: { sido: '서울특별시', sgg: '성동구' } },
+      { text: '역삼동 시장 분석', region: { sido: '서울특별시', sgg: '강남구', dong: '역삼동' } },
+      { text: '성수동 상권 현황', region: { sido: '서울특별시', sgg: '성동구', dong: '성수동' } },
+      { text: '청담동 평당가 추이', region: { sido: '서울특별시', sgg: '강남구', dong: '청담동' } },
+      { text: '삼성동 법인 매수 분석', region: { sido: '서울특별시', sgg: '강남구', dong: '삼성동' } },
+      { text: '서초동 거래 구성', region: { sido: '서울특별시', sgg: '서초구', dong: '서초동' } },
+      { text: '논현동 평균 매매가', region: { sido: '서울특별시', sgg: '강남구', dong: '논현동' } },
+      { text: '한남동 용도지역 분석', region: { sido: '서울특별시', sgg: '용산구', dong: '한남동' } },
+      { text: '이태원동 상업 빌딩', region: { sido: '서울특별시', sgg: '용산구', dong: '이태원동' } }
     ]
   },
+  // B = 두 지역·상권 비교
   B: {
     examples: [
-      '최근 체결된 상징적 거래 한 건의 심층 분석',
-      '매각 차익이 큰 거래의 10년 보유 스토리',
-      '프라임 자산 매각과 매수자 프로파일',
-      '권역 시세를 끌어올린 레퍼런스 거래',
-      '리모델링·용도변경 전후 가치 변동 사례'
+      '두 지역의 12개 지표 대조',
+      '평당가·거래량·법인 비율 격차',
+      '각 지역의 서울 내 상대적 위상',
+      '전년 동기 변화 비교',
+      '반기별 추이 병렬 분석'
     ],
     suggestions: [
-      '성수동 연무장길 110억 거래 심층 분석',
-      '역삼동 F&F 별관 232억 매각 배경',
-      '청담동 노후 빌딩 리모델링 후 시세 변화',
-      '여의도 대형 오피스 손바뀜 스토리',
-      '강남역 초역세권 꼬마빌딩 거래 사례',
-      '성수 SI타워 구조와 매수자 전략',
-      '도산공원 코너 건물 고가 갱신 스토리',
-      '용산 한남동 플래그십 거래 풀이',
-      '송파 잠실 근생 빌딩 10년 차익 사례',
-      '마포 홍대 메인 스트리트 거래 해부',
-      '서초 법원 인근 오피스 매각 배경',
-      '성수동 팝업 거리 신축 거래 스토리'
+      { text: '강남 vs 서초 거래 비교',
+        region1: { sido: '서울특별시', sgg: '강남구' },
+        region2: { sido: '서울특별시', sgg: '서초구' } },
+      { text: '강남 vs 송파 평당가 격차',
+        region1: { sido: '서울특별시', sgg: '강남구' },
+        region2: { sido: '서울특별시', sgg: '송파구' } },
+      { text: '마포 vs 용산 거래량 대조',
+        region1: { sido: '서울특별시', sgg: '마포구' },
+        region2: { sido: '서울특별시', sgg: '용산구' } },
+      { text: '성동 vs 광진 시장 비교',
+        region1: { sido: '서울특별시', sgg: '성동구' },
+        region2: { sido: '서울특별시', sgg: '광진구' } },
+      { text: '종로 vs 중구 오피스 비교',
+        region1: { sido: '서울특별시', sgg: '종로구' },
+        region2: { sido: '서울특별시', sgg: '중구' } },
+      { text: '영등포 vs 마포 법인 비율',
+        region1: { sido: '서울특별시', sgg: '영등포구' },
+        region2: { sido: '서울특별시', sgg: '마포구' } },
+      { text: '역삼동 vs 삼성동 평당가',
+        region1: { sido: '서울특별시', sgg: '강남구', dong: '역삼동' },
+        region2: { sido: '서울특별시', sgg: '강남구', dong: '삼성동' } },
+      { text: '성수 vs 청담 거래 흐름',
+        region1: { sido: '서울특별시', sgg: '성동구', dong: '성수동' },
+        region2: { sido: '서울특별시', sgg: '강남구', dong: '청담동' } },
+      { text: '한남동 vs 이태원동 시장',
+        region1: { sido: '서울특별시', sgg: '용산구', dong: '한남동' },
+        region2: { sido: '서울특별시', sgg: '용산구', dong: '이태원동' } },
+      { text: '논현동 vs 신사동 거래 비교',
+        region1: { sido: '서울특별시', sgg: '강남구', dong: '논현동' },
+        region2: { sido: '서울특별시', sgg: '강남구', dong: '신사동' } },
+      { text: '서초동 vs 반포동 평당가',
+        region1: { sido: '서울특별시', sgg: '서초구', dong: '서초동' },
+        region2: { sido: '서울특별시', sgg: '서초구', dong: '반포동' } },
+      { text: '도곡동 vs 개포동 거래',
+        region1: { sido: '서울특별시', sgg: '강남구', dong: '도곡동' },
+        region2: { sido: '서울특별시', sgg: '강남구', dong: '개포동' } }
     ]
   },
+  // C = 랭킹 전용
   C: {
     examples: [
-      '특정 지역의 월간/분기 종합 리뷰',
-      '권역 전체 거래 흐름과 정책 이슈',
-      '핵심 지표 + 주요 거래 + 전망 종합',
-      '전년 동기 대비 변화와 예측',
-      '리서치 하우스 전망과 실거래 교차 분석'
+      'TOP N 거래량 순위',
+      'TOP N 평당가 순위',
+      'TOP N 평균 매매가 순위',
+      'TOP N 법인 매수 비율 순위',
+      'TOP N 연면적 평당가 순위'
     ],
     suggestions: [
-      '성동구 2026년 1분기 빌딩 시장 브리핑',
-      '강남 3구 4월 종합 리포트',
-      '서울 오피스 2026 상반기 중간 점검',
-      '송파·강동 4월 거래 동향',
-      '성수권 월간 리뷰 4월',
-      '마포·용산 분기 브리핑',
-      '강남구 1분기 주요 거래 총정리',
-      '영등포권 봄시즌 시장 흐름',
-      '한강벨트 4월 시장 요약',
-      '서초구 2026 1분기 종합 분석',
-      '종로·중구 오피스 4월 브리핑',
-      '서울 전체 3월 빌딩 시장 결산'
+      { text: '서울 25개 구 거래량 TOP 10', region: { sido: '서울특별시' }, rankBy: 'totalCount' },
+      { text: '서울 25개 구 평당가 TOP 10', region: { sido: '서울특별시' }, rankBy: 'avgPricePerPyeong' },
+      { text: '서울 25개 구 평균 매매가 TOP 10', region: { sido: '서울특별시' }, rankBy: 'avgPrice' },
+      { text: '서울 25개 구 법인 매수 비율 TOP 10', region: { sido: '서울특별시' }, rankBy: 'corpBuyerRatio' },
+      { text: '서울 25개 구 연면적 평당가 TOP 10', region: { sido: '서울특별시' }, rankBy: 'avgPricePerArea' },
+      { text: '강남 동별 거래량 TOP 5', region: { sido: '서울특별시', sgg: '강남구' }, rankBy: 'totalCount' },
+      { text: '강남 동별 평당가 TOP 5', region: { sido: '서울특별시', sgg: '강남구' }, rankBy: 'avgPricePerPyeong' },
+      { text: '강남 동별 평균 매매가 TOP 5', region: { sido: '서울특별시', sgg: '강남구' }, rankBy: 'avgPrice' },
+      { text: '성동 동별 거래량 TOP 5', region: { sido: '서울특별시', sgg: '성동구' }, rankBy: 'totalCount' },
+      { text: '성동 동별 평당가 TOP 5', region: { sido: '서울특별시', sgg: '성동구' }, rankBy: 'avgPricePerPyeong' },
+      { text: '서초구 동별 거래량 TOP 5', region: { sido: '서울특별시', sgg: '서초구' }, rankBy: 'totalCount' },
+      { text: '서초구 동별 평당가 TOP 5', region: { sido: '서울특별시', sgg: '서초구' }, rankBy: 'avgPricePerPyeong' },
+      { text: '송파구 동별 거래량 TOP 5', region: { sido: '서울특별시', sgg: '송파구' }, rankBy: 'totalCount' },
+      { text: '마포구 동별 거래량 TOP 5', region: { sido: '서울특별시', sgg: '마포구' }, rankBy: 'totalCount' },
+      { text: '용산구 동별 평당가 TOP 5', region: { sido: '서울특별시', sgg: '용산구' }, rankBy: 'avgPricePerPyeong' }
     ]
   }
 };
 
 var currentTemplate = 'A';
+var tplCurrentSuggestions = []; // 현재 표시 중 추천 주제 3개 (idx로 참조)
+var pendingSuggestionMeta = null; // 클릭된 주제의 region 메타 (다음 생성 요청에 첨부)
 
 function selectTemplate(tpl) {
   if (!TEMPLATE_META[tpl]) return;
@@ -961,27 +1004,33 @@ function refreshSuggestions() {
     var j = Math.floor(Math.random() * (i + 1));
     var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
   }
-  var picks = pool.slice(0, 3);
+  tplCurrentSuggestions = pool.slice(0, 3);
   var html = '';
-  picks.forEach(function(s) {
-    var esc = s.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-    html += '<div class="tpl-suggest-item" onclick="pickSuggestion(\\''+esc+'\\')">';
-    html += '<div class="tpl-suggest-item-text">' + s + '</div>';
-    html += '<button class="tpl-suggest-item-btn" onclick="event.stopPropagation();pickSuggestionAndGenerate(\\''+esc+'\\')">생성</button>';
+  tplCurrentSuggestions.forEach(function(s, idx) {
+    var textEsc = s.text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    html += '<div class="tpl-suggest-item" onclick="pickSuggestion(' + idx + ')">';
+    html += '<div class="tpl-suggest-item-text">' + textEsc + '</div>';
+    html += '<button class="tpl-suggest-item-btn" onclick="event.stopPropagation();pickSuggestionAndGenerate(' + idx + ')">생성</button>';
     html += '</div>';
   });
   var itemsEl = document.getElementById('tplSuggestItems');
   if (itemsEl) itemsEl.innerHTML = html;
 }
 
-function pickSuggestion(text) {
+function pickSuggestion(idx) {
+  var s = tplCurrentSuggestions[idx];
+  if (!s) return;
   var ta = document.getElementById('textInput');
-  if (ta) { ta.value = text; ta.focus(); }
+  if (ta) { ta.value = s.text; ta.focus(); }
+  pendingSuggestionMeta = s;
 }
 
-function pickSuggestionAndGenerate(text) {
+function pickSuggestionAndGenerate(idx) {
+  var s = tplCurrentSuggestions[idx];
+  if (!s) return;
   var ta = document.getElementById('textInput');
-  if (ta) ta.value = text;
+  if (ta) ta.value = s.text;
+  pendingSuggestionMeta = s;
   doGenerate();
 }
 const CARD_STYLES = {
@@ -1029,6 +1078,8 @@ function goToSlide(idx) {
   const num = document.getElementById('cardSlideNum');
   const bgImg = document.getElementById('cardBgImg');
   const skeleton = document.getElementById('cardSkeleton');
+  const periodEl = document.getElementById('cardPeriod');
+  const sourceEl = document.getElementById('cardSource');
 
   // 스타일 클래스 초기화
   preview.className = 'card-preview';
@@ -1041,6 +1092,8 @@ function goToSlide(idx) {
     skeleton.classList.remove('active');
     tag.style.display = 'none';
     document.querySelector('.card-watermark').style.display = 'none';
+    if (periodEl) periodEl.style.display = 'none';
+    if (sourceEl) sourceEl.style.display = 'none';
     text.textContent = cardsData[idx].title || '';
     text.style.display = '';
     text.style.fontSize = DEFAULT_FONT_SIZE + 'px';
@@ -1067,6 +1120,28 @@ function goToSlide(idx) {
     text.style.display = '';
     num.style.display = '';
     document.querySelector('.card-watermark').style.display = '';
+
+    // 기간 배지 렌더링 (period 있고 빈 문자열 아닐 때만)
+    var p = '';
+    if (periodEl) {
+      p = (card.period || '').trim();
+      var ps = (card.periodSecondary || '').trim();
+      if (p) {
+        var html = escHtml(p);
+        if (ps) {
+          html += '<span class="card-period-secondary">vs ' + escHtml(ps) + '</span>';
+        }
+        periodEl.innerHTML = html;
+        periodEl.style.display = '';
+      } else {
+        periodEl.style.display = 'none';
+      }
+    }
+
+    // 출처 표시 (period가 있는 카드 = 통계 데이터 카드)
+    if (sourceEl) {
+      sourceEl.style.display = p ? '' : 'none';
+    }
 
     if (cardImages[idx]) {
       // 이미지 + 오버레이 배경
@@ -1101,6 +1176,8 @@ function goToSlide(idx) {
     document.querySelector('.card-watermark').style.display = '';
     tag.textContent = CARD_TAGS[idx];
     text.textContent = '콘텐츠를 생성하면 여기에 카드뉴스가 표시됩니다';
+    if (periodEl) periodEl.style.display = 'none';
+    if (sourceEl) sourceEl.style.display = 'none';
   }
   num.textContent = (idx + 1) + ' / 7';
   // 카드별 글자 크기 적용
@@ -1365,10 +1442,28 @@ async function doGenerate() {
   btn.textContent = '리서치 및 분석 중...';
 
   try {
+    // 추천 주제에서 온 region 메타 첨부 (직접 입력 또는 URL 모드 시 null)
+    var suggestionMeta = pendingSuggestionMeta;
+    if (suggestionMeta && suggestionMeta.text !== input) {
+      suggestionMeta = null;
+    }
+    if (mode === 'url') {
+      suggestionMeta = null;
+    }
+    pendingSuggestionMeta = null;
+
+    var requestBody = { mode: mode, input: sendInput, template: currentTemplate };
+    if (suggestionMeta) {
+      if (suggestionMeta.region) requestBody.region = suggestionMeta.region;
+      if (suggestionMeta.region1) requestBody.region1 = suggestionMeta.region1;
+      if (suggestionMeta.region2) requestBody.region2 = suggestionMeta.region2;
+      if (suggestionMeta.rankBy) requestBody.rankBy = suggestionMeta.rankBy;
+    }
+
     const resp = await fetch((cfBaseUrl || '') + '/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, input: sendInput, template: currentTemplate })
+      body: JSON.stringify(requestBody)
     });
     const data = await resp.json();
 
@@ -1617,7 +1712,9 @@ function loadHistory(id) {
     return {
       tag: (item.cardTags && item.cardTags[i]) || c.tag || '',
       title: (item.cardTitles && item.cardTitles[i]) || c.title || '',
-      style: c.style || 'dark'
+      style: c.style || 'dark',
+      period: c.period || '',
+      periodSecondary: c.periodSecondary || ''
     };
   });
   imageIdeas = item.result?.imageIdeas || [];

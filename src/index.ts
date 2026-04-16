@@ -36,6 +36,7 @@ import path from 'path';
 import iconv from 'iconv-lite';
 import { getTransactions, getTransactionsByPeriod, formatYm } from './molit-api';
 import db from './db';
+import { computeRegionStats, RegionStatsOptions } from './region-stats';
 import { firestore, auth as firebaseAuth } from './firebase-admin';
 
 // ─── 랭킹 서버 메모리 캐시 ───
@@ -227,11 +228,26 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
   try {
     req.setTimeout(300000); // 5분 타임아웃
     res.setTimeout(300000);
-    const { mode, input, template } = req.body;
+    const { mode, input, template, region, region1, region2, rankBy } = req.body;
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: '입력 내용이 필요합니다.' });
     }
-    const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim(), template || 'A');
+
+    let regionStats: any = null;
+    if (region || (region1 && region2)) {
+      try {
+        const opts: RegionStatsOptions = { region, region1, region2, rankBy };
+        regionStats = computeRegionStats(opts);
+        if (regionStats) {
+          console.log('[콘텐츠 생성] region stats 집계 완료 — type:', regionStats.type);
+        }
+      } catch (e: any) {
+        console.log('[콘텐츠 생성] region stats 실패:', e.message);
+        regionStats = null;
+      }
+    }
+
+    const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim(), template || 'A', regionStats);
 
     // URL 모드일 때 자동으로 학습에 추가 (중복은 내부에서 스킵)
     if (mode === 'url') {
