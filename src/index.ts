@@ -227,11 +227,11 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
   try {
     req.setTimeout(300000); // 5분 타임아웃
     res.setTimeout(300000);
-    const { mode, input } = req.body;
+    const { mode, input, template } = req.body;
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: '입력 내용이 필요합니다.' });
     }
-    const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim());
+    const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim(), template || 'A');
 
     // URL 모드일 때 자동으로 학습에 추가 (중복은 내부에서 스킵)
     if (mode === 'url') {
@@ -457,8 +457,8 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
     }
 
     // 네이버 뉴스 검색
-    const includeKw = ['빌딩','상가','오피스','상업용','근린생활','업무용','꼬마빌딩','공실률','임대료','권리금','리테일','수익형','상권','매물','평당가','연면적','대지면적','캡레이트','NOI'];
-    const excludeKw = ['아파트','주택','전세','월세','청약','입주','모델하우스','분양권','래미안','자이','힐스테이트','푸르지오','국회','여당','야당','탄핵','선거','의원','정당','후보','검찰','경찰','수사','재판','판결','구속','기소','피의자','범죄','살인','폭행','성범죄','마약','주가','코스피','코스닥','환율','기준금리','한은','연준','ETF','삼성전자','SK하이닉스','반도체','배터리','자동차','K-POP','축구','야구','올림픽'];
+    const includeKw = ['빌딩','상가','부동산','매매','상권','임대','개발','거래','오피스','리테일','권리금','공실','투자','재건축','재개발','수익률','건물','토지','분양','임차','점포','상업용','근린생활','꼬마빌딩','평당가'];
+    const excludeKw = ['아파트','주택','전세','월세','청약','입주','모델하우스','분양권','래미안','자이','힐스테이트','푸르지오'];
     const sourceMap: Record<string, string> = { 'mk.co.kr':'매일경제','hankyung.com':'한국경제','sedaily.com':'서울경제','mt.co.kr':'머니투데이','edaily.co.kr':'이데일리','newsis.com':'뉴시스','yna.co.kr':'연합뉴스','chosun.com':'조선일보','donga.com':'동아일보','hani.co.kr':'한겨레','khan.co.kr':'경향신문','joongang.co.kr':'중앙일보','dt.co.kr':'디지털타임스','biz.chosun.com':'조선비즈','asiae.co.kr':'아시아경제','fnnews.com':'파이낸셜뉴스','heraldcorp.com':'헤럴드경제','etoday.co.kr':'이투데이' };
 
     function cleanHtml(t: string) { return (t || '').replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, "'"); }
@@ -484,10 +484,8 @@ app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
           const diffDays = (now - new Date(item.pubDate).getTime()) / (1000 * 60 * 60 * 24);
           if (diffDays > 7) continue;
           const title = cleanHtml(item.title);
-          const desc = cleanHtml(item.description);
-          const combined = title + ' ' + desc;
           const hasInclude = includeKw.some(k => title.includes(k));
-          const hasExclude = excludeKw.some(k => combined.includes(k));
+          const hasExclude = excludeKw.some(k => title.includes(k));
           if (!hasInclude || hasExclude) continue;
           if (learnedUrls.has(link) || learnedUrls.has(item.originallink)) continue;
           seen.add(link);

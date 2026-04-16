@@ -60,6 +60,26 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .text-input{width:100%;padding:14px;border:1px solid var(--border);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;background:var(--surface);outline:none;resize:vertical;min-height:120px;transition:border-color 0.15s;line-height:1.6;}
     .text-input:focus{border-color:var(--navy);}
     .input-guide{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+    .tpl-selector{margin-bottom:16px;}
+    .tpl-label{font-size:13px;font-weight:500;color:#1A1A2E;margin-bottom:10px;}
+    .tpl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .tpl-card{padding:14px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;transition:all 0.15s;text-align:left;font-family:inherit;}
+    .tpl-card:hover{border-color:var(--navy);}
+    .tpl-card.active{border-color:var(--navy);background:rgba(44,74,124,0.04);}
+    .tpl-card .tpl-badge{display:inline-block;font-size:9px;font-weight:600;letter-spacing:1px;color:var(--navy);background:rgba(44,74,124,0.08);padding:2px 6px;border-radius:3px;margin-bottom:6px;}
+    .tpl-card .tpl-name{font-size:13px;font-weight:600;color:#1A1A2E;margin-bottom:2px;}
+    .tpl-card .tpl-desc{font-size:10px;color:#A8A49C;line-height:1.4;}
+    .tpl-examples{margin-top:14px;padding:12px 14px;background:#F7F6F3;border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7;}
+    .tpl-examples-title{font-size:11px;color:var(--navy);font-weight:600;margin-bottom:6px;letter-spacing:0.3px;}
+    .tpl-suggest{margin-top:12px;margin-bottom:12px;}
+    .tpl-suggest-title{font-size:11px;color:var(--navy);font-weight:600;letter-spacing:0.3px;}
+    .tpl-suggest-items{display:flex;flex-direction:column;gap:6px;}
+    .tpl-suggest-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;}
+    .tpl-suggest-item:hover{border-color:var(--navy);}
+    .tpl-suggest-item-text{font-size:12px;color:#1A1A2E;flex:1;padding-right:8px;line-height:1.45;}
+    .tpl-suggest-item-btn{font-size:11px;color:var(--navy);font-weight:500;white-space:nowrap;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;background:#fff;font-family:inherit;cursor:pointer;}
+    .tpl-refresh{font-size:11px;color:var(--muted);cursor:pointer;margin-left:auto;background:none;border:none;font-family:inherit;}
+    .tpl-suggest-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 
     /* Generate button */
     .btn-generate{width:100%;padding:14px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -487,8 +507,38 @@ export function generateInstaPageHTML(regionJson?: string): string {
   </div>
 
   <div class="card">
+    <div class="tpl-selector">
+      <div class="tpl-label">템플릿 선택</div>
+      <div class="tpl-cards">
+        <button class="tpl-card active" data-tpl="A" onclick="selectTemplate('A')">
+          <span class="tpl-badge">A</span>
+          <div class="tpl-name">데이터 임팩트</div>
+          <div class="tpl-desc">동별/권역 비교, 추세 분석</div>
+        </button>
+        <button class="tpl-card" data-tpl="B" onclick="selectTemplate('B')">
+          <span class="tpl-badge">B</span>
+          <div class="tpl-name">거래 스토리</div>
+          <div class="tpl-desc">특정 거래 사례 심층</div>
+        </button>
+        <button class="tpl-card" data-tpl="C" onclick="selectTemplate('C')">
+          <span class="tpl-badge">C</span>
+          <div class="tpl-name">시장 브리핑</div>
+          <div class="tpl-desc">월간/분기 정기 리포트</div>
+        </button>
+      </div>
+      <div class="tpl-examples" id="tplExamples"></div>
+    </div>
+
+    <div class="tpl-suggest">
+      <div class="tpl-suggest-header">
+        <span class="tpl-suggest-title">추천 주제</span>
+        <button class="tpl-refresh" onclick="refreshSuggestions()">다른 추천 보기</button>
+      </div>
+      <div class="tpl-suggest-items" id="tplSuggestItems"></div>
+    </div>
+
     <div class="input-section">
-      <textarea class="text-input" id="textInput" placeholder="무엇이든 입력하세요&#10;&#10;예시:&#10;· 성수동&#10;· 강남역 상권 회복에 대한 콘텐츠 만들어줘&#10;· https://news.example.com/article/... (기사 URL도 가능)"></textarea>
+      <textarea class="text-input" id="textInput" placeholder="위 추천 주제를 선택하거나 직접 입력하세요&#10;&#10;템플릿에 맞는 주제를 작성하면 더 정확한 콘텐츠가 생성됩니다."></textarea>
       <div class="input-guide">텍스트, 키워드, 기사 URL 모두 입력 가능 · URL 입력 시 기사를 자동 추출합니다</div>
     </div>
 
@@ -811,6 +861,129 @@ var cfBaseUrl = '${process.env.FUNCTION_URL || ''}';
 (function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
+// ─── 템플릿 메타 데이터 + 추천 주제 풀 ───
+const TEMPLATE_META = {
+  A: {
+    examples: [
+      '지역 간 거래량·평당가 비교 분석',
+      '특정 권역의 분기/반기 추세 변화',
+      '법인 vs 개인 매수 비중 등 구조적 지표',
+      '용도별(근생/오피스/판매) 거래 분포',
+      '전년 대비 상승/하락 핵심 지표'
+    ],
+    suggestions: [
+      '성동구 TOP 5 동별 평당가 비교',
+      '강남구 오피스 vs 근생 거래 비중 변화',
+      '서울 법인 매수 비율 3년 추이',
+      '송파구 2026년 상반기 거래 밀도',
+      '성수권 vs 도산공원 평당가 격차',
+      '마포구 연도별 평균 매매가 변화',
+      '서초·강남·송파 3구 거래 흐름 비교',
+      '용산구 재개발 권역 가격 동향',
+      '종로·중구 오피스 공실률과 거래량',
+      '영등포 여의도 vs 문래 거래 대조',
+      '성동구 연면적 규모별 평당가 분포',
+      '강북권 TOP 3 동별 수익률',
+      '한강벨트 구별 거래 건수 차이'
+    ]
+  },
+  B: {
+    examples: [
+      '최근 체결된 상징적 거래 한 건의 심층 분석',
+      '매각 차익이 큰 거래의 10년 보유 스토리',
+      '프라임 자산 매각과 매수자 프로파일',
+      '권역 시세를 끌어올린 레퍼런스 거래',
+      '리모델링·용도변경 전후 가치 변동 사례'
+    ],
+    suggestions: [
+      '성수동 연무장길 110억 거래 심층 분석',
+      '역삼동 F&F 별관 232억 매각 배경',
+      '청담동 노후 빌딩 리모델링 후 시세 변화',
+      '여의도 대형 오피스 손바뀜 스토리',
+      '강남역 초역세권 꼬마빌딩 거래 사례',
+      '성수 SI타워 구조와 매수자 전략',
+      '도산공원 코너 건물 고가 갱신 스토리',
+      '용산 한남동 플래그십 거래 풀이',
+      '송파 잠실 근생 빌딩 10년 차익 사례',
+      '마포 홍대 메인 스트리트 거래 해부',
+      '서초 법원 인근 오피스 매각 배경',
+      '성수동 팝업 거리 신축 거래 스토리'
+    ]
+  },
+  C: {
+    examples: [
+      '특정 지역의 월간/분기 종합 리뷰',
+      '권역 전체 거래 흐름과 정책 이슈',
+      '핵심 지표 + 주요 거래 + 전망 종합',
+      '전년 동기 대비 변화와 예측',
+      '리서치 하우스 전망과 실거래 교차 분석'
+    ],
+    suggestions: [
+      '성동구 2026년 1분기 빌딩 시장 브리핑',
+      '강남 3구 4월 종합 리포트',
+      '서울 오피스 2026 상반기 중간 점검',
+      '송파·강동 4월 거래 동향',
+      '성수권 월간 리뷰 4월',
+      '마포·용산 분기 브리핑',
+      '강남구 1분기 주요 거래 총정리',
+      '영등포권 봄시즌 시장 흐름',
+      '한강벨트 4월 시장 요약',
+      '서초구 2026 1분기 종합 분석',
+      '종로·중구 오피스 4월 브리핑',
+      '서울 전체 3월 빌딩 시장 결산'
+    ]
+  }
+};
+
+var currentTemplate = 'A';
+
+function selectTemplate(tpl) {
+  if (!TEMPLATE_META[tpl]) return;
+  currentTemplate = tpl;
+  document.querySelectorAll('.tpl-card').forEach(function(c) {
+    c.classList.toggle('active', c.getAttribute('data-tpl') === tpl);
+  });
+  var meta = TEMPLATE_META[tpl];
+  var exHtml = '<div class="tpl-examples-title">이 템플릿에 적합한 주제</div>';
+  meta.examples.forEach(function(ex) {
+    exHtml += '· ' + ex + '<br>';
+  });
+  var examplesEl = document.getElementById('tplExamples');
+  if (examplesEl) examplesEl.innerHTML = exHtml;
+  refreshSuggestions();
+}
+
+function refreshSuggestions() {
+  var meta = TEMPLATE_META[currentTemplate];
+  if (!meta) return;
+  var pool = meta.suggestions.slice();
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  var picks = pool.slice(0, 3);
+  var html = '';
+  picks.forEach(function(s) {
+    var esc = s.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    html += '<div class="tpl-suggest-item" onclick="pickSuggestion(\\''+esc+'\\')">';
+    html += '<div class="tpl-suggest-item-text">' + s + '</div>';
+    html += '<button class="tpl-suggest-item-btn" onclick="event.stopPropagation();pickSuggestionAndGenerate(\\''+esc+'\\')">생성</button>';
+    html += '</div>';
+  });
+  var itemsEl = document.getElementById('tplSuggestItems');
+  if (itemsEl) itemsEl.innerHTML = html;
+}
+
+function pickSuggestion(text) {
+  var ta = document.getElementById('textInput');
+  if (ta) { ta.value = text; ta.focus(); }
+}
+
+function pickSuggestionAndGenerate(text) {
+  var ta = document.getElementById('textInput');
+  if (ta) ta.value = text;
+  doGenerate();
+}
 const CARD_STYLES = {
   dark:   { bg: '#1A1A1A', color: '#FFFFFF' },
   light:  { bg: '#F8F6F1', color: '#1A1A2E' },
@@ -1195,7 +1368,7 @@ async function doGenerate() {
     const resp = await fetch((cfBaseUrl || '') + '/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode, input: sendInput })
+      body: JSON.stringify({ mode, input: sendInput, template: currentTemplate })
     });
     const data = await resp.json();
 
@@ -2939,6 +3112,7 @@ async function doInstaLogin() {
     renderHistoryList();
     updateStudyBadge();
     loadRecommendNews(false);
+    selectTemplate('A');
     if (window.location.hash === '#content') showContentView(); else showTransactionView();
   } catch(e) {
     errEl.textContent = '로그인 중 오류가 발생했습니다';
@@ -3671,6 +3845,7 @@ async function txRankGetInsight() {
     renderHistoryList();
     updateStudyBadge();
     loadRecommendNews(false);
+    selectTemplate('A');
 
     // 기존 깨진 캐시 제거
     try { Object.keys(sessionStorage).forEach(function(k) { if (k.startsWith('txRank_')) sessionStorage.removeItem(k); }); } catch(e) {}
