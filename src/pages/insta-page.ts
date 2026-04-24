@@ -165,6 +165,9 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .card-actions{display:flex;gap:6px;position:absolute;bottom:16px;right:16px;z-index:2;}
     .btn-card-action{width:32px;height:32px;border-radius:6px;border:none;background:rgba(0,0,0,0.4);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;transition:background 0.15s;}
     .btn-card-action:hover{background:rgba(0,0,0,0.6);}
+    .btn-card-action:disabled{opacity:0.5;cursor:wait;}
+    .btn-regen.spinning svg{animation:btn-spin 1s linear infinite;}
+    @keyframes btn-spin{to{transform:rotate(360deg);}}
     .card-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:background 0.15s;z-index:2;padding:0;}
     .card-arrow:hover{background:rgba(0,0,0,0.6);}
     .card-arrow.left{left:10px;}
@@ -621,6 +624,9 @@ export function generateInstaPageHTML(regionJson?: string): string {
           <div class="card-actions">
             <button class="btn-card-action" title="글자 축소" onclick="changeFontSize(-2)" style="font-size:11px;font-weight:700;">A-</button>
             <button class="btn-card-action" title="글자 확대" onclick="changeFontSize(2)" style="font-size:11px;font-weight:700;">A+</button>
+            <button class="btn-card-action btn-regen" id="btnRegenCard" title="이 카드 재생성" onclick="regenerateCurrentCard(this)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            </button>
             <button class="btn-card-action" title="전체 다운로드 (ZIP)" onclick="downloadAllCards()">&#8595;</button>
           </div>
           <input type="file" id="cardFileInput" accept="image/*" style="display:none;" onchange="handleCardUpload(event)">
@@ -863,6 +869,13 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
 <script>
 var cfBaseUrl = '${process.env.FUNCTION_URL || ''}';
+function getApiBase() {
+  try {
+    var h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return '';
+  } catch(e) {}
+  return cfBaseUrl || '';
+}
 (function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
@@ -1102,6 +1115,8 @@ function goToSlide(idx) {
     document.querySelectorAll('.card-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
     document.getElementById('cardArrowLeft').style.display = idx === 0 ? 'none' : 'flex';
     document.getElementById('cardArrowRight').style.display = 'none';
+    var regenBtn7 = document.getElementById('btnRegenCard');
+    if (regenBtn7) regenBtn7.style.display = 'none';
     renderCardImgActions(idx);
     return;
   }
@@ -1185,6 +1200,9 @@ function goToSlide(idx) {
   document.querySelectorAll('.card-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
   document.getElementById('cardArrowLeft').style.display = idx === 0 ? 'none' : 'flex';
   document.getElementById('cardArrowRight').style.display = idx >= 6 ? 'none' : 'flex';
+  // 재생성 버튼 7장 숨김
+  var regenBtn = document.getElementById('btnRegenCard');
+  if (regenBtn) regenBtn.style.display = (idx === 6 || !cardsData.length) ? 'none' : '';
   // 이미지 액션 버튼 렌더링
   renderCardImgActions(idx);
 }
@@ -1197,8 +1215,7 @@ function renderCardImgActions(idx) {
       '<button class="btn-img-act" onclick="generateSingleCardImage()">&#10024; 재생성</button>' +
       '<button class="btn-img-act" onclick="removeCardImage()">&#10005; 제거</button>';
   } else {
-    el.innerHTML = '<button class="btn-img-act" onclick="triggerCardUpload()">&#128247; 업로드</button>' +
-      '<button class="btn-img-act" onclick="generateSingleCardImage()">&#10024; AI 생성</button>';
+    el.innerHTML = '';
   }
 }
 
@@ -1210,6 +1227,53 @@ function changeFontSize(delta) {
   if (newSize < MIN_FONT_SIZE || newSize > MAX_FONT_SIZE) return;
   cardFontSizes[currentSlide] = newSize;
   document.getElementById('cardText').style.fontSize = newSize + 'px';
+}
+
+// ─── 카드 단일 재생성 ───
+async function regenerateCurrentCard(btn) {
+  var idx = currentSlide;
+  if (idx === 6) return;
+  if (!cardsData || !cardsData.length || !cardsData[idx]) return;
+
+  btn.classList.add('spinning');
+  btn.disabled = true;
+
+  var meta = window.currentCardSessionMeta || {};
+  var reqBody = {
+    cardIndex: idx,
+    template: currentTemplate,
+    topic: currentTopic || '',
+    previousCards: cardsData,
+    previousContent: cardsData[idx]
+  };
+  if (meta.region) reqBody.region = meta.region;
+  if (meta.region1) reqBody.region1 = meta.region1;
+  if (meta.region2) reqBody.region2 = meta.region2;
+  if (meta.rankBy) reqBody.rankBy = meta.rankBy;
+
+  try {
+    var resp = await fetch(getApiBase() + '/api/content/regenerate-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reqBody)
+    });
+    var data = await resp.json();
+    if (data && data.success && data.card) {
+      // tag/style/period는 기존값 유지, title/periodSecondary만 갱신
+      cardsData[idx] = Object.assign({}, cardsData[idx], {
+        title: data.card.title,
+        periodSecondary: data.card.periodSecondary || cardsData[idx].periodSecondary
+      });
+      goToSlide(idx);
+    } else {
+      alert('재생성 실패: ' + ((data && data.error) || '알 수 없는 오류'));
+    }
+  } catch (e) {
+    alert('재생성 중 오류: ' + (e && e.message ? e.message : e));
+  } finally {
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+  }
 }
 
 // ─── 카드 이미지 업로드 ───
@@ -1273,7 +1337,7 @@ async function generateSingleCardImage() {
 
     // Gemini 생성
     console.log('[카드 개별] Gemini 생성:', idx + 1);
-    var resp = await fetch((cfBaseUrl || '') + '/api/content/generate-card', {
+    var resp = await fetch(getApiBase() + '/api/content/generate-card', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1371,7 +1435,7 @@ async function generateCardImages() {
         if (!mapB64) { await new Promise(function(r){setTimeout(r,2000)}); mapB64 = await captureKakaoMap(mapRegion); }
         if (mapB64) { cardImages[i] = mapB64; if (cardsData[i]) cardsData[i]._mapCard = true; if (currentSlide === i) { spinner.classList.remove('active'); goToSlide(i); } continue; }
       }
-      var resp = await fetch((cfBaseUrl || '') + '/api/content/generate-card', {
+      var resp = await fetch(getApiBase() + '/api/content/generate-card', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cardIndex: i, topic: currentTopic, tag: card.tag || CARD_TAGS[i], title: card.title || '', style: card.style || 'dark', imageIdea: imageIdeas[i] || '' })
       });
@@ -1450,6 +1514,7 @@ async function doGenerate() {
     if (mode === 'url') {
       suggestionMeta = null;
     }
+    window.currentCardSessionMeta = suggestionMeta ? Object.assign({}, suggestionMeta) : {};
     pendingSuggestionMeta = null;
 
     var requestBody = { mode: mode, input: sendInput, template: currentTemplate };
@@ -1460,7 +1525,7 @@ async function doGenerate() {
       if (suggestionMeta.rankBy) requestBody.rankBy = suggestionMeta.rankBy;
     }
 
-    const resp = await fetch((cfBaseUrl || '') + '/api/content/generate', {
+    const resp = await fetch(getApiBase() + '/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)

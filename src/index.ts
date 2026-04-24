@@ -4,7 +4,7 @@ import { generateChatbotPageHTML } from './pages/chatbot-page';
 import { generateAdminPageHTML } from './pages/admin-page';
 import { handleChatbotMessage } from './chatbot';
 import { generateInstaPageHTML } from './pages/insta-page';
-import { generateAllContent } from './content-generator';
+import { generateAllContent, regenerateSingleCard } from './content-generator';
 import { generateSingleCard } from './card-image';
 import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf } from './learn-store';
 import axios from 'axios';
@@ -263,6 +263,50 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '환경 변수를 확인해주세요 (OPENAI_API_KEY)' });
     }
     res.status(500).json({ error: '콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+  }
+});
+
+// ─── 카드 단일 재생성 API ───
+app.post('/api/content/regenerate-card', async (req: Request, res: Response) => {
+  try {
+    req.setTimeout(180000);
+    res.setTimeout(180000);
+    const { cardIndex, template, topic, previousCards, previousContent, region, region1, region2, rankBy } = req.body;
+
+    if (typeof cardIndex !== 'number' || cardIndex < 0 || cardIndex > 5) {
+      return res.status(400).json({ success: false, error: 'cardIndex는 0~5만 허용 (7장 제외)' });
+    }
+    if (!template || !['A', 'B', 'C'].includes(template)) {
+      return res.status(400).json({ success: false, error: 'template A/B/C 필수' });
+    }
+    if (!Array.isArray(previousCards) || previousCards.length === 0) {
+      return res.status(400).json({ success: false, error: 'previousCards 필수' });
+    }
+
+    let regionStats: any = null;
+    if (region || (region1 && region2)) {
+      try {
+        const opts: RegionStatsOptions = { region, region1, region2, rankBy };
+        regionStats = computeRegionStats(opts);
+      } catch (e: any) {
+        console.log('[재생성] region stats 실패:', e.message);
+        regionStats = null;
+      }
+    }
+
+    const result = await regenerateSingleCard({
+      cardIndex,
+      template,
+      topic: String(topic || '').slice(0, 500),
+      previousCards,
+      previousContent: previousContent || previousCards[cardIndex] || {},
+      regionStats
+    });
+
+    res.json({ success: true, card: result.card });
+  } catch (err: any) {
+    console.error('[카드 재생성 실패]', err);
+    res.status(500).json({ success: false, error: err.message || '재생성 중 오류' });
   }
 });
 

@@ -25,13 +25,19 @@ function validateFirstCardTitle(title: string, template: 'A' | 'B' | 'C'): strin
   const hasEmoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(t);
 
   if (template === 'A') {
-    // A = 지역·상권 분석: 지역+숫자 25자 이내
-    if (t.length > 25) errors.push(`길이 초과 (${t.length}자 > 25자)`);
-    if (!/[0-9]/.test(t)) errors.push('숫자 없음');
-    if (/[?!]/.test(t)) errors.push('물음표·느낌표 포함');
-    if (hasEllipsis) errors.push('말줄임표(…) 포함');
+    // A = 숫자 훅: 15자 이내, 숫자·단위 30%+, 부정 지표 금지
+    if (t.length > 15) errors.push(`길이 초과 (${t.length}자 > 15자)`);
+    const forbiddenPatterns = /[요죠네까다]$|[?!。…]|\.{2,}/;
+    if (forbiddenPatterns.test(t)) errors.push('서술어/문장부호 금지 위반');
+    const titleNoSpace = t.replace(/\s/g, '');
+    const digitUnitPattern = /[0-9일이삼사오육칠팔구십백천만억조억만원%건위배평㎡년월일]|TOP/gi;
+    const matches = titleNoSpace.match(digitUnitPattern) || [];
+    const digitUnitCount = matches.join('').length;
+    const ratio = titleNoSpace.length > 0 ? digitUnitCount / titleNoSpace.length : 0;
+    if (ratio < 0.3) errors.push(`숫자·단위 비율 부족 (${(ratio*100).toFixed(0)}% < 30%)`);
+    const negativePattern = /감소|하락|-\s*\d|급락|축소/;
+    if (negativePattern.test(t)) errors.push('부정 지표 사용 금지');
     if (hasEmoji) errors.push('이모지 포함');
-    if (forbiddenEnd.test(t)) errors.push('서술어 종결');
   } else if (template === 'B') {
     // B = 두 지역 비교: 격차 숫자 + 두 지역 20자 이내
     if (t.length > 20) errors.push(`길이 초과 (${t.length}자 > 20자)`);
@@ -64,13 +70,14 @@ async function regenerateFirstCardTitle(
   topic: string
 ): Promise<string | null> {
   const templateRule = template === 'A'
-    ? `[템플릿 A — 지역·상권 분석 헤드라인]
-- 전체 길이 25자 이내
-- 지역명 포함
-- 구체적 숫자 최소 1개 (평당가/순위/변화율 등)
-- 서술어·물음표·느낌표 금지
-- 좋은 예시: "용산 평당 1.27억 서울 3위" / "성수 법인매수 100%" / "강남 거래 -40%"
-- 나쁜 예시: "용산구 빌딩 시장 분석" (숫자 없음) / "성수동은 핫해요" (서술어)`
+    ? `[템플릿 A — 숫자 훅 헤드라인]
+- 전체 길이 15자 이내 (공백 포함)
+- 공백 제외 글자수 대비 숫자·단위 비율 30% 이상 (숫자: 0-9·한글숫자, 단위: 억·만·원·%·건·위·배·평·㎡·년·월·일·TOP)
+- 지역명은 선택(숫자가 주인공, 지역명은 조연). 숫자 없으면 반드시 탈락
+- 서술어·조사 끌기·물음표·느낌표·마침표·말줄임표 금지
+- 부정 지표(감소, 하락, -n%) 쓰지 말 것. 긍정·중립 임팩트 지표만
+- 좋은 예시: "평당 3억 돌파" / "성수 법인매수 68%" / "용산 평당 1.27억" / "거래량 3년래 최고"
+- 나쁜 예시: "용산구 빌딩 시장 분석" (숫자 없음) / "성수동이 조용히 움직여요" (서사+서술어) / "최근 3년 서울 빌딩 누가 샀을까" (길이초과+서사) / "강남 거래 -40%" (부정 지표)`
     : template === 'B'
     ? `[템플릿 B — 두 지역 비교 격차 헤드라인]
 - 전체 길이 20자 이내
@@ -372,7 +379,14 @@ async function generateContent(
 - 리서치에 개발호재가 없으면 상권 특성(유동인구, 업종, 임차 구조 등)으로 대체. 확인 안 된 개발 계획은 언급 금지.
 - title 본문에 기간 괄호 표기 금지. period 형식: "YYYY.MM~YYYY.MM".
 
-1장 (지역 후킹): 이 지역의 가장 임팩트 있는 숫자 1개 + 지역명 압축 헤드라인
+1장 (숫자 훅): 이번 콘텐츠에서 가장 임팩트 있는 숫자 하나가 제목의 주인공. 서사형 문장 금지, 헤드라인 스타일.
+  핵심 규칙:
+    - 숫자·단위가 제목의 절반(공백 제외 30% 이상) 차지
+    - 15자 이내 (공백 포함)
+    - 서술어·조사 끌기 금지. 헤드처럼 끊어 씀
+    - 긍정 지표 또는 임팩트 큰 중립 지표에서 숫자 선택. 부정 지표는 1장에 쓰지 말 것 (부정 지표는 매수 기회로 전환되는 5장에서 활용)
+  좋은 예: "평당 3억 돌파", "성수 법인매수 68%", "용산 평당 1.27억", "거래량 3년래 최고"
+  나쁜 예: "용산구 빌딩 시장 분석" (숫자 없음), "성수동이 조용히 움직이고 있어요" (서사+서술어), "최근 3년 서울 빌딩은 누가 샀을까" (서사형 훅)
   period: 당기
 
 2장 (핵심 통계): 가장 긍정적이거나 주목할 통계 1~2개 압축 + 서울 내 위상
@@ -473,7 +487,7 @@ template === 'B' ? `[카드뉴스 구조 — 템플릿 B: 두 지역 비교 (반
 
 TOP N 개수가 10이면 3장에 반드시 10개 모두 나열. 절대 생략 금지.`;
 
-  const templateCardsExample = template === 'A' ? `      {"tag": "지역 후킹", "title": "...", "style": "dark", "period": "2026.01~2026.04"},
+  const templateCardsExample = template === 'A' ? `      {"tag": "숫자 훅", "title": "...", "style": "dark", "period": "2026.01~2026.04"},
       {"tag": "핵심 통계", "title": "...", "style": "light", "period": "2026.01~2026.04", "periodSecondary": "2025.01~2025.04"},
       {"tag": "개발호재·뉴스", "title": "...", "style": "accent", "period": "2026.01~2026.04"},
       {"tag": "상권·입지", "title": "...", "style": "light", "period": "2026.01~2026.04"},
@@ -654,24 +668,26 @@ ${regionStatsBlock ? '\n' + regionStatsBlock + '\n' : ''}
 문장을 쓰지 말고 박물관 전시 라벨처럼 써야 합니다.
 [필수 원칙]의 후킹, 구어체, "~거든요", "~에요" 지시는 1장 제목에 절대 적용하지 마세요.
 
-${template === 'A' ? `[템플릿 A — 1장: 지역·상권 분석 헤드라인]
+${template === 'A' ? `[템플릿 A — 1장: 숫자 훅 헤드라인]
 
 필수 조건 (모두 충족해야 함):
-① 전체 길이 25자 이내
-② 지역명 포함
-③ 구체적 숫자 최소 1개 (평당가/순위/변화율 등)
-④ 서술어("~요","~다","~까") 금지
-⑤ 물음표·느낌표 금지
+① 전체 길이 15자 이내 (공백 포함)
+② 공백 제외 글자수 대비 숫자·단위 비율 30% 이상 (숫자: 0-9·한글숫자, 단위: 억·만·원·%·건·위·배·평·㎡·년·월·일·TOP)
+③ 지역명은 선택. 숫자 없으면 반드시 탈락
+④ 서술어·조사 끌기·물음표·느낌표·마침표·말줄임표 금지
+⑤ 부정 지표(감소, 하락, -n%, 급락, 축소) 쓰지 말 것. 긍정·중립 임팩트 지표만
 
 통과 예시:
-- 용산 평당 1.27억 서울 3위
-- 성수 법인매수 100% 전원 법인
-- 강남 거래 -40% 단가는 상승
-- 마포 평당 8700만 서울 7위
+- 평당 3억 돌파
+- 성수 법인매수 68%
+- 용산 평당 1.27억
+- 거래량 3년래 최고
 
 실패 예시:
-✗ "용산구 빌딩 시장의 현재 상황을 분석해봤어요" → 서사형·서술어
-✗ "성수동은 요즘 핫하죠?" → 질문형·서술어` :
+✗ "용산구 빌딩 시장 분석" → 숫자 없음
+✗ "성수동이 조용히 움직여요" → 서사형+서술어
+✗ "최근 3년 서울 빌딩 누가 샀을까" → 길이초과+서사형
+✗ "강남 거래 -40%" → 부정 지표` :
 
 template === 'B' ? `[템플릿 B — 1장: 두 지역 비교 격차 헤드라인]
 
@@ -1283,4 +1299,133 @@ export async function generateAllContent(
   const result = await generateContent(contentInput, analysis, research, template, regionStats);
 
   return result;
+}
+
+// ─── 단일 카드 재생성 ───
+export async function regenerateSingleCard(params: {
+  cardIndex: number;
+  template: 'A' | 'B' | 'C';
+  topic: string;
+  previousCards: any[];
+  previousContent: any;
+  regionStats?: any;
+}): Promise<{ card: any }> {
+  const { cardIndex, template, topic, previousCards, previousContent, regionStats } = params;
+
+  if (cardIndex === 6) {
+    throw new Error('7장 CTA 카드는 재생성할 수 없습니다');
+  }
+  if (cardIndex < 0 || cardIndex > 5) {
+    throw new Error(`cardIndex 범위 오류: ${cardIndex} (0~5만 허용)`);
+  }
+  if (!Array.isArray(previousCards) || previousCards.length === 0) {
+    throw new Error('previousCards가 비어있습니다');
+  }
+
+  const targetCard = previousCards[cardIndex] || previousContent || {};
+  const fixedTag = targetCard.tag || '';
+  const fixedStyle = targetCard.style || 'light';
+  const fixedPeriod = targetCard.period || '';
+  const fixedPeriodSecondary = targetCard.periodSecondary || '';
+
+  const otherCardsText = previousCards
+    .map((c: any, i: number) => i === cardIndex ? null : `${i + 1}. [${c?.tag || ''}] ${c?.title || ''}`)
+    .filter(Boolean)
+    .join('\n');
+
+  const regionStatsBlock = regionStats ? formatRegionStats(regionStats) : '';
+
+  const isFirstCard = cardIndex === 0;
+  const firstCardRule = isFirstCard ? (
+    template === 'A'
+      ? '\n- A 1장 절대 규칙: 15자 이내, 공백 제외 숫자·단위 비율 30%+, 부정 지표(감소/하락/-n%/급락/축소) 금지, 서술어·물음표·느낌표·마침표·말줄임표 금지'
+      : template === 'B'
+      ? '\n- B 1장 절대 규칙: 20자 이내, 두 지역 이름 또는 "vs" 포함, 격차 숫자 1개 이상, 서술어·문장부호·중간점 금지'
+      : '\n- C 1장 절대 규칙: 15~35자, 줄표(—)/하이픈(-)/물결(~) 1개 이상 포함, 서술어·물음표 금지'
+  ) : '';
+
+  const prompt = `다음 SNS 카드뉴스의 ${cardIndex + 1}장(0-based: ${cardIndex})을 재생성한다.
+사용자가 현재 내용에 만족하지 못해 재생성을 요청했다. 이전과 명확히 다른 접근으로 더 임팩트 있는 버전 작성.
+
+[템플릿]: ${template}
+[전체 주제]: ${topic}
+
+[해당 카드 고정값 — 절대 변경 금지]
+- tag: ${fixedTag}
+- style: ${fixedStyle}
+- period: ${fixedPeriod}${fixedPeriodSecondary ? `\n- periodSecondary: ${fixedPeriodSecondary}` : ''}
+
+[이전 title — 반드시 다른 표현으로 대체]
+${previousContent?.title || targetCard.title || ''}
+
+[다른 카드 맥락 — 톤·중복 방지용 (수정 금지, 참고만)]
+${otherCardsText}
+${regionStatsBlock ? `\n[지역 통계 데이터]\n${regionStatsBlock}\n` : ''}
+[규칙]
+- title 한 개만 새로 작성
+- tag, style, period는 위 고정값 그대로 유지
+- 이전 title과 명확히 다른 단어·각도 사용
+- 다른 카드와 수치·표현 중복 금지
+- 마크다운 금지, 이모지 허용${firstCardRule}
+
+JSON 형식으로만 응답:
+{"card": {"tag": "${fixedTag}", "title": "...", "style": "${fixedStyle}", "period": "${fixedPeriod}"${fixedPeriodSecondary ? `, "periodSecondary": "${fixedPeriodSecondary}"` : ''}}}`;
+
+  console.log(`[카드 재생성] idx=${cardIndex}, template=${template}, tag=${fixedTag}`);
+
+  const res = await client.chat.completions.create({
+    model: MODEL,
+    max_completion_tokens: 1500,
+    reasoning_effort: 'low' as any,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const text = res.choices[0]?.message?.content || '{}';
+  console.log('[카드 재생성 GPT 응답]', text.slice(0, 500));
+
+  const parsed = safeParseGPTJson(text);
+  if (!parsed || !parsed.card) {
+    throw new Error('GPT 응답 파싱 실패');
+  }
+
+  const newCard: any = {
+    tag: fixedTag,
+    title: String(parsed.card.title || '').trim(),
+    style: fixedStyle,
+    period: fixedPeriod
+  };
+  if (fixedPeriodSecondary) newCard.periodSecondary = fixedPeriodSecondary;
+
+  if (!newCard.title) {
+    throw new Error('재생성된 title이 비어있습니다');
+  }
+
+  // 1장 재생성 시 검증 루프 (최대 2회)
+  if (isFirstCard) {
+    let currentTitle = newCard.title;
+    const originalTitle = currentTitle;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const errors = validateFirstCardTitle(currentTitle, template);
+      if (errors.length === 0) {
+        console.log(`[1장 재생성 검증] 시도 ${attempt} 통과: "${currentTitle}"`);
+        break;
+      }
+      console.log(`[1장 재생성 검증] 시도 ${attempt} 실패 (${errors.join(', ')}) — "${currentTitle}"`);
+      const fixed = await regenerateFirstCardTitle(currentTitle, template, errors, topic);
+      if (fixed) {
+        console.log(`[1장 재생성 검증] 시도 ${attempt} 보정 결과: "${fixed}"`);
+        currentTitle = fixed;
+      } else {
+        break;
+      }
+    }
+    const finalErrors = validateFirstCardTitle(currentTitle, template);
+    if (finalErrors.length === 0) {
+      newCard.title = currentTitle;
+    } else {
+      console.log(`[1장 재생성 검증] 최종 실패 (${finalErrors.join(', ')}) — 새 title 유지: "${originalTitle}"`);
+    }
+  }
+
+  return { card: newCard };
 }
