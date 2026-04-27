@@ -4,7 +4,7 @@ export function generateChatbotPageHTML(): string {
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>BSN 어시스턴트</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -19,12 +19,31 @@ export function generateChatbotPageHTML(): string {
       --text:#1A1A2E;--sub:#6B6B80;--muted:#9CA3AF;
       --warn:#DC2626;--warn-lt:#FEE2E2;
       --radius:12px;--shadow:0 1px 4px rgba(0,0,0,0.07);
+      /* 적응형 레이아웃 토큰 — 기본값은 데스크톱(PC 마우스 + 폴백) */
+      --bsn-content-width:1200px;
+      --bsn-content-padding:0;
+      --bsn-content-max-width:1200px;
+      --bsn-chat-max-width:760px;
     }
+    /* 터치 디바이스 — 모바일(폰) */
+    @media (hover:none) and (pointer:coarse) and (max-width:767px){
+      :root{--bsn-content-width:100%;--bsn-content-padding:16px;--bsn-content-max-width:480px;--bsn-chat-max-width:100%;}
+    }
+    /* 터치 디바이스 — 태블릿(iPad/폴드) */
+    @media (hover:none) and (pointer:coarse) and (min-width:768px) and (max-width:1279px){
+      :root{--bsn-content-width:720px;--bsn-content-padding:0;--bsn-content-max-width:720px;--bsn-chat-max-width:720px;}
+    }
+    .bsn-container{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;}
+    html,body{min-width:1200px;}
+    @media (hover:none) and (pointer:coarse){html,body{min-width:320px;}}
     body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;overflow-y:scroll;}
+    @media (hover:none) and (pointer:coarse){body{overflow-x:hidden;}}
 
     /* Navbar */
     nav{position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid var(--border);}
-    .nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;gap:20px;}
+    .nav-inner{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;height:52px;display:flex;align-items:center;gap:20px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .nav-inner::-webkit-scrollbar{display:none;}
+    .nav-inner > *{white-space:nowrap;flex-shrink:0;}
     .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
     .logo-mark{width:28px;height:28px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;}
     .logo-text{font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
@@ -38,7 +57,7 @@ export function generateChatbotPageHTML(): string {
     .nav-btn:hover{border-color:var(--navy);color:var(--navy);}
 
     /* Chat */
-    .chat-container{flex:1;max-width:760px;width:100%;margin:0 auto;padding:32px 24px 24px;display:flex;flex-direction:column;height:calc(100vh - 52px);}
+    .chat-container{flex:1;width:100%;max-width:var(--bsn-chat-max-width);margin-left:auto;margin-right:auto;padding-top:32px;padding-bottom:24px;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;display:flex;flex-direction:column;height:calc(100vh - 52px);}
     .chat-header{text-align:center;margin-bottom:28px;}
     .chat-header h1{font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;color:var(--text);margin-bottom:8px;}
     .chat-header p{font-size:14px;color:var(--sub);line-height:1.5;}
@@ -117,7 +136,7 @@ export function generateChatbotPageHTML(): string {
     @keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
     @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
-    @media(max-width:640px){
+    @media (hover:none) and (pointer:coarse) and (max-width:640px){
       .chat-container{padding:16px 12px 12px;}
       .msg{max-width:92%;}
       .quick-actions{gap:6px;}

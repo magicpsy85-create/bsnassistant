@@ -4,7 +4,7 @@ export function generateAdminPageHTML(): string {
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>관리자 — BSN 어시스턴트</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -20,12 +20,31 @@ export function generateAdminPageHTML(): string {
       --bg:#F8F6F1;--surface:#FFFFFF;--border:#E2E2E2;
       --text:#1A1A2E;--sub:#6B6B80;--muted:#9CA3AF;
       --radius:12px;--shadow:0 1px 4px rgba(0,0,0,0.07);
+      /* 적응형 레이아웃 토큰 — 기본값은 데스크톱(PC 마우스 + 폴백) */
+      --bsn-content-width:1200px;
+      --bsn-content-padding:0;
+      --bsn-content-max-width:1200px;
+      --bsn-chat-max-width:760px;
     }
-    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+    /* 터치 디바이스 — 모바일(폰) */
+    @media (hover:none) and (pointer:coarse) and (max-width:767px){
+      :root{--bsn-content-width:100%;--bsn-content-padding:16px;--bsn-content-max-width:480px;--bsn-chat-max-width:100%;}
+    }
+    /* 터치 디바이스 — 태블릿(iPad/폴드) */
+    @media (hover:none) and (pointer:coarse) and (min-width:768px) and (max-width:1279px){
+      :root{--bsn-content-width:720px;--bsn-content-padding:0;--bsn-content-max-width:720px;--bsn-chat-max-width:720px;}
+    }
+    .bsn-container{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;}
+    html,body{min-width:1200px;}
+    @media (hover:none) and (pointer:coarse){html,body{min-width:320px;}}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;margin:0;}
+    @media (hover:none) and (pointer:coarse){body{overflow-x:hidden;}}
 
     /* Navbar */
     nav{position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid var(--border);}
-    .nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;gap:20px;}
+    .nav-inner{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;height:52px;display:flex;align-items:center;gap:20px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .nav-inner::-webkit-scrollbar{display:none;}
+    .nav-inner > *{white-space:nowrap;flex-shrink:0;}
     .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
     .logo-mark{width:28px;height:28px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;}
     .logo-text{font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
@@ -39,7 +58,7 @@ export function generateAdminPageHTML(): string {
     .nav-btn:hover{border-color:var(--navy);color:var(--navy);}
 
     /* Layout */
-    .container{max-width:1200px;margin:0 auto;padding:28px 24px;}
+    .container{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-top:28px;padding-bottom:28px;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;}
 
     /* Tabs */
     .tabs{display:flex;gap:2px;margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:0;}
@@ -146,7 +165,7 @@ export function generateAdminPageHTML(): string {
     .form-group textarea{min-height:80px;resize:vertical;}
     .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--navy);}
 
-    @media(max-width:900px){
+    @media (hover:none) and (pointer:coarse) and (max-width:900px){
       .rule-split{flex-direction:column;height:auto;}
       .rule-left,.rule-right{width:100%;}
       .rule-left{max-height:300px;}
@@ -185,7 +204,7 @@ export function generateAdminPageHTML(): string {
     .section{display:none;}
     .section.active{display:block;}
 
-    @media(max-width:768px){
+    @media (hover:none) and (pointer:coarse) and (max-width:768px){
       .form-row{flex-direction:column;}
       .stats{grid-template-columns:1fr 1fr;}
     }

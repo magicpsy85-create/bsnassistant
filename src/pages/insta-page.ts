@@ -3,7 +3,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>콘텐츠 생성 — BSN 어시스턴트</title>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -16,12 +16,31 @@ export function generateInstaPageHTML(regionJson?: string): string {
       --bg:#F8F6F1;--surface:#FFFFFF;--border:#E2E2E2;
       --text:#1A1A2E;--sub:#6B6B80;--muted:#9CA3AF;
       --radius:14px;--shadow:0 1px 4px rgba(0,0,0,0.07);
+      /* 적응형 레이아웃 토큰 — 기본값은 데스크톱(PC 마우스 + 폴백) */
+      --bsn-content-width:1200px;
+      --bsn-content-padding:0;
+      --bsn-content-max-width:1200px;
+      --bsn-chat-max-width:760px;
     }
-    body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+    /* 터치 디바이스 — 모바일(폰) */
+    @media (hover:none) and (pointer:coarse) and (max-width:767px){
+      :root{--bsn-content-width:100%;--bsn-content-padding:16px;--bsn-content-max-width:480px;--bsn-chat-max-width:100%;}
+    }
+    /* 터치 디바이스 — 태블릿(iPad/폴드) */
+    @media (hover:none) and (pointer:coarse) and (min-width:768px) and (max-width:1279px){
+      :root{--bsn-content-width:720px;--bsn-content-padding:0;--bsn-content-max-width:720px;--bsn-chat-max-width:720px;}
+    }
+    .bsn-container{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;}
+    html,body{min-width:1200px;}
+    @media (hover:none) and (pointer:coarse){html,body{min-width:320px;}}
+    body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;margin:0;}
+    @media (hover:none) and (pointer:coarse){body{overflow-x:hidden;}}
 
     /* Navbar */
     nav{position:sticky;top:0;z-index:50;background:#ffffff;border-bottom:1px solid var(--border);font-family:'Inter',-apple-system,sans-serif;}
-    .nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;gap:20px;}
+    .nav-inner{width:var(--bsn-content-width);max-width:var(--bsn-content-max-width);margin-left:auto;margin-right:auto;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;height:52px;display:flex;align-items:center;gap:20px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .nav-inner::-webkit-scrollbar{display:none;}
+    .nav-inner > *{white-space:nowrap;flex-shrink:0;}
     .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
     .logo-mark{width:28px;height:28px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;}
     .logo-text{font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
@@ -34,7 +53,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .nav-btn{padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
     .nav-btn:hover{border-color:var(--navy);color:var(--navy);}
 
-    main{max-width:680px;margin:0 auto;padding:32px 24px;}
+    main{width:var(--bsn-content-width);max-width:min(680px,var(--bsn-content-max-width));margin-left:auto;margin-right:auto;padding-top:32px;padding-bottom:32px;padding-left:var(--bsn-content-padding);padding-right:var(--bsn-content-padding);box-sizing:border-box;}
 
     /* Header */
     .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
@@ -143,7 +162,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .btn-copy:hover{border-color:var(--navy);color:var(--navy);}
 
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media(max-width:600px){.two-col{grid-template-columns:1fr;}}
+    @media (hover:none) and (pointer:coarse) and (max-width:600px){.two-col{grid-template-columns:1fr;}}
 
     /* Card news preview */
     .card-preview-wrap{position:relative;margin-bottom:16px;}
@@ -282,8 +301,8 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .tx-stat-pill.on{background:var(--navy-light);color:var(--navy);border-color:var(--navy-border);}
     .tx-period-info{font-size:11px;color:var(--muted);margin-bottom:14px;}
     .tx-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-    @media(max-width:700px){.tx-rank-grid{grid-template-columns:repeat(3,1fr);}}
-    @media(max-width:480px){.tx-rank-grid{grid-template-columns:repeat(2,1fr);}}
+    @media (hover:none) and (pointer:coarse) and (max-width:700px){.tx-rank-grid{grid-template-columns:repeat(3,1fr);}}
+    @media (hover:none) and (pointer:coarse) and (max-width:480px){.tx-rank-grid{grid-template-columns:repeat(2,1fr);}}
     .tx-rank-card{background:var(--surface);border:1px solid rgba(44,74,124,0.08);border-radius:12px;padding:12px;cursor:pointer;transition:all 0.12s;position:relative;}
     .tx-rank-card:hover{border-color:rgba(44,74,124,0.25);}
     .tx-rank-card:has(.tx-rank-check:hover){border-color:rgba(44,74,124,0.08);}
@@ -519,7 +538,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
         <button class="tpl-card active" data-tpl="A" onclick="selectTemplate('A')">
           <span class="tpl-badge">A</span>
           <div class="tpl-name">거래 스토리</div>
-          <div class="tpl-desc">특정 거래 한 건 심층 분석</div>
+          <div class="tpl-desc">한 지역·상권 심층 분석</div>
         </button>
         <button class="tpl-card" data-tpl="B" onclick="selectTemplate('B')">
           <span class="tpl-badge">B</span>
@@ -879,6 +898,40 @@ function getApiBase() {
 (function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
+const BADGE_MATRIX = {
+  A: [
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: true,  showSecondary: true  },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: false, showSecondary: false }
+  ],
+  B: [
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: true,  showSecondary: true  },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: false, showSecondary: false }
+  ],
+  C: [
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: true,  showSecondary: false },
+    { showPeriod: false, showSecondary: false },
+    { showPeriod: false, showSecondary: false }
+  ]
+};
+const SOURCE_MATRIX = {
+  A: [true, true, false, false, true, false, false],
+  B: [true, true, false, true, true, false, false],
+  C: [true, true, true, false, true, false, false]
+};
 // ─── 템플릿 메타 데이터 + 추천 주제 풀 ───
 // 주제 포맷: { text, region: { sido, sgg, dong? } } 또는 { text, region1, region2 }
 // C 템플릿: rankBy 필드로 정렬 기준 지정
@@ -1136,15 +1189,15 @@ function goToSlide(idx) {
     num.style.display = '';
     document.querySelector('.card-watermark').style.display = '';
 
-    // 기간 배지 렌더링 (period 있고 빈 문자열 아닐 때만)
-    var p = '';
+    // 기간 배지 렌더링 — BADGE_MATRIX 기반 (card.period 미사용)
+    var tpl = (currentTemplate && BADGE_MATRIX[currentTemplate]) ? currentTemplate : 'A';
+    var rule = BADGE_MATRIX[tpl][idx] || { showPeriod: false, showSecondary: false };
+    var smeta = window.currentCardSessionMeta || {};
     if (periodEl) {
-      p = (card.period || '').trim();
-      var ps = (card.periodSecondary || '').trim();
-      if (p) {
-        var html = escHtml(p);
-        if (ps) {
-          html += '<span class="card-period-secondary">vs ' + escHtml(ps) + '</span>';
+      if (rule.showPeriod && smeta.currentPeriod) {
+        var html = escHtml(smeta.currentPeriod);
+        if (rule.showSecondary && smeta.comparisonPeriod) {
+          html += '<span class="card-period-secondary">vs ' + escHtml(smeta.comparisonPeriod) + '</span>';
         }
         periodEl.innerHTML = html;
         periodEl.style.display = '';
@@ -1153,9 +1206,10 @@ function goToSlide(idx) {
       }
     }
 
-    // 출처 표시 (period가 있는 카드 = 통계 데이터 카드)
+    // 출처 배지 — SOURCE_MATRIX 기반
     if (sourceEl) {
-      sourceEl.style.display = p ? '' : 'none';
+      var showSrc = (SOURCE_MATRIX[tpl] || SOURCE_MATRIX.A)[idx];
+      sourceEl.style.display = showSrc ? '' : 'none';
     }
 
     if (cardImages[idx]) {
@@ -1259,10 +1313,9 @@ async function regenerateCurrentCard(btn) {
     });
     var data = await resp.json();
     if (data && data.success && data.card) {
-      // tag/style/period는 기존값 유지, title/periodSecondary만 갱신
+      // tag/style은 기존값 유지, title만 갱신 (기간 배지는 매트릭스 기반)
       cardsData[idx] = Object.assign({}, cardsData[idx], {
-        title: data.card.title,
-        periodSecondary: data.card.periodSecondary || cardsData[idx].periodSecondary
+        title: data.card.title
       });
       goToSlide(idx);
     } else {
@@ -1566,6 +1619,13 @@ function toDisplayText(data) {
 function bindResults(r) {
   console.log('[bindResults] 전체 응답:', JSON.stringify(r).slice(0, 500));
 
+  // sessionMeta 병합 (region 메타 + 서버가 돌려준 기간 값)
+  var prevMeta = window.currentCardSessionMeta || {};
+  window.currentCardSessionMeta = Object.assign({}, prevMeta, {
+    currentPeriod: r.sessionMeta?.currentPeriod,
+    comparisonPeriod: r.sessionMeta?.comparisonPeriod
+  });
+
   // Instagram cards
   cardsData = r.instagram?.cards || [];
   imageIdeas = r.imageIdeas || [];
@@ -1631,6 +1691,8 @@ function saveHistory(mode, input, result) {
       cardFontSizes: [...cardFontSizes],
       cardTitles: cardsData.map(c => c.title || ''),
       cardTags: cardsData.map(c => c.tag || ''),
+      template: currentTemplate || 'A',
+      sessionMeta: window.currentCardSessionMeta || {},
       createdAt: new Date().toISOString()
     };
     history.unshift(item);
@@ -1770,6 +1832,12 @@ function loadHistory(id) {
   currentHistoryId = id;
   currentTopic = item.input || '';
 
+  // 템플릿·sessionMeta 복원 (매트릭스 기반 배지용)
+  if (item.template && ['A', 'B', 'C'].indexOf(item.template) >= 0) {
+    currentTemplate = item.template;
+  }
+  window.currentCardSessionMeta = item.sessionMeta ? Object.assign({}, item.sessionMeta) : {};
+
   // 카드 데이터 복원 (insta/instagram 키 호환)
   var ig = item.result?.instagram || item.result?.insta || {};
   const cards = ig.cards || [];
@@ -1777,9 +1845,7 @@ function loadHistory(id) {
     return {
       tag: (item.cardTags && item.cardTags[i]) || c.tag || '',
       title: (item.cardTitles && item.cardTitles[i]) || c.title || '',
-      style: c.style || 'dark',
-      period: c.period || '',
-      periodSecondary: c.periodSecondary || ''
+      style: c.style || 'dark'
     };
   });
   imageIdeas = item.result?.imageIdeas || [];
