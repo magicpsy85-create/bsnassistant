@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // context_cache: B-2-A에서 신규 추가. Admin SDK만 접근 (코드 레벨 TTL 처리).
+    match /context_cache/{document=**} {
+      allow read, write: if false;
+    }
+
     // 서버(Admin SDK)만 접근 가능 - 클라이언트 직접 접근 차단
     match /{document=**} {
       allow read, write: if false;

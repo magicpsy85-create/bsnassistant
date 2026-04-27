@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import axios from 'axios';
-import crypto from 'crypto';
 import { buildLearningContext } from './learn-store';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -362,56 +361,14 @@ export interface AllChannelsResult {
   sessionMeta?: ContentContext['sessionMeta'];
 }
 
-// ─── B-1b: 채널 키 + ContentContext 캐시 ───
+// ─── B-1b: 채널 키 ───
 export type ChannelKey = 'instagram' | 'shortform' | 'youtube' | 'thread' | 'blog';
 export const ALL_CHANNELS: ChannelKey[] = ['instagram', 'shortform', 'youtube', 'thread', 'blog'];
 
-const CONTEXT_CACHE_TTL_MS = 10 * 60 * 1000; // 10분
-const contextCache = new Map<string, { ctx: ContentContext; expiresAt: number }>();
-
-export function computeContentHash(parts: {
-  input: string;
-  template: 'A' | 'B' | 'C';
-  region?: string;
-  region1?: string;
-  region2?: string;
-  rankBy?: string;
-}): string {
-  const key = JSON.stringify({
-    input: parts.input || '',
-    template: parts.template,
-    region: parts.region || '',
-    region1: parts.region1 || '',
-    region2: parts.region2 || '',
-    rankBy: parts.rankBy || ''
-  });
-  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
-}
-
-export function cacheContext(hash: string, ctx: ContentContext): void {
-  // 만료된 항목 정리 (lazy)
-  const now = Date.now();
-  for (const [k, v] of contextCache) {
-    if (v.expiresAt < now) contextCache.delete(k);
-  }
-  contextCache.set(hash, { ctx, expiresAt: now + CONTEXT_CACHE_TTL_MS });
-  console.log(`[contextCache] set ${hash} (size=${contextCache.size})`);
-}
-
-export function getCachedContext(hash: string): ContentContext | null {
-  const entry = contextCache.get(hash);
-  if (!entry) {
-    console.log(`[contextCache] miss ${hash}`);
-    return null;
-  }
-  if (entry.expiresAt < Date.now()) {
-    contextCache.delete(hash);
-    console.log(`[contextCache] miss ${hash} (expired)`);
-    return null;
-  }
-  console.log(`[contextCache] hit ${hash}`);
-  return entry.ctx;
-}
+// B-2-A: contextCache는 Firestore 백엔드로 이전 (src/contextCache.ts)
+// computeContentHash도 동일 모듈로 이동, 기존 import 호환을 위해 re-export
+import { contextCache, computeContentHash } from './contextCache';
+export { contextCache, computeContentHash };
 
 function safeParseGPTJson(raw: string): any {
   let text = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -1586,7 +1543,7 @@ export async function generateAllContent(
     input, template,
     region: options.region, region1: options.region1, region2: options.region2, rankBy: options.rankBy
   });
-  cacheContext(contentHash, ctx);
+  await contextCache.set(contentHash, ctx);
 
   const tGen = Date.now();
   const result = await generateContent(contentInput, analysis, research, template, regionStats, channels);
@@ -1615,7 +1572,7 @@ export async function generateChannelFromContext(
   contentHash: string,
   channel: ChannelKey
 ): Promise<ContentResult> {
-  const ctx = getCachedContext(contentHash);
+  const ctx = await contextCache.get(contentHash);
   if (!ctx) {
     const err: any = new Error('CONTEXT_CACHE_MISS');
     err.code = 'CONTEXT_CACHE_MISS';
