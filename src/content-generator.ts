@@ -309,6 +309,55 @@ export interface ContentResult {
     currentPeriod?: string;
     comparisonPeriod?: string;
   };
+  channels?: AllChannelsResult;
+}
+
+// ─── B-1a: 채널별 분리 준비용 타입 ───
+// 현재는 단일 GPT 응답에서 분배하지만, B-1b에서 채널별 독립 GPT 호출 시 동일 타입 사용.
+export interface ContentContext {
+  topic: string;
+  template: 'A' | 'B' | 'C';
+  mode: 'text' | 'url';
+  input: string;
+  region?: string;
+  region1?: string;
+  region2?: string;
+  rankBy?: string;
+  analysis: any;
+  research: any;
+  regionStats: any | null;
+  sessionMeta?: { currentPeriod?: string; comparisonPeriod?: string };
+}
+
+export interface InstagramChannel {
+  cards: { tag: string; title: string; style: 'dark' | 'light' | 'accent' | 'cta' }[];
+  caption: string;
+  hashtags: string[];
+  imageIdeas: string[];
+}
+export interface ShortformChannel {
+  filming: string;
+  reelsUpload: string;
+  shortsUpload: string;
+}
+export interface YoutubeChannel {
+  title: string;
+  script: string;
+  description: string;
+}
+export interface ThreadChannel {
+  post: string;
+}
+export interface BlogChannel {
+  post: string;
+}
+export interface AllChannelsResult {
+  instagram: InstagramChannel;
+  shortform: ShortformChannel;
+  youtube: YoutubeChannel;
+  thread: ThreadChannel;
+  blog: BlogChannel;
+  sessionMeta?: ContentContext['sessionMeta'];
 }
 
 function safeParseGPTJson(raw: string): any {
@@ -1305,6 +1354,65 @@ async function extractArticle(url: string): Promise<string> {
 }
 
 // ══════════════════════════════════════════════════════════
+// B-1a: 채널별 분배 헬퍼
+// ──────────────────────────────────────────────────────────
+// 단일 GPT 응답(ContentResult)에서 채널별 슬라이스를 추출.
+// B-1b에서 채널별 독립 GPT 호출로 확장 시 동일 인터페이스 유지.
+// ══════════════════════════════════════════════════════════
+function extractInstagramFromResponse(result: ContentResult, _ctx: ContentContext): InstagramChannel {
+  const ig = result.instagram || ({} as any);
+  const cap = String(ig.caption || '');
+  const hashtags = (cap.match(/#\S+/g) || []);
+  return {
+    cards: Array.isArray(ig.cards) ? ig.cards : [],
+    caption: cap,
+    hashtags,
+    imageIdeas: Array.isArray(result.imageIdeas) ? result.imageIdeas : []
+  };
+}
+function extractShortformFromResponse(result: ContentResult, _ctx: ContentContext): ShortformChannel {
+  const sf = result.shortform || ({} as any);
+  return {
+    filming: String(sf.filming || ''),
+    reelsUpload: String(sf.reelsUpload || ''),
+    shortsUpload: String(sf.shortsUpload || '')
+  };
+}
+function extractYoutubeFromResponse(result: ContentResult, _ctx: ContentContext): YoutubeChannel {
+  const y = result.youtube || ({} as any);
+  return {
+    title: String(y.title || ''),
+    script: String(y.script || ''),
+    description: String(y.description || '')
+  };
+}
+function extractThreadFromResponse(result: ContentResult, _ctx: ContentContext): ThreadChannel {
+  const t = result.thread || ({} as any);
+  return { post: String(t.post || '') };
+}
+function extractBlogFromResponse(result: ContentResult, _ctx: ContentContext): BlogChannel {
+  const b = result.blog || ({} as any);
+  return { post: String(b.post || '') };
+}
+
+function buildSessionMeta(regionStats: any): ContentContext['sessionMeta'] | undefined {
+  if (!regionStats) return undefined;
+  if (regionStats.type === 'single' || regionStats.type === 'ranking') {
+    return {
+      currentPeriod: regionStats.currentPeriodLabel,
+      comparisonPeriod: regionStats.prevPeriodLabel
+    };
+  }
+  if (regionStats.type === 'compare') {
+    return {
+      currentPeriod: regionStats.region1?.currentPeriodLabel,
+      comparisonPeriod: regionStats.region1?.prevPeriodLabel
+    };
+  }
+  return undefined;
+}
+
+// ══════════════════════════════════════════════════════════
 // 메인 엔트리
 // ══════════════════════════════════════════════════════════
 export async function generateAllContent(
@@ -1335,27 +1443,31 @@ export async function generateAllContent(
   const research = await doResearch(analysis);
   console.log(`[generateAllContent] doResearch 완료 — ${Date.now() - tResearch}ms`);
 
-  // C단계: 콘텐츠 생성
+  // C단계: 콘텐츠 생성 (B-1a: 단일 GPT 호출 유지, B-1b에서 채널별 호출로 확장)
+  const sessionMeta = buildSessionMeta(regionStats);
+  const ctx: ContentContext = {
+    topic: analysis?.topic || input.slice(0, 100),
+    template, mode, input,
+    analysis, research, regionStats,
+    sessionMeta
+  };
+
   const tGen = Date.now();
   const result = await generateContent(contentInput, analysis, research, template, regionStats);
   console.log(`[generateAllContent] generateContent 완료 — ${Date.now() - tGen}ms`);
 
   // sessionMeta 주입 (기간 배지용 실제 기간 값)
-  let sessionMeta: { currentPeriod?: string; comparisonPeriod?: string } | undefined;
-  if (regionStats) {
-    if (regionStats.type === 'single' || regionStats.type === 'ranking') {
-      sessionMeta = {
-        currentPeriod: regionStats.currentPeriodLabel,
-        comparisonPeriod: regionStats.prevPeriodLabel
-      };
-    } else if (regionStats.type === 'compare') {
-      sessionMeta = {
-        currentPeriod: regionStats.region1?.currentPeriodLabel,
-        comparisonPeriod: regionStats.region1?.prevPeriodLabel
-      };
-    }
-  }
   if (sessionMeta) result.sessionMeta = sessionMeta;
+
+  // B-1a: nested 채널 구조도 함께 반환 (additive — 기존 nested 필드 그대로 유지)
+  result.channels = {
+    instagram: extractInstagramFromResponse(result, ctx),
+    shortform: extractShortformFromResponse(result, ctx),
+    youtube: extractYoutubeFromResponse(result, ctx),
+    thread: extractThreadFromResponse(result, ctx),
+    blog: extractBlogFromResponse(result, ctx),
+    sessionMeta
+  };
 
   console.log(`[generateAllContent] 전체 — ${Date.now() - tStart}ms`);
   return result;
