@@ -204,6 +204,100 @@ app.get('/api/auth/config', (_req: Request, res: Response) => {
   });
 });
 
+// ─── B-2: 사용자 채널 프리셋 ───
+type PresetMode = 'fast' | 'sns' | 'all' | 'custom';
+
+interface ChannelPreset {
+  selectedPreset: PresetMode;
+  customChannels: ChannelKey[];
+  updatedAt: string;
+}
+
+const PRESET_TO_CHANNELS: Record<Exclude<PresetMode, 'custom'>, ChannelKey[]> = {
+  fast: ['instagram'],
+  sns: ['instagram', 'shortform', 'thread'],
+  all: ['instagram', 'shortform', 'youtube', 'thread', 'blog']
+};
+
+const VALID_PRESETS: PresetMode[] = ['fast', 'sns', 'all', 'custom'];
+
+function presetToChannels(preset: ChannelPreset): ChannelKey[] {
+  if (preset.selectedPreset === 'custom') {
+    return preset.customChannels.includes('instagram')
+      ? preset.customChannels
+      : ['instagram', ...preset.customChannels];
+  }
+  return PRESET_TO_CHANNELS[preset.selectedPreset] || ['instagram'];
+}
+
+const DEFAULT_PRESET: ChannelPreset = {
+  selectedPreset: 'fast',
+  customChannels: ['instagram'],
+  updatedAt: new Date(0).toISOString()
+};
+
+app.get('/api/user/preset', async (req: Request, res: Response) => {
+  const tStart = Date.now();
+  try {
+    const authHeader = req.headers.authorization || '';
+    const idToken = authHeader.replace(/^Bearer\s+/i, '');
+    if (!idToken) return res.status(401).json({ error: 'idToken 필요' });
+
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) return res.status(403).json({ error: '이메일 정보 없음' });
+
+    const membersSnap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+    if (membersSnap.empty) return res.status(403).json({ error: '등록되지 않은 사용자' });
+
+    const member = membersSnap.docs[0].data();
+    const preset: ChannelPreset = member.channelPreset || DEFAULT_PRESET;
+
+    console.log(`[/api/user/preset GET] ${email} → ${preset.selectedPreset} (${Date.now() - tStart}ms)`);
+    res.json({ success: true, preset });
+  } catch (e: any) {
+    console.error('[/api/user/preset GET] 오류:', e.message);
+    res.status(500).json({ error: '프리셋 조회 실패' });
+  }
+});
+
+app.post('/api/user/preset', async (req: Request, res: Response) => {
+  const tStart = Date.now();
+  try {
+    const authHeader = req.headers.authorization || '';
+    const idToken = authHeader.replace(/^Bearer\s+/i, '');
+    if (!idToken) return res.status(401).json({ error: 'idToken 필요' });
+
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) return res.status(403).json({ error: '이메일 정보 없음' });
+
+    const { selectedPreset, customChannels } = req.body;
+    if (!VALID_PRESETS.includes(selectedPreset)) {
+      return res.status(400).json({ error: '유효하지 않은 프리셋 모드' });
+    }
+    if (!Array.isArray(customChannels) || !customChannels.every((c: any) => ALL_CHANNELS.includes(c))) {
+      return res.status(400).json({ error: '유효하지 않은 채널 목록' });
+    }
+
+    const membersSnap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+    if (membersSnap.empty) return res.status(403).json({ error: '등록되지 않은 사용자' });
+
+    const newPreset: ChannelPreset = {
+      selectedPreset,
+      customChannels,
+      updatedAt: new Date().toISOString()
+    };
+    await membersSnap.docs[0].ref.update({ channelPreset: newPreset });
+
+    console.log(`[/api/user/preset POST] ${email} → ${selectedPreset} (${Date.now() - tStart}ms)`);
+    res.json({ success: true, preset: newPreset });
+  } catch (e: any) {
+    console.error('[/api/user/preset POST] 오류:', e.message);
+    res.status(500).json({ error: '프리셋 저장 실패' });
+  }
+});
+
 // ─── 챗봇 페이지 ───
 app.get('/', (_req: Request, res: Response) => {
   res.redirect('/insta#transaction');
