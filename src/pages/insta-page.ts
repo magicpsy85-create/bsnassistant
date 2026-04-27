@@ -166,7 +166,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
     /* Card news preview */
     .card-preview-wrap{position:relative;margin-bottom:16px;}
-    .card-preview{width:100%;aspect-ratio:1/1;background:var(--navy);border-radius:12px;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:24px;color:#fff;}
+    .card-preview{width:100%;aspect-ratio:4/5;background:var(--navy);border-radius:12px;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:24px;color:#fff;}
     .card-preview img.card-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
     .card-tag{display:none;}
     .card-watermark{position:absolute;top:16px;right:16px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:800;opacity:0.4;z-index:1;}
@@ -175,6 +175,43 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .card-source{position:absolute;bottom:16px;left:16px;font-family:'Poppins',-apple-system,sans-serif;font-size:10px;font-weight:400;opacity:0.5;z-index:2;letter-spacing:0.2px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.15);}
     .card-main-text{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:800;line-height:1.6;padding:20px 10px;word-break:keep-all;white-space:pre-line;z-index:1;cursor:text;}
     .card-main-text[contenteditable="true"]:focus{outline:1px dashed rgba(255,255,255,0.4);outline-offset:4px;}
+
+    /* ── 카드 레이아웃 매트릭스 (data-layout) ── */
+    /* centered: 중앙 헤드라인 */
+    .card-main-text[data-layout="centered"]{flex-direction:column;}
+    .card-main-text[data-layout="centered"] .card-headline{font-size:32px;font-weight:800;line-height:1.3;text-align:center;}
+
+    /* header-bullets: 상단 헤더 + 구분선 + bullet */
+    .card-main-text[data-layout="header-bullets"]{flex-direction:column;align-items:flex-start;justify-content:flex-start;text-align:left;padding:32px 28px;font-size:16px;font-weight:600;line-height:1.7;}
+    .card-main-text[data-layout="header-bullets"] .card-header{font-size:18px;font-weight:800;margin-bottom:12px;width:100%;}
+    .card-main-text[data-layout="header-bullets"] .card-header-divider{height:1px;background:currentColor;opacity:0.3;margin-bottom:16px;width:100%;}
+    .card-main-text[data-layout="header-bullets"] .card-bullets{font-size:16px;line-height:1.7;width:100%;}
+    .card-main-text[data-layout="header-bullets"] .card-bullets > div{margin-bottom:8px;}
+
+    /* split: 상하 분할 (큰 수치 + 짧은 해석) */
+    .card-main-text[data-layout="split"]{flex-direction:column;padding:0;align-items:stretch;justify-content:stretch;}
+    .card-main-text[data-layout="split"] .split-top{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:36px;font-weight:800;line-height:1.3;padding:32px 24px;word-break:keep-all;}
+    .card-main-text[data-layout="split"] .split-bottom{border-top:1px solid currentColor;border-color:rgba(255,255,255,0.25);padding:18px 24px;font-size:14px;font-weight:600;line-height:1.6;opacity:0.9;text-align:center;}
+    .card-preview.style-light .card-main-text[data-layout="split"] .split-bottom{border-color:rgba(0,0,0,0.15);}
+
+    /* split-side: 좌우 분할 (B 2장) */
+    .card-main-text[data-layout="split-side"]{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;padding:32px 20px;}
+    .card-main-text[data-layout="split-side"] .split-region{text-align:center;display:flex;flex-direction:column;gap:8px;}
+    .card-main-text[data-layout="split-side"] .region-name{font-size:14px;font-weight:700;opacity:0.8;}
+    .card-main-text[data-layout="split-side"] .region-value{font-size:22px;font-weight:800;line-height:1.3;word-break:keep-all;}
+
+    /* ranking-list: 순위 + 항목 + 수치 (C 3장) */
+    .card-main-text[data-layout="ranking-list"]{flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;padding:28px 24px;}
+    .card-main-text[data-layout="ranking-list"] .ranking-title{font-size:18px;font-weight:800;text-align:center;margin-bottom:10px;}
+    .card-main-text[data-layout="ranking-list"] .ranking-divider{height:1px;background:currentColor;opacity:0.3;margin-bottom:10px;}
+    .card-main-text[data-layout="ranking-list"] .ranking-row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:600;line-height:1.9;gap:12px;}
+    .card-main-text[data-layout="ranking-list"] .ranking-row .rank-num{font-weight:800;margin-right:6px;}
+
+    /* comparison-list: 전년 동기 비교 (B 4장) */
+    .card-main-text[data-layout="comparison-list"]{flex-direction:column;align-items:stretch;justify-content:center;text-align:left;padding:28px 24px;font-size:14px;line-height:1.9;}
+    .card-main-text[data-layout="comparison-list"] .comparison-row{display:grid;grid-template-columns:1fr auto;gap:8px;}
+    .card-main-text[data-layout="comparison-list"] .comparison-up{color:#4ade80;font-weight:800;}
+    .card-main-text[data-layout="comparison-list"] .comparison-down{color:#f87171;font-weight:800;}
     .card-preview.style-light .card-tag[contenteditable="true"]:focus,
     .card-preview.style-light .card-main-text[contenteditable="true"]:focus{outline-color:rgba(0,0,0,0.2);}
     .card-slide-num{text-align:center;font-size:12px;font-weight:800;z-index:1;background:rgba(0,0,0,0.3);color:#fff;padding:2px 8px;border-radius:4px;display:inline-block;}
@@ -932,6 +969,11 @@ const SOURCE_MATRIX = {
   B: [true, true, false, true, true, false, false],
   C: [true, true, true, false, true, false, false]
 };
+const LAYOUT_MATRIX = {
+  A: ['centered', 'split', 'header-bullets', 'header-bullets', 'split', 'header-bullets', 'centered'],
+  B: ['centered', 'split-side', 'header-bullets', 'comparison-list', 'split', 'header-bullets', 'centered'],
+  C: ['centered', 'split', 'ranking-list', 'header-bullets', 'split', 'header-bullets', 'centered']
+};
 // ─── 템플릿 메타 데이터 + 추천 주제 풀 ───
 // 주제 포맷: { text, region: { sido, sgg, dong? } } 또는 { text, region1, region2 }
 // C 템플릿: rankBy 필드로 정렬 기준 지정
@@ -1136,6 +1178,86 @@ function initCardNav() {
   }
 }
 
+function renderCardContent(card, layout, textEl) {
+  if (!textEl) return false;
+  var raw = String(card.title || '');
+  var lines = raw.split('\\n').map(function(s){return s.trim();}).filter(Boolean);
+  if (lines.length === 0) { textEl.textContent = raw; return true; }
+
+  switch (layout) {
+    case 'centered': {
+      textEl.innerHTML = '<div class="card-headline">' + lines.map(escHtml).join('<br>') + '</div>';
+      return true;
+    }
+    case 'header-bullets': {
+      var header = card.tag || lines[0] || '';
+      var bullets = (card.tag ? lines : lines.slice(1));
+      textEl.innerHTML =
+        '<div class="card-header">' + escHtml(header) + '</div>' +
+        '<div class="card-header-divider"></div>' +
+        '<div class="card-bullets">' +
+          bullets.map(function(b){ return '<div>• ' + escHtml(b.replace(/^[•\\-·]\\s*/, '')) + '</div>'; }).join('') +
+        '</div>';
+      return true;
+    }
+    case 'split': {
+      var top = lines[0] || '';
+      var bottom = lines.slice(1).join(' / ');
+      textEl.innerHTML =
+        '<div class="split-top">' + escHtml(top) + '</div>' +
+        (bottom ? '<div class="split-bottom">' + escHtml(bottom) + '</div>' : '');
+      return true;
+    }
+    case 'split-side': {
+      // GPT 패턴: "지역A: 값 | 지역B: 값" 또는 줄별 분리. 정교화는 후속 작업.
+      var pairs = [];
+      lines.forEach(function(l){
+        var m = l.match(/^(.+?)\\s*[:：]\\s*(.+)$/);
+        if (m) pairs.push({ name: m[1].trim(), value: m[2].trim() });
+      });
+      if (pairs.length >= 2) {
+        textEl.innerHTML = pairs.slice(0, 2).map(function(p){
+          return '<div class="split-region"><div class="region-name">' + escHtml(p.name) + '</div><div class="region-value">' + escHtml(p.value) + '</div></div>';
+        }).join('');
+      } else {
+        // fallback: 단순 줄 표시
+        textEl.innerHTML = lines.map(escHtml).join('<br>');
+      }
+      return true;
+    }
+    case 'ranking-list': {
+      var rankRows = lines.map(function(line){
+        var m = line.match(/^(\\d+)[.)]?\\s*(.+?)\\s+([\\d,.]+\\S*)$/);
+        if (m) {
+          return '<div class="ranking-row"><span><span class="rank-num">' + escHtml(m[1]) + '.</span>' + escHtml(m[2]) + '</span><span>' + escHtml(m[3]) + '</span></div>';
+        }
+        return '<div class="ranking-row">' + escHtml(line) + '</div>';
+      }).join('');
+      textEl.innerHTML =
+        '<div class="ranking-title">' + escHtml(card.tag || '랭킹') + '</div>' +
+        '<div class="ranking-divider"></div>' +
+        rankRows;
+      return true;
+    }
+    case 'comparison-list': {
+      var rows = lines.map(function(line){
+        // "거래량 +15%" 또는 "평당가 -8%" 패턴
+        var m = line.match(/^(.+?)\\s*([+\\-]?[\\d.]+%?\\S*)$/);
+        if (m) {
+          var val = m[2];
+          var cls = val.indexOf('-') === 0 ? 'comparison-down' : (val.indexOf('+') === 0 ? 'comparison-up' : '');
+          return '<div class="comparison-row"><span>' + escHtml(m[1].trim()) + '</span><span class="' + cls + '">' + escHtml(val) + '</span></div>';
+        }
+        return '<div class="comparison-row"><span>' + escHtml(line) + '</span><span></span></div>';
+      }).join('');
+      textEl.innerHTML = rows;
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
 function goToSlide(idx) {
   currentSlide = idx;
   const preview = document.getElementById('cardPreview');
@@ -1183,7 +1305,17 @@ function goToSlide(idx) {
 
     // 태그/텍스트는 항상 표시 (인라인 편집 가능)
     tag.textContent = card.tag || CARD_TAGS[idx];
-    text.textContent = card.title || '';
+    var _tpl = (currentTemplate && LAYOUT_MATRIX[currentTemplate]) ? currentTemplate : 'A';
+    var _layout = (LAYOUT_MATRIX[_tpl] && LAYOUT_MATRIX[_tpl][idx]) || null;
+    var _rendered = false;
+    if (_layout) {
+      text.setAttribute('data-layout', _layout);
+      _rendered = renderCardContent(card, _layout, text);
+      if (!_rendered) text.removeAttribute('data-layout');
+    } else {
+      text.removeAttribute('data-layout');
+    }
+    if (!_rendered) text.textContent = card.title || '';
     tag.style.display = '';
     text.style.display = '';
     num.style.display = '';
