@@ -4,7 +4,7 @@ import { generateChatbotPageHTML } from './pages/chatbot-page';
 import { generateAdminPageHTML } from './pages/admin-page';
 import { handleChatbotMessage } from './chatbot';
 import { generateInstaPageHTML } from './pages/insta-page';
-import { generateAllContent, regenerateSingleCard } from './content-generator';
+import { generateAllContent, regenerateSingleCard, generateChannelFromContext, computeContentHash, ALL_CHANNELS, ChannelKey } from './content-generator';
 import { generateSingleCard } from './card-image';
 import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf } from './learn-store';
 import axios from 'axios';
@@ -229,11 +229,23 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
   try {
     req.setTimeout(300000); // 5분 타임아웃
     res.setTimeout(300000);
-    const { mode, input, template, region, region1, region2, rankBy } = req.body;
+    const { mode, input, template, region, region1, region2, rankBy, channels } = req.body;
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: '입력 내용이 필요합니다.' });
     }
-    console.log(`[/api/content/generate] 요청 도착 — template: ${template || 'A'}`);
+
+    // channels 파라미터 검증 — 지정 없으면 기본 ['instagram']
+    let requestedChannels: ChannelKey[] | undefined = undefined;
+    if (Array.isArray(channels) && channels.length > 0) {
+      const valid = channels.filter((c: any): c is ChannelKey =>
+        typeof c === 'string' && ALL_CHANNELS.includes(c as ChannelKey)
+      );
+      if (valid.length === 0) {
+        return res.status(400).json({ error: 'channels에 유효한 채널이 없습니다.' });
+      }
+      requestedChannels = valid;
+    }
+    console.log(`[/api/content/generate] 요청 도착 — template: ${template || 'A'}, channels: ${requestedChannels ? '['+requestedChannels.join(',')+']' : '기본(instagram)'}`);
 
     let regionStats: any = null;
     if (region || (region1 && region2)) {
@@ -249,7 +261,13 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
       }
     }
 
-    const result = await generateAllContent(mode === 'url' ? 'url' : 'text', input.trim(), template || 'A', regionStats);
+    const result = await generateAllContent(
+      mode === 'url' ? 'url' : 'text',
+      input.trim(),
+      template || 'A',
+      regionStats,
+      { channels: requestedChannels, region, region1, region2, rankBy }
+    );
 
     // URL 모드일 때 자동으로 학습에 추가 (중복은 내부에서 스킵)
     if (mode === 'url') {
@@ -266,6 +284,34 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
       return res.status(500).json({ error: '환경 변수를 확인해주세요 (OPENAI_API_KEY)' });
     }
     res.status(500).json({ error: '콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+  }
+});
+
+// ─── 채널별 후속 생성 API (B-1b) ───
+app.post('/api/content/generate-channel', async (req: Request, res: Response) => {
+  const tReq = Date.now();
+  try {
+    req.setTimeout(180000);
+    res.setTimeout(180000);
+    const { channel, contentHash } = req.body;
+    if (!channel || typeof channel !== 'string' || !ALL_CHANNELS.includes(channel as ChannelKey)) {
+      return res.status(400).json({ error: 'channel은 instagram/shortform/youtube/thread/blog 중 하나여야 합니다.' });
+    }
+    if (!contentHash || typeof contentHash !== 'string') {
+      return res.status(400).json({ error: 'contentHash 필수' });
+    }
+    console.log(`[/api/content/generate-channel] 요청 — channel: ${channel}, hash: ${contentHash}`);
+
+    const result = await generateChannelFromContext(contentHash, channel as ChannelKey);
+    console.log(`[/api/content/generate-channel] 응답 송신 — ${Date.now() - tReq}ms`);
+    res.json({ success: true, result });
+  } catch (err: any) {
+    if (err && err.code === 'CONTEXT_CACHE_MISS') {
+      console.warn(`[/api/content/generate-channel] 캐시 미스 — ${Date.now() - tReq}ms`);
+      return res.status(410).json({ success: false, error: 'CONTEXT_CACHE_MISS', message: '컨텍스트 캐시가 만료되었습니다. 처음부터 다시 생성해주세요.' });
+    }
+    console.error(`[/api/content/generate-channel] 오류 — ${Date.now() - tReq}ms:`, err);
+    res.status(500).json({ success: false, error: '채널 생성 중 오류가 발생했습니다.' });
   }
 });
 
