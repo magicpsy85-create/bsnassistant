@@ -206,10 +206,12 @@ interface ResearchData {
 }
 
 async function doResearch(analysis: AnalysisResult): Promise<ResearchData> {
+  const t0 = Date.now();
   const data: ResearchData = { naverNews: [], transactions: [], googleResults: [] };
 
   // (1) 네이버 뉴스 검색
   const keywords = analysis.search_keywords || [analysis.topic || '부동산'];
+  console.log(`[doResearch] 시작 — keywords:`, keywords.slice(0, 3));
   const naverPromises = keywords.slice(0, 3).map(async (kw) => {
     try {
       const naverId = process.env.NAVER_CLIENT_ID;
@@ -259,34 +261,21 @@ async function doResearch(analysis: AnalysisResult): Promise<ResearchData> {
     } catch { return []; }
   })();
 
-  // (3) Brave Search
-  const bravePromise = (async () => {
-    try {
-      const braveKey = process.env.BRAVE_API_KEY;
-      if (!braveKey) return [];
-      const kw = analysis.search_keywords[0] + ' 빌딩 부동산';
-      const resp = await axios.get('https://api.search.brave.com/res/v1/web/search', {
-        params: { q: kw, count: 5, search_lang: 'ko' },
-        headers: { 'X-Subscription-Token': braveKey, 'Accept': 'application/json' },
-        timeout: 5000
-      });
-      return (resp.data.web?.results || []).map((it: any) => ({
-        title: it.title || '',
-        snippet: it.description || ''
-      }));
-    } catch { return []; }
-  })();
+  // (3) Brave Search 제거 — 한국 부동산 콘텐츠는 네이버 뉴스 우세, v1/web/search는 노이즈 위험
+  // 다른 경로(리포트·LLM Context·Places)의 브레이브는 유지
 
-  const [naverResults, txResults, braveResults] = await Promise.all([
+  const tSearch = Date.now();
+  const [naverResults, txResults] = await Promise.all([
     Promise.all(naverPromises),
-    transactionPromise,
-    bravePromise
+    transactionPromise
   ]);
+  console.log(`[doResearch] 검색 완료 — ${Date.now() - tSearch}ms (네이버 ${naverResults.flat().length}건, 국토부 ${txResults.length}건)`);
 
   data.naverNews = naverResults.flat();
   data.transactions = txResults;
-  data.googleResults = braveResults;
+  data.googleResults = [];
 
+  console.log(`[doResearch] 전체 — ${Date.now() - t0}ms`);
   return data;
 }
 
@@ -877,6 +866,7 @@ ${templateCardsExample}
   console.log('[DEBUG] User message 길이:', userContent.length);
   console.log('[DEBUG] User message 앞 200자:', userContent.slice(0, 200));
 
+  const tGptCall = Date.now();
   const res = await client.chat.completions.create({
     model: MODEL,
     max_completion_tokens: 12000,
@@ -885,6 +875,7 @@ ${templateCardsExample}
       { role: 'user', content: fullSystemContent + '\n\n' + userContent }
     ]
   });
+  console.log(`[generateContent] GPT 응답 — ${Date.now() - tGptCall}ms (input tokens: ${res.usage?.prompt_tokens}, output: ${res.usage?.completion_tokens})`);
 
   const text = res.choices[0]?.message?.content || '{}';
   console.log('[GPT 원본 응답 (처음 800자)]', text.slice(0, 800));
@@ -1322,21 +1313,32 @@ export async function generateAllContent(
   template: 'A' | 'B' | 'C' = 'A',
   regionStats: any = null
 ): Promise<ContentResult> {
+  const tStart = Date.now();
+  console.log(`[generateAllContent] 시작 — template: ${template}, mode: ${mode}, input: "${input.slice(0, 50)}"`);
+
   // URL 모드: 기사 내용 추출
   let contentInput = input;
   if (mode === 'url') {
+    const tExtract = Date.now();
     const article = await extractArticle(input);
     contentInput = article || input;
+    console.log(`[generateAllContent] URL 추출 — ${Date.now() - tExtract}ms`);
   }
 
   // A단계: 입력 분석
+  const tAnalyze = Date.now();
   const analysis = await analyzeInput(contentInput);
+  console.log(`[generateAllContent] 입력 분석 — ${Date.now() - tAnalyze}ms`);
 
   // B단계: 리서치
+  const tResearch = Date.now();
   const research = await doResearch(analysis);
+  console.log(`[generateAllContent] doResearch 완료 — ${Date.now() - tResearch}ms`);
 
   // C단계: 콘텐츠 생성
+  const tGen = Date.now();
   const result = await generateContent(contentInput, analysis, research, template, regionStats);
+  console.log(`[generateAllContent] generateContent 완료 — ${Date.now() - tGen}ms`);
 
   // sessionMeta 주입 (기간 배지용 실제 기간 값)
   let sessionMeta: { currentPeriod?: string; comparisonPeriod?: string } | undefined;
@@ -1355,6 +1357,7 @@ export async function generateAllContent(
   }
   if (sessionMeta) result.sessionMeta = sessionMeta;
 
+  console.log(`[generateAllContent] 전체 — ${Date.now() - tStart}ms`);
   return result;
 }
 
@@ -1425,14 +1428,17 @@ ${regionStatsBlock ? `\n[지역 통계 데이터]\n${regionStatsBlock}\n` : ''}
 JSON 형식으로만 응답:
 {"card": {"tag": "${fixedTag}", "title": "...", "style": "${fixedStyle}"}}`;
 
-  console.log(`[카드 재생성] idx=${cardIndex}, template=${template}, tag=${fixedTag}`);
+  const tRegenStart = Date.now();
+  console.log(`[regenerateSingleCard] 시작 — idx=${cardIndex}, template=${template}, tag=${fixedTag}`);
 
+  const tRegenGpt = Date.now();
   const res = await client.chat.completions.create({
     model: MODEL,
     max_completion_tokens: 1500,
     reasoning_effort: 'low' as any,
     messages: [{ role: 'user', content: prompt }]
   });
+  console.log(`[regenerateSingleCard] GPT 완료 — ${Date.now() - tRegenGpt}ms (input tokens: ${res.usage?.prompt_tokens}, output: ${res.usage?.completion_tokens})`);
 
   const text = res.choices[0]?.message?.content || '{}';
   console.log('[카드 재생성 GPT 응답]', text.slice(0, 500));
@@ -1479,5 +1485,6 @@ JSON 형식으로만 응답:
     }
   }
 
+  console.log(`[regenerateSingleCard] 전체 — ${Date.now() - tRegenStart}ms`);
   return { card: newCard };
 }

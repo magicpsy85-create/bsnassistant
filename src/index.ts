@@ -225,6 +225,7 @@ app.get('/insta', (_req: Request, res: Response) => {
 
 // ─── 콘텐츠 생성 API ───
 app.post('/api/content/generate', async (req: Request, res: Response) => {
+  const tReq = Date.now();
   try {
     req.setTimeout(300000); // 5분 타임아웃
     res.setTimeout(300000);
@@ -232,6 +233,7 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
     if (!input || typeof input !== 'string') {
       return res.status(400).json({ error: '입력 내용이 필요합니다.' });
     }
+    console.log(`[/api/content/generate] 요청 도착 — template: ${template || 'A'}`);
 
     let regionStats: any = null;
     if (region || (region1 && region2)) {
@@ -256,9 +258,10 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
       }).catch(() => {});
     }
 
+    console.log(`[/api/content/generate] 응답 송신 — ${Date.now() - tReq}ms (전체 응답 시간)`);
     res.json({ success: true, result });
   } catch (err: any) {
-    console.error('콘텐츠 생성 오류:', err);
+    console.error(`[/api/content/generate] 오류 — ${Date.now() - tReq}ms:`, err);
     if (err.status === 401) {
       return res.status(500).json({ error: '환경 변수를 확인해주세요 (OPENAI_API_KEY)' });
     }
@@ -268,6 +271,7 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
 
 // ─── 카드 단일 재생성 API ───
 app.post('/api/content/regenerate-card', async (req: Request, res: Response) => {
+  const tReq = Date.now();
   try {
     req.setTimeout(180000);
     res.setTimeout(180000);
@@ -303,9 +307,10 @@ app.post('/api/content/regenerate-card', async (req: Request, res: Response) => 
       regionStats
     });
 
+    console.log(`[/api/content/regenerate-card] 응답 송신 — ${Date.now() - tReq}ms (전체 응답 시간)`);
     res.json({ success: true, card: result.card });
   } catch (err: any) {
-    console.error('[카드 재생성 실패]', err);
+    console.error(`[/api/content/regenerate-card] 실패 — ${Date.now() - tReq}ms:`, err);
     res.status(500).json({ success: false, error: err.message || '재생성 중 오류' });
   }
 });
