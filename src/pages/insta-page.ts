@@ -58,6 +58,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
     /* Header */
     .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
     .page-header h1{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--text);}
+    /* B-2-B-1: 프리셋 헤더 영역 */
+    .preset-display{display:flex;align-items:center;gap:8px;}
+    .preset-label{font-size:12px;color:var(--sub);}
+    .preset-settings-btn{background:none;border:1px solid var(--border);border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;color:var(--text);transition:background 0.15s;}
+    .preset-settings-btn:hover{background:var(--bg);}
     .btn-study{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--navy-border);border-radius:8px;background:var(--navy-light);color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;text-decoration:none;}
     .btn-study:hover{background:var(--navy);color:#fff;}
     .btn-study .badge{background:var(--navy);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700;}
@@ -562,10 +567,16 @@ export function generateInstaPageHTML(regionJson?: string): string {
 <div id="inputView" class="input-view active">
   <div class="page-header">
     <h1>콘텐츠 생성</h1>
-    <button class="btn-study" onclick="showLearnView()">
-      <span>&#128218; 학습</span>
-      <span class="badge" id="studyBadge">0</span>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="preset-display">
+        <span class="preset-label" id="presetLabel">빠르게 모드</span>
+        <button class="preset-settings-btn" id="presetSettingsBtn" type="button" title="채널 설정">&#9881;</button>
+      </div>
+      <button class="btn-study" onclick="showLearnView()">
+        <span>&#128218; 학습</span>
+        <span class="badge" id="studyBadge">0</span>
+      </button>
+    </div>
   </div>
 
   <div class="card">
