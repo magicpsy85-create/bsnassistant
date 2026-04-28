@@ -63,6 +63,31 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .preset-label{font-size:12px;color:var(--sub);}
     .preset-settings-btn{background:none;border:1px solid var(--border);border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;color:var(--text);transition:background 0.15s;}
     .preset-settings-btn:hover{background:var(--bg);}
+    /* B-2-B-2: 프리셋 모달 */
+    .preset-modal-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;}
+    .preset-modal-backdrop.open{display:flex;}
+    .preset-modal{background:var(--surface);border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto;}
+    .preset-modal-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:0.5px solid var(--border);margin-bottom:16px;}
+    .preset-modal-title{font-size:14px;font-weight:600;color:var(--text);}
+    .preset-modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0;line-height:1;font-family:inherit;}
+    .preset-modal-section-label{font-size:11px;color:var(--muted);margin-bottom:8px;}
+    .preset-options{display:flex;flex-direction:column;gap:6px;}
+    .preset-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;}
+    .preset-option.selected{border:1.5px solid var(--navy);background:var(--navy-light);}
+    .preset-option input[type="radio"]{margin:0;}
+    .preset-option-text{flex:1;}
+    .preset-option-name{font-size:13px;font-weight:500;color:var(--text);}
+    .preset-option.selected .preset-option-name{color:var(--navy);}
+    .preset-option-desc{font-size:10px;color:var(--muted);margin-top:2px;}
+    .preset-custom-channels{display:flex;flex-direction:column;gap:4px;padding-top:4px;}
+    .preset-channel-row{display:flex;align-items:center;gap:8px;padding:6px 8px;}
+    .preset-channel-row.disabled{opacity:0.4;}
+    .preset-channel-row input[type="checkbox"]{margin:0;}
+    .preset-channel-row span{font-size:12px;color:var(--text);}
+    .preset-modal-actions{display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--border);}
+    .preset-modal-btn-cancel,.preset-modal-btn-save{flex:1;padding:10px;font-size:13px;border-radius:6px;cursor:pointer;border:none;font-family:inherit;}
+    .preset-modal-btn-cancel{background:var(--bg);border:1px solid var(--border);color:var(--text);}
+    .preset-modal-btn-save{background:var(--navy);color:#fff;font-weight:500;}
     .btn-study{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--navy-border);border-radius:8px;background:var(--navy-light);color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;text-decoration:none;}
     .btn-study:hover{background:var(--navy);color:#fff;}
     .btn-study .badge{background:var(--navy);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700;}
@@ -3400,7 +3425,40 @@ function checkBrowserSession() {
   });
 }
 
+/**
+ * Firebase SDK 초기화 보장.
+ * - 이미 초기화됐으면 스킵
+ * - 미초기화 시 /api/auth/config 호출 후 initializeApp
+ * - sessionId 자동 로그인 + 신규 로그인 양쪽에서 사용
+ */
+async function ensureFirebaseInitialized() {
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+    return true;
+  }
+  if (typeof firebase === 'undefined') {
+    console.warn('[Firebase] SDK 미로드 — script 태그 확인 필요');
+    return false;
+  }
+  try {
+    var configRes = await fetch('/api/auth/config');
+    if (!configRes.ok) {
+      console.warn('[Firebase] config 응답 실패', configRes.status);
+      return false;
+    }
+    var config = await configRes.json();
+    firebase.initializeApp(config);
+    console.log('[Firebase] 초기화 완료');
+    return true;
+  } catch (e) {
+    console.warn('[Firebase] 초기화 실패', e && e.message);
+    return false;
+  }
+}
+
 async function initInstaAuth() {
+  // 페이지 진입 시 Firebase 초기화 보장 (sessionId 자동 로그인 케이스 포함)
+  await ensureFirebaseInitialized();
+
   var hasLocal = localStorage.getItem('bsn_user_name') && localStorage.getItem('bsn_user_id');
 
   if (!hasLocal) {
@@ -3441,6 +3499,7 @@ async function initInstaAuth() {
   } catch(e) {}
 
   document.getElementById('instaLoginOverlay').style.display = 'none';
+  if (typeof loadUserPreset === 'function') loadUserPreset();
   return true;
 }
 
@@ -3450,9 +3509,7 @@ async function doInstaLogin() {
   var btn = document.getElementById('instaGoogleBtn');
   btn.disabled = true; btn.textContent = '로그인 중...';
   try {
-    var configRes = await fetch('/api/auth/config');
-    var config = await configRes.json();
-    if (!firebase.apps.length) firebase.initializeApp(config);
+    await ensureFirebaseInitialized();
     var auth = firebase.auth();
     var provider = new firebase.auth.GoogleAuthProvider();
     var result = await auth.signInWithPopup(provider);
@@ -3484,6 +3541,7 @@ async function doInstaLogin() {
     updateStudyBadge();
     loadRecommendNews(false);
     selectTemplate('A');
+    if (typeof loadUserPreset === 'function') loadUserPreset();
     if (window.location.hash === '#content') showContentView(); else showTransactionView();
   } catch(e) {
     errEl.textContent = '로그인 중 오류가 발생했습니다';
@@ -4232,7 +4290,326 @@ async function txRankGetInsight() {
     }, 200);
   }
 })();
+
+/* ════════════════════════════════════════════════
+   B-2-B-2: 프리셋 시스템 (모달 + Firestore 연동)
+   ════════════════════════════════════════════════ */
+
+var PRESET_TO_CHANNELS = {
+  fast:   ['instagram'],
+  sns:    ['instagram', 'shortform', 'thread'],
+  all:    ['instagram', 'shortform', 'youtube', 'thread', 'blog'],
+  custom: []
+};
+
+var PRESET_LABELS = {
+  fast: '빠르게',
+  sns:  'SNS 풀세트',
+  all:  '전체 채널',
+  custom: '직접 선택'
+};
+
+var PRESET_DESCRIPTIONS = {
+  fast: '인스타 카드 + 캡션',
+  sns:  '인스타 + 스레드 + 숏폼',
+  all:  '5개 채널 모두',
+  custom: '아래에서 채널 개별 선택'
+};
+
+var ALL_CHANNELS = ['instagram', 'shortform', 'youtube', 'thread', 'blog'];
+
+var CHANNEL_LABELS = {
+  instagram: '인스타그램',
+  shortform: '숏폼',
+  youtube:   '유튜브',
+  thread:    '스레드',
+  blog:      '블로그'
+};
+
+var currentPreset = {
+  selectedPreset: 'fast',
+  customChannels: ['instagram'],
+  updatedAt: new Date(0).toISOString()
+};
+
+var modalSelectedPreset = null;
+var modalCustomChannels = [];
+
+/**
+ * 유효한 Firebase ID 토큰 반환.
+ * - currentUser 있으면 getIdToken(false) — 만료 임박 시 SDK가 자동 갱신
+ * - 비로그인 상태면 localStorage 캐시만 시도 (없으면 null)
+ */
+async function getValidIdToken() {
+  try {
+    // Firebase 초기화 가드 — 미초기화 시 localStorage 캐시 fallback
+    if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
+      return localStorage.getItem('bsn_firebase_token') || null;
+    }
+
+    var user = firebase.auth().currentUser;
+    if (!user) {
+      return localStorage.getItem('bsn_firebase_token') || null;
+    }
+    var token = await user.getIdToken(false);
+    if (token) {
+      localStorage.setItem('bsn_firebase_token', token);
+      return token;
+    }
+    return null;
+  } catch (e) {
+    console.warn('[토큰 조회 실패]', e && e.message);
+    return localStorage.getItem('bsn_firebase_token') || null;
+  }
+}
+
+/**
+ * 토큰 부착 fetch + 만료 응답 시 1회 강제 갱신 후 재시도.
+ * 401/500 응답을 토큰 만료 신호로 간주 (백엔드가 만료 토큰을 catch에서 500 반환).
+ */
+async function fetchWithTokenRetry(url, options) {
+  options = options || {};
+  options.headers = options.headers || {};
+
+  var token = await getValidIdToken();
+  if (token) options.headers['Authorization'] = 'Bearer ' + token;
+
+  var res = await fetch(url, options);
+
+  if (res.status === 401 || res.status === 500) {
+    try {
+      // Firebase 초기화 가드
+      if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+        var user = firebase.auth().currentUser;
+        if (user) {
+          var freshToken = await user.getIdToken(true);
+          localStorage.setItem('bsn_firebase_token', freshToken);
+          options.headers['Authorization'] = 'Bearer ' + freshToken;
+          res = await fetch(url, options);
+        }
+      }
+    } catch (e) {
+      console.warn('[토큰 강제 갱신 실패]', e && e.message);
+    }
+  }
+
+  return res;
+}
+
+async function loadUserPreset() {
+  try {
+    var res = await fetchWithTokenRetry('/api/user/preset', {});
+
+    if (res.ok) {
+      var data = await res.json();
+      if (data.success && data.preset) {
+        currentPreset = data.preset;
+        if (!Array.isArray(currentPreset.customChannels)) currentPreset.customChannels = ['instagram'];
+        updatePresetDisplay();
+      }
+    } else if (res.status === 401 || res.status === 500) {
+      console.warn('[프리셋 로드 실패] 토큰 검증 안됨, default 사용');
+    }
+  } catch (e) {
+    console.warn('[프리셋 로드 실패]', e && e.message);
+  }
+}
+
+async function saveUserPreset(newPreset) {
+  try {
+    // Firebase 초기화 가드
+    if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
+      alert('인증 시스템 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+      return false;
+    }
+
+    var user = firebase.auth().currentUser;
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return false;
+    }
+
+    var res = await fetchWithTokenRetry('/api/user/preset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        selectedPreset: newPreset.selectedPreset,
+        customChannels: newPreset.customChannels
+      })
+    });
+
+    if (res.ok) {
+      var data = await res.json();
+      currentPreset = data.preset;
+      if (!Array.isArray(currentPreset.customChannels)) currentPreset.customChannels = ['instagram'];
+      updatePresetDisplay();
+      return true;
+    } else {
+      console.error('[프리셋 저장 실패]', res.status);
+      alert('저장에 실패했습니다. 다시 시도해주세요.');
+      return false;
+    }
+  } catch (e) {
+    console.error('[프리셋 저장 예외]', e && e.message);
+    return false;
+  }
+}
+
+function updatePresetDisplay() {
+  var label = document.getElementById('presetLabel');
+  if (label) {
+    label.textContent = (PRESET_LABELS[currentPreset.selectedPreset] || '빠르게') + ' 모드';
+  }
+}
+
+function openPresetModal() {
+  modalSelectedPreset = currentPreset.selectedPreset;
+  modalCustomChannels = (currentPreset.customChannels || []).slice();
+  if (modalCustomChannels.indexOf('instagram') < 0) modalCustomChannels.unshift('instagram');
+
+  renderPresetOptions();
+  renderCustomChannelsCheckboxes();
+
+  var backdrop = document.getElementById('presetModalBackdrop');
+  if (backdrop) backdrop.classList.add('open');
+}
+
+function closePresetModal() {
+  var backdrop = document.getElementById('presetModalBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+function renderPresetOptions() {
+  var container = document.getElementById('presetOptions');
+  if (!container) return;
+
+  var presets = ['fast', 'sns', 'all', 'custom'];
+  var html = '';
+
+  for (var i = 0; i < presets.length; i++) {
+    var p = presets[i];
+    var selected = modalSelectedPreset === p;
+    var selectedClass = selected ? ' selected' : '';
+    var checkedAttr = selected ? ' checked' : '';
+
+    html += '<label class="preset-option' + selectedClass + '" data-preset="' + p + '">';
+    html += '<input type="radio" name="modalPreset" value="' + p + '"' + checkedAttr + '>';
+    html += '<div class="preset-option-text">';
+    html += '<div class="preset-option-name">' + PRESET_LABELS[p] + '</div>';
+    html += '<div class="preset-option-desc">' + PRESET_DESCRIPTIONS[p] + '</div>';
+    html += '</div></label>';
+  }
+
+  container.innerHTML = html;
+
+  var labels = container.querySelectorAll('.preset-option');
+  for (var j = 0; j < labels.length; j++) {
+    (function(label) {
+      label.addEventListener('click', function() {
+        modalSelectedPreset = label.getAttribute('data-preset');
+        renderPresetOptions();
+        renderCustomChannelsCheckboxes();
+      });
+    })(labels[j]);
+  }
+}
+
+function renderCustomChannelsCheckboxes() {
+  var container = document.getElementById('presetCustomChannels');
+  if (!container) return;
+
+  var isCustom = modalSelectedPreset === 'custom';
+  var html = '';
+
+  for (var i = 0; i < ALL_CHANNELS.length; i++) {
+    var ch = ALL_CHANNELS[i];
+    var checked = ch === 'instagram' || modalCustomChannels.indexOf(ch) >= 0;
+    var disabled = !isCustom || ch === 'instagram';
+    var disabledClass = disabled ? ' disabled' : '';
+    var checkedAttr = checked ? ' checked' : '';
+    var disabledAttr = disabled ? ' disabled' : '';
+    var requiredText = ch === 'instagram' ? ' (필수)' : '';
+
+    html += '<label class="preset-channel-row' + disabledClass + '">';
+    html += '<input type="checkbox" data-channel="' + ch + '"' + checkedAttr + disabledAttr + '>';
+    html += '<span>' + CHANNEL_LABELS[ch] + requiredText + '</span></label>';
+  }
+
+  container.innerHTML = html;
+
+  if (isCustom) {
+    var boxes = container.querySelectorAll('input[type="checkbox"]:not([disabled])');
+    for (var k = 0; k < boxes.length; k++) {
+      (function(box) {
+        box.addEventListener('change', function() {
+          var ch = box.getAttribute('data-channel');
+          if (box.checked) {
+            if (modalCustomChannels.indexOf(ch) < 0) modalCustomChannels.push(ch);
+          } else {
+            var idx = modalCustomChannels.indexOf(ch);
+            if (idx >= 0) modalCustomChannels.splice(idx, 1);
+          }
+        });
+      })(boxes[k]);
+    }
+  }
+}
+
+function attachPresetHandlers() {
+  var settingsBtn = document.getElementById('presetSettingsBtn');
+  if (settingsBtn) settingsBtn.addEventListener('click', openPresetModal);
+
+  var closeBtn = document.getElementById('presetModalClose');
+  if (closeBtn) closeBtn.addEventListener('click', closePresetModal);
+
+  var cancelBtn = document.getElementById('presetModalCancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', closePresetModal);
+
+  var saveBtn = document.getElementById('presetModalSave');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async function() {
+      var newPreset = {
+        selectedPreset: modalSelectedPreset,
+        customChannels: modalCustomChannels.slice(),
+        updatedAt: new Date().toISOString()
+      };
+      var ok = await saveUserPreset(newPreset);
+      if (ok) closePresetModal();
+    });
+  }
+
+  var backdrop = document.getElementById('presetModalBackdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) closePresetModal();
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', attachPresetHandlers);
+} else {
+  attachPresetHandlers();
+}
 </script>
+
+<!-- B-2-B-2: 프리셋 모달 -->
+<div class="preset-modal-backdrop" id="presetModalBackdrop">
+  <div class="preset-modal" id="presetModal">
+    <div class="preset-modal-header">
+      <div class="preset-modal-title">채널 생성 설정</div>
+      <button class="preset-modal-close" id="presetModalClose" type="button">&times;</button>
+    </div>
+    <div class="preset-modal-section-label">기본 모드 선택</div>
+    <div class="preset-options" id="presetOptions"></div>
+    <div class="preset-modal-section-label" style="margin-top:16px;">'직접 선택' 모드 채널</div>
+    <div class="preset-custom-channels" id="presetCustomChannels"></div>
+    <div class="preset-modal-actions">
+      <button class="preset-modal-btn-cancel" id="presetModalCancel" type="button">취소</button>
+      <button class="preset-modal-btn-save" id="presetModalSave" type="button">저장</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>`;
