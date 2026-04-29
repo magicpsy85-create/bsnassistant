@@ -82,6 +82,8 @@
   - 문제: `ensureFirebaseInitialized()` 가드 누락 + `currentUser` null 시 토큰 갱신 불가
   - 영향: 토큰 만료 시 default 프리셋 fallback (사용자 영향 작음, 모니터링 노이즈)
   - 조치: 인증 경로 전수 점검과 묶어 처리. 단독 fix 아님.
+- getValidIdToken localStorage fallback 정리 (JWT exp 검증 + 만료 시 재로그인 정책)
+- initFirebase 실패 시 에러 처리 (config fetch 실패 / SDK 미로드 / initializeApp 예외 — 현재는 console.error만, 오버레이 그대로 표시되어 사용자 클릭 시 TypeError 발생)
 - 98명 일일 사용량 추정 + OpenAI 월 비용 시뮬레이션
 - 사내 배포 (COOP/COEP 헤더, favicon, Firestore 보안 규칙, PM2 cluster 검토)
 
