@@ -72,7 +72,6 @@ C:\Users\magic\Documents\bsnassistant\
 - CSS는 `<style>` 블록에 인라인
 - JS는 `<script>` 블록에 인라인
 - `var` 사용 (템플릿 리터럴 내부 JS는 strict mode 아님)
-- 문자열 내 줄바꿈: `\\n` (이중 이스케이프 필요)
 
 ### 변수 네이밍
 - 실거래가 관련: `tx` 접두사 (txRankingData, txLoadRanking 등)
@@ -146,11 +145,17 @@ KAKAO_JS_API_KEY=
 
 ## 실거래가 시스템
 
+### DB 분리 원칙
+- Firestore: 메인 DB (인증, members, access_requests)
+- SQLite: 실거래가 캐시 전용
+- localStorage: 카드뉴스 히스토리만
+
 ### 캐시 정책 (SQLite)
-- 확정 데이터 (3개월 이전): 영구 캐시
+- 확정 데이터 (3개월 이전): 영구 캐시 (3개월 후 is_final 확정)
 - 당월 데이터: 6시간 TTL
 - 비당월 미확정: 24시간 TTL
 - 0건 응답: 재호출
+- 정기 재검증: 매월 1일(현재월+이전월), 분기 1일(1·4·7·10월) 전수 재검증
 
 ### 랭킹 API
 - 전국 → 17개 시/도별 랭킹
@@ -158,11 +163,12 @@ KAKAO_JS_API_KEY=
 - 시/군/구 선택 → 동별 랭킹
 - 정렬 기준: totalCount, avgPrice, avgPricePerPyeong, avgPricePerArea
 - 전년 동기 대비 변동률
+- API resultCode 정상값: `'000'` (00 아님)
 
 ### 필터링 (실거래 데이터)
-- 집합건물 제외
-- 지분거래 제외
-- cdealDay 존재 시 해제 건으로 처리
+- `buildingType === '집합'` 제외 (집합건물)
+- `shareDealingType !== ''` 제외 (지분거래)
+- cdealDay 존재 시 해약 처리 (통계 기본 제외, 토글 가능)
 
 ## 구성원 관리
 
@@ -174,3 +180,45 @@ KAKAO_JS_API_KEY=
 
 ## 비효율 감지 시 행동
 코드 작업 중 비효율적인 패턴을 발견하면 먼저 개선안을 제안하고, 승인 후 적용.
+
+---
+
+## 도메인 룰 (조건부 우선 참조)
+
+<important if="*-page.ts 파일을 수정할 때">
+SSR 페이지 작업 검증 절차:
+1. tsc 통과만으로 부족함. TypeScript 컴파일러는 백틱 템플릿 안 문자열 내용을 검사하지 않음.
+2. SSR JS escape: 백틱 템플릿 안의 줄바꿈은 \n이 아니라 \\n으로 두 번 escape 필수.
+3. 백틱 중첩, \', " escape 누락 시 SyntaxError로 페이지 전체 JS가 깨질 수 있음.
+4. Firebase compat SDK는 sessionId 자동 로그인 시 미초기화 상태이므로 ensureFirebaseInitialized() 헬퍼 호출 필수.
+5. 작업 완료 후 반드시 브라우저 DevTools Console 에러 0건 + 페이지 메뉴 이동 + 주요 기능 작동을 사용자에게 직접 확인 요청.
+6. 동일 SSR 패턴(전역 var 선언, 함수 정의)을 다른 *-page.ts 파일에서 사용 중인지 grep으로 일관성 점검.
+</important>
+
+<important if="카드뉴스 콘텐츠 생성 또는 수정 작업을 할 때">
+- 카드 객체 스키마: {tag, title, style} (period/periodSecondary는 제거됨)
+- 기간/출처 배지: BADGE_MATRIX, SOURCE_MATRIX로 카드 인덱스별 제어
+- sessionMeta(currentPeriodLabel, prevPeriodLabel)는 generateAllContent 응답에 포함되어야 함
+- 카드 A-1: 숫자 훅 (≤15자, 숫자 비율 ≥30%, 부정 프레이밍 금지)
+- 카드 6: 포지션 중립 (매수/매도 권고 금지, 통계 지표는 허용)
+- 카드 A-3, C-4: 중립 표현 원칙 적용
+- 콘텐츠 11-1: 뉴스 사실 단정 회피 ('예정' 대신 '추진 중/계획/보도')
+- 콘텐츠 10-2: 문맥 기반 완화 (권고 표현만 차단, 통계 지표 허용)
+- regenerateSingleCard: 5줄 주의사항(다른 관점 ≠ 정보 나열, 기간 반복 금지, bullet 4-6개, 길이 +30자 초과 금지) + 카드 6 길이/기간 반복 가드 console.warn 유지
+- 최우선 원칙: 빌딩 매수 설득. 부정 지표는 매수 기회로 프레이밍.
+</important>
+
+<important if="실거래가 기능 또는 SQLite 캐시 작업을 할 때">
+세부 항목은 위쪽 "실거래가 시스템" 섹션 참조. (DB 분리 원칙, 캐시 정책·정기 재검증, 필터링 규칙, API resultCode 정상값 등 모두 해당 섹션에 병합 완료)
+인증 흐름: Google OAuth → /api/auth/verify → Firestore members 매칭 → uid·role·sessionId 확보 (자세한 내용은 "인증/보안 정책" 섹션 참조)
+</important>
+
+<important>
+GPT 모델 정책: 콘텐츠 생성은 gpt-5 + reasoning_effort 'low' 고정. 'minimal'은 재생성·캡션·블로그 등 긴 텍스트 채널에서 출력이 1 bullet로 압축되거나 짧아지는 품질 저하가 있어 사용 금지. 챗봇·AI 분석은 GPT-4o 유지.
+</important>
+
+<important>
+시간 측정 마커 표준: [doResearch] [generateAllContent] [generateContent] [regenerateSingleCard] [/api/...] [contextCache]. 새 기능에도 동일 패턴 적용.
+</important>
+
+---
