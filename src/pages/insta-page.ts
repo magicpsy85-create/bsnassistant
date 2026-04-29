@@ -1745,6 +1745,7 @@ async function doGenerate() {
       if (suggestionMeta.region2) requestBody.region2 = suggestionMeta.region2;
       if (suggestionMeta.rankBy) requestBody.rankBy = suggestionMeta.rankBy;
     }
+    requestBody.channels = getCurrentChannels();
 
     const resp = await fetch(getApiBase() + '/api/content/generate', {
       method: 'POST',
@@ -4334,6 +4335,15 @@ var currentPreset = {
 
 var modalSelectedPreset = null;
 var modalCustomChannels = [];
+
+// 현재 프리셋 → 채널 배열. 백엔드 presetToChannels()와 동일한 규칙.
+function getCurrentChannels() {
+  if (currentPreset.selectedPreset === 'custom') {
+    var ch = currentPreset.customChannels || [];
+    return ch.indexOf('instagram') >= 0 ? ch : ['instagram'].concat(ch);
+  }
+  return PRESET_TO_CHANNELS[currentPreset.selectedPreset] || ['instagram'];
+}
 
 /**
  * 유효한 Firebase ID 토큰 반환.
