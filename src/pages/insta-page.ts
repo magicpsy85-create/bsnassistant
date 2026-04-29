@@ -4593,7 +4593,7 @@ async function getValidIdToken() {
 
 /**
  * 토큰 부착 fetch + 만료 응답 시 1회 강제 갱신 후 재시도.
- * 401/500 응답을 토큰 만료 신호로 간주 (백엔드가 만료 토큰을 catch에서 500 반환).
+ * 백엔드는 만료 토큰에 401 반환 (2026-04-29 수정. 이전 버전은 500이었음).
  */
 async function fetchWithTokenRetry(url, options) {
   options = options || {};
@@ -4604,7 +4604,7 @@ async function fetchWithTokenRetry(url, options) {
 
   var res = await fetch(url, options);
 
-  if (res.status === 401 || res.status === 500) {
+  if (res.status === 401) {
     try {
       // Firebase 초기화 가드
       if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
@@ -4635,8 +4635,10 @@ async function loadUserPreset() {
         if (!Array.isArray(currentPreset.customChannels)) currentPreset.customChannels = ['instagram'];
         updatePresetDisplay();
       }
-    } else if (res.status === 401 || res.status === 500) {
+    } else if (res.status === 401) {
       console.warn('[프리셋 로드 실패] 토큰 검증 안됨, default 사용');
+    } else {
+      console.warn('[프리셋 로드 실패] 서버 오류, default 사용 (status:', res.status, ')');
     }
   } catch (e) {
     console.warn('[프리셋 로드 실패]', e && e.message);

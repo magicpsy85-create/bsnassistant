@@ -256,6 +256,11 @@ app.get('/api/user/preset', async (req: Request, res: Response) => {
     console.log(`[/api/user/preset GET] ${email} → ${preset.selectedPreset} (${Date.now() - tStart}ms)`);
     res.json({ success: true, preset });
   } catch (e: any) {
+    const code = e?.code || e?.errorInfo?.code || '';
+    if (typeof code === 'string' && code.indexOf('auth/') === 0) {
+      console.warn('[/api/user/preset GET] 토큰 검증 실패:', code);
+      return res.status(401).json({ error: 'invalid_token' });
+    }
     console.error('[/api/user/preset GET] 오류:', e.message);
     res.status(500).json({ error: '프리셋 조회 실패' });
   }
@@ -293,6 +298,11 @@ app.post('/api/user/preset', async (req: Request, res: Response) => {
     console.log(`[/api/user/preset POST] ${email} → ${selectedPreset} (${Date.now() - tStart}ms)`);
     res.json({ success: true, preset: newPreset });
   } catch (e: any) {
+    const code = e?.code || e?.errorInfo?.code || '';
+    if (typeof code === 'string' && code.indexOf('auth/') === 0) {
+      console.warn('[/api/user/preset POST] 토큰 검증 실패:', code);
+      return res.status(401).json({ error: 'invalid_token' });
+    }
     console.error('[/api/user/preset POST] 오류:', e.message);
     res.status(500).json({ error: '프리셋 저장 실패' });
   }
