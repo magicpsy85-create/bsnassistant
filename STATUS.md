@@ -71,19 +71,16 @@
 - **B-2-B-2** (`a242fd3`) — 모달 + Firestore 저장/로드 + Firebase ID 토큰 자동 갱신 + `ensureFirebaseInitialized()` 가드
 - **B-2-B-3** (`a0723de`) — `/api/content/generate` payload에 `channels` 전달. **메인 칩은 미추가 결정** — 헤더 칩이 동일 기능 커버 (D 옵션). sessionStorage 캐시 미도입 (Q 옵션) — 메모리 `currentPreset` 변수만 사용
 - **B-2-B-4** (`b17c50d`) — 탭별 placeholder UI + `/api/content/generate-channel` 프론트 연결. **결정사항:** ① data-generated는 응답 payload 기준(프리셋 변경 시 마킹 흔들림 방지) ② inflightChannels Set은 채널별·confirmShown은 전역(병렬 호출 허용·다중 confirm 차단) ③ 410 fallback은 자동이 아닌 confirm 후 `doGenerate(channels)` — 프리셋 ∪ 요청 채널 union으로 재생성하여 사용자 의도 보존
+- **인증 race condition fix (B-2-B-2 후속)** — `a242fd3`에서 insta-page.ts `initInstaAuth`(3679)·`doInstaLogin`(3731)에 `ensureFirebaseInitialized()` 가드 적용 완료 (2026-04-29 검증). 잔여분(`currentUser` null 시 토큰 갱신)은 별도 백로그로 분리.
 
 **다음 후속 (낮은 우선):**
 - 카드 레이아웃 정교화 (split-side / comparison-list 정규식)
 - 학습 데이터 SQLite 전환
 
 **운영 준비 트랙 (검증 종료 후):**
-- 인증 race condition fix (B-2-B-2 후속)
-  - 위치: insta-page.ts `checkInstaSession` 흐름 (sessionId 자동 로그인)
-  - 문제: `ensureFirebaseInitialized()` 가드 누락 + `currentUser` null 시 토큰 갱신 불가
-  - 영향: 토큰 만료 시 default 프리셋 fallback (사용자 영향 작음, 모니터링 노이즈)
-  - 조치: 인증 경로 전수 점검과 묶어 처리. 단독 fix 아님.
-- getValidIdToken localStorage fallback 정리 (JWT exp 검증 + 만료 시 재로그인 정책)
-- initFirebase 실패 시 에러 처리 (config fetch 실패 / SDK 미로드 / initializeApp 예외 — 현재는 console.error만, 오버레이 그대로 표시되어 사용자 클릭 시 TypeError 발생)
+- 인증 흐름 정비:
+  - getValidIdToken localStorage fallback 정리 (JWT exp 검증 + 만료 시 재로그인 정책)
+  - initFirebase 실패 시 에러 처리 (config fetch 실패 / SDK 미로드 / initializeApp 예외 — 현재는 console.error만, 오버레이 그대로 표시되어 사용자 클릭 시 TypeError 발생)
 - 98명 일일 사용량 추정 + OpenAI 월 비용 시뮬레이션
 - 사내 배포 (COOP/COEP 헤더, favicon, Firestore 보안 규칙, PM2 cluster 검토)
 
