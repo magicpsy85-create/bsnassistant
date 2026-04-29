@@ -1979,6 +1979,7 @@ function updateChannelGeneratedFlags(r) {
 
 // ─── Bind results to UI ───
 function bindResults(r) {
+  switchChannel('insta'); // 새 결과 도착 시 항상 인스타 탭부터 표시
   console.log('[bindResults] 전체 응답:', JSON.stringify(r).slice(0, 500));
 
   // B-2-B-4: contentHash 보관 (단독 채널 호출용)
@@ -2278,6 +2279,7 @@ function showResult() {
 }
 
 function showInput() {
+  switchChannel('insta'); // 다음 결과 진입 시 인스타부터 표시 (history 로드 경로 안전 마진)
   updateCurrentHistory(); // 수정 내용 저장
   document.getElementById('resultView').classList.remove('active');
   document.getElementById('resultView').style.display = 'none';
