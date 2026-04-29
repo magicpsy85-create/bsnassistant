@@ -1,6 +1,6 @@
 # BSN Assistant — 현재 상태 요약
 
-작성일: 2026-04-29 / main HEAD: `a0723de`
+작성일: 2026-04-29 / main HEAD: `b17c50d`
 
 ## 1. 회사 / 운영 컨텍스트
 - **회사:** BSN빌사남부동산중개법인 — 상업용 빌딩 매매 중개
@@ -37,20 +37,20 @@
 
 | 해시 | 의미 |
 |---|---|
+| `b17c50d` | **B-2-B-4** — 탭별 placeholder + `/api/content/generate-channel` 프론트 호출 + 410 fallback. `inflightChannels` Set(채널별 중복 방지) + `confirmShown` 플래그(전역 confirm 다중 표시 방지). `data-generated`는 응답 payload 기준(currentPreset 미사용). 410 시 `doGenerate(channels)` 호출 — 프리셋 ∪ 요청 채널 union으로 재생성 |
 | `a0723de` | **B-2-B-3** — `/api/content/generate` payload에 `channels` 전달. `getCurrentChannels()` 헬퍼 (백엔드 `presetToChannels()` 미러). UI 변경 없음 (헤더 칩이 B-2-B-1에서 이미 커버) |
 | `a242fd3` | **B-2-B-2** — 프리셋 모달 + Firestore 연동 + Firebase ID 토큰 자동 갱신(`fetchWithTokenRetry`) + `ensureFirebaseInitialized()` 가드 |
 | `1bbca09` | **B-2-B-1** — 헤더 프리셋 칩 표시 + ⚙️ 버튼 (`#presetLabel` / `#presetSettingsBtn`) |
 | `8e3e4e5` | contextCache 인메모리 Map → Firestore TTL 컬렉션 이전 (Cloud Functions 다중 인스턴스 대비) |
-| `c47ad21` | 사용자 채널 프리셋 API (`/api/user/preset` GET·POST → `members.channelPreset`) |
 
 ## 5. 엔드포인트 목록 (현재)
 **인증:** `POST /api/auth/verify` `POST /api/auth/check-session` `GET /api/auth/config`
 **구성원:** `GET /api/members` `POST|PUT|DELETE /api/admin/members[/:no]`
 **접근 요청:** `GET /api/admin/access-requests` `POST /api/admin/access-requests/:id/approve|reject` `DELETE /api/admin/access-requests/:id`
 **사용자 프리셋 (c47ad21):** `GET|POST /api/user/preset` (members.channelPreset 필드)
-**콘텐츠 생성 (B-1b 갱신):**
+**콘텐츠 생성 (B-2-B-4 갱신):**
 - `POST /api/content/generate` (B-2-B-3에서 프론트가 `channels` 배열 전달 — getCurrentChannels())
-- `POST /api/content/generate-channel` (백엔드만 — `{channel, contentHash}`, 캐시 미스 시 410. **프론트 호출은 B-2-B-4에서 연결 예정**)
+- `POST /api/content/generate-channel` (`{channel, contentHash}`, 캐시 미스 시 410. B-2-B-4에서 프론트 연결 완료 — 비프리셋 채널 탭 placeholder 버튼 클릭 시 호출)
 - `POST /api/content/regenerate-card` `POST /api/content/generate-card` `POST /api/content/geocode` `POST /api/content/capture-map`
 - `GET /api/content/recommend-news`
 
@@ -63,23 +63,20 @@
 
 ## 6. 진행 중 / 다음 작업
 
-**완료:**
+**완료 (B-2-B 시리즈 전체 종료):**
 - **B-1b** (`e116b15`) — 채널 분리 백엔드. 캐시 hit 시 31초(분석·검색 스킵)
 - **사용자 프리셋 백엔드** (`c47ad21`) — `/api/user/preset` GET·POST, `members.channelPreset`
 - **contextCache Firestore TTL 이전** (`8e3e4e5`) — 다중 인스턴스 대비
 - **B-2-B-1** (`1bbca09`) — 헤더 ⚙️ + 프리셋 모드 표시
 - **B-2-B-2** (`a242fd3`) — 모달 + Firestore 저장/로드 + Firebase ID 토큰 자동 갱신 + `ensureFirebaseInitialized()` 가드
 - **B-2-B-3** (`a0723de`) — `/api/content/generate` payload에 `channels` 전달. **메인 칩은 미추가 결정** — 헤더 칩이 동일 기능 커버 (D 옵션). sessionStorage 캐시 미도입 (Q 옵션) — 메모리 `currentPreset` 변수만 사용
+- **B-2-B-4** (`b17c50d`) — 탭별 placeholder UI + `/api/content/generate-channel` 프론트 연결. **결정사항:** ① data-generated는 응답 payload 기준(프리셋 변경 시 마킹 흔들림 방지) ② inflightChannels Set은 채널별·confirmShown은 전역(병렬 호출 허용·다중 confirm 차단) ③ 410 fallback은 자동이 아닌 confirm 후 `doGenerate(channels)` — 프리셋 ∪ 요청 채널 union으로 재생성하여 사용자 의도 보존
 
-**다음 — B-2-B-4 (탭별 채널 분리 호출 흐름):**
-- 채널별 결과 탭에 placeholder + "이 채널 생성" 버튼
-- 클릭 시 `/api/content/generate-channel` 호출 (`{channel, contentHash}`)
-- 410(`CONTEXT_CACHE_MISS`) 응답 시 `/api/content/generate` 재호출 fallback
-- 호출 흐름: 프리셋 채널만 `/generate`로 1회 → 비프리셋 채널 탭 클릭 시 단독 생성
-
-**후속 (낮은 우선):**
+**다음 후속 (낮은 우선):**
 - 카드 레이아웃 정교화 (split-side / comparison-list 정규식)
 - 학습 데이터 SQLite 전환
+- 운영 시뮬레이션: ~98명 일일 사용량 추정 + OpenAI 월 비용
+- 사내 배포 (단계 검증 종료 시)
 
 ## 7. 운영 시 고려사항
 - **OpenAI 비용:** 카드 1회 생성 입력 9,800 + 출력 6,000 토큰 (gpt-5 low). 사용자 ~98명 × 일일 사용량 추정 후 월 비용 시뮬레이션 필요. B-1b로 단일 채널 호출은 출력 토큰 1/3 수준
