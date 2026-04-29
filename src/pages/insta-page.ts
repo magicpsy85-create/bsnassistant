@@ -181,6 +181,17 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .channel-panel{display:none;}
     .channel-panel.active{display:block;}
 
+    /* B-2-B-4: 채널별 미생성 placeholder */
+    .channel-placeholder{display:none;background:var(--surface);border:1px dashed rgba(44,74,124,0.25);border-radius:14px;padding:36px 20px;text-align:center;}
+    .channel-panel[data-generated="false"] .channel-placeholder{display:block;}
+    .channel-panel[data-generated="false"] > .card{display:none;}
+    .placeholder-icon{font-size:32px;color:var(--navy);opacity:0.4;margin-bottom:8px;font-weight:300;}
+    .placeholder-text{font-size:13px;color:var(--sub);margin-bottom:14px;line-height:1.6;}
+    .btn-channel-generate{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:1px solid var(--navy);background:var(--surface);color:var(--navy);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s,color 0.15s;}
+    .btn-channel-generate:hover{background:var(--navy);color:#fff;}
+    .btn-channel-generate:disabled{opacity:0.6;cursor:not-allowed;}
+    .btn-channel-generate.loading{background:var(--navy-light);color:var(--navy);border-color:var(--navy-light);}
+
     /* Result sections */
     .section-label{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
     .section-label .sub-label{font-size:11px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;}
@@ -696,6 +707,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
   <!-- ── Instagram Panel ── -->
   <div class="channel-panel active" id="panel-insta">
+    <div class="channel-placeholder" id="placeholder-insta">
+      <div class="placeholder-icon">+</div>
+      <div class="placeholder-text">인스타 카드뉴스는 아직 생성되지 않았어요</div>
+      <button class="btn-channel-generate" onclick="generateSingleChannel('insta')">+ 이 채널만 추가 생성</button>
+    </div>
     <div class="card">
       <div class="section-label">카드뉴스 미리보기 <button id="btnAiImage" onclick="generateCardImages()" style="font-size:11px;padding:3px 10px;border:1px solid rgba(44,74,124,0.3);border-radius:6px;background:none;color:#2C4A7C;cursor:pointer;font-family:inherit;font-weight:500;display:none;">AI 이미지 생성</button></div>
       <div class="card-preview-wrap">
@@ -736,6 +752,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
   <!-- ── Short-form Panel ── -->
   <div class="channel-panel" id="panel-short">
+    <div class="channel-placeholder" id="placeholder-short">
+      <div class="placeholder-icon">+</div>
+      <div class="placeholder-text">숏폼 스크립트는 아직 생성되지 않았어요</div>
+      <button class="btn-channel-generate" onclick="generateSingleChannel('short')">+ 이 채널만 추가 생성</button>
+    </div>
     <div class="card" style="padding:20px;margin-bottom:12px;">
       <div class="result-block">
         <div class="section-label" style="flex-direction:column;align-items:flex-start;gap:2px;">
@@ -776,6 +797,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
   <!-- ── YouTube Panel ── -->
   <div class="channel-panel" id="panel-youtube">
+    <div class="channel-placeholder" id="placeholder-youtube">
+      <div class="placeholder-icon">+</div>
+      <div class="placeholder-text">유튜브 콘텐츠는 아직 생성되지 않았어요</div>
+      <button class="btn-channel-generate" onclick="generateSingleChannel('youtube')">+ 이 채널만 추가 생성</button>
+    </div>
     <div class="card">
       <div class="result-block">
         <div class="section-label">제목 <button class="btn-copy" onclick="copyText('ytTitle')">복사</button></div>
@@ -794,6 +820,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
   <!-- ── Thread Panel ── -->
   <div class="channel-panel" id="panel-thread">
+    <div class="channel-placeholder" id="placeholder-thread">
+      <div class="placeholder-icon">+</div>
+      <div class="placeholder-text">스레드 게시글은 아직 생성되지 않았어요</div>
+      <button class="btn-channel-generate" onclick="generateSingleChannel('thread')">+ 이 채널만 추가 생성</button>
+    </div>
     <div class="card">
       <div class="result-block">
         <div class="section-label">스레드 게시글 <button class="btn-copy" onclick="copyText('threadPost')">복사</button></div>
@@ -804,6 +835,11 @@ export function generateInstaPageHTML(regionJson?: string): string {
 
   <!-- ── Blog Panel ── -->
   <div class="channel-panel" id="panel-blog">
+    <div class="channel-placeholder" id="placeholder-blog">
+      <div class="placeholder-icon">+</div>
+      <div class="placeholder-text">블로그 글은 아직 생성되지 않았어요</div>
+      <button class="btn-channel-generate" onclick="generateSingleChannel('blog')">+ 이 채널만 추가 생성</button>
+    </div>
     <div class="card">
       <div class="result-block">
         <div class="section-label">블로그 글 <span class="sub-label">SEO 키워드</span> <button class="btn-copy" onclick="copyText('blogPost')">복사</button></div>
@@ -1711,8 +1747,127 @@ function switchChannel(ch) {
   document.querySelectorAll('.channel-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + ch));
 }
 
+/* ════════════════════════════════════════════════
+   B-2-B-4: 단일 채널 추가 생성 (캐시된 ctx 재사용)
+   ════════════════════════════════════════════════ */
+var inflightChannels = new Set();
+var confirmShown = false;
+
+async function generateSingleChannel(uiCh) {
+  var apiCh = UI_TO_API_CHANNEL[uiCh];
+  if (!apiCh) { console.warn('[generateSingleChannel] 알 수 없는 채널:', uiCh); return; }
+
+  // (a) 같은 채널 중복 클릭 방지 — 다른 채널은 병렬 허용
+  if (inflightChannels.has(apiCh)) {
+    console.log('[generateSingleChannel] 이미 진행 중:', apiCh);
+    return;
+  }
+
+  var btn = document.querySelector('#placeholder-' + uiCh + ' .btn-channel-generate');
+  var originalText = btn ? btn.textContent : '';
+
+  // contentHash 없으면 바로 fallback 흐름
+  if (!window.currentContentHash) {
+    handleChannelCacheMiss(uiCh, apiCh);
+    return;
+  }
+
+  inflightChannels.add(apiCh);
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = '생성 중... (최대 90초)';
+  }
+
+  try {
+    var resp = await fetch(getApiBase() + '/api/content/generate-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: apiCh, contentHash: window.currentContentHash })
+    });
+
+    if (resp.status === 410) {
+      console.warn('[generateSingleChannel] 캐시 미스 — fallback 시도');
+      handleChannelCacheMiss(uiCh, apiCh);
+      return;
+    }
+
+    var data = await resp.json();
+    if (!resp.ok || !data.success) {
+      throw new Error(data.error || '채널 생성에 실패했습니다.');
+    }
+
+    // 응답에서 해당 채널 슬롯만 bind
+    bindSingleChannel(uiCh, data.result);
+    updateCurrentHistory();
+    showToast('"' + (CHANNEL_LABELS[apiCh] || apiCh) + '" 생성 완료');
+  } catch (err) {
+    console.error('[generateSingleChannel] 오류:', err);
+    alert(err.message || '채널 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    inflightChannels.delete(apiCh);
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = originalText || '+ 이 채널만 추가 생성';
+    }
+  }
+}
+
+// 410 또는 hash 부재 — 사용자에게 전체 재생성 confirm
+function handleChannelCacheMiss(uiCh, apiCh) {
+  if (confirmShown) return;
+  confirmShown = true;
+  try {
+    var ok = confirm('생성 컨텍스트가 만료되었습니다 (10분 TTL).\\n전체를 처음부터 다시 생성할까요?\\n\\n취소하면 이 채널은 미생성 상태로 유지됩니다.');
+    if (ok) {
+      // 현재 프리셋 + 요청 채널 합집합으로 재생성
+      var channels = getCurrentChannels().slice();
+      if (apiCh && channels.indexOf(apiCh) < 0) channels.push(apiCh);
+      doGenerate(channels).finally(function() { confirmShown = false; });
+    } else {
+      confirmShown = false;
+    }
+  } catch (e) {
+    confirmShown = false;
+    throw e;
+  }
+}
+
+// 단일 채널 응답에서 해당 슬롯만 UI에 반영
+function bindSingleChannel(uiCh, r) {
+  if (!r) return;
+  if (uiCh === 'insta') {
+    // 카드뉴스 + 캡션 + imageIdeas 재바인딩
+    cardsData = r.instagram?.cards || [];
+    imageIdeas = r.imageIdeas || [];
+    cardImages = new Array(7).fill(null);
+    cardFontSizes = new Array(7).fill(DEFAULT_FONT_SIZE);
+    currentSlide = 0;
+    goToSlide(0);
+    var aiBtn = document.getElementById('btnAiImage');
+    if (aiBtn) { aiBtn.style.display = 'inline-block'; aiBtn.textContent = 'AI 이미지 생성'; }
+    document.getElementById('instaCaption').value = toDisplayText(r.instagram?.caption);
+  } else if (uiCh === 'short') {
+    document.getElementById('shortFilming').value = toDisplayText(r.shortform?.filming || r.shortform?.script);
+    document.getElementById('shortReelsUpload').value = toDisplayText(r.shortform?.reelsUpload || r.shortform?.reelsTip);
+    document.getElementById('shortShortsUpload').value = toDisplayText(r.shortform?.shortsUpload || r.shortform?.shortsTip);
+  } else if (uiCh === 'youtube') {
+    document.getElementById('ytTitle').value = toDisplayText(r.youtube?.title);
+    document.getElementById('ytScript').value = toDisplayText(r.youtube?.script);
+    document.getElementById('ytDesc').value = toDisplayText(r.youtube?.description);
+  } else if (uiCh === 'thread') {
+    document.getElementById('threadPost').value = toDisplayText(r.thread?.post);
+  } else if (uiCh === 'blog') {
+    document.getElementById('blogPost').value = toDisplayText(r.blog?.post);
+  }
+  // 해당 패널만 generated=true로 전환 (다른 패널은 건드리지 않음)
+  var panel = document.getElementById('panel-' + uiCh);
+  if (panel) panel.setAttribute('data-generated', 'true');
+}
+
 // ─── Generate (API 연동) ───
-async function doGenerate() {
+async function doGenerate(channelOverride) {
   const btn = document.getElementById('generateBtn');
   const input = document.getElementById('textInput').value.trim();
   if (!input) { alert('입력 내용을 확인해 주세요.'); return; }
@@ -1745,7 +1900,7 @@ async function doGenerate() {
       if (suggestionMeta.region2) requestBody.region2 = suggestionMeta.region2;
       if (suggestionMeta.rankBy) requestBody.rankBy = suggestionMeta.rankBy;
     }
-    requestBody.channels = getCurrentChannels();
+    requestBody.channels = (Array.isArray(channelOverride) && channelOverride.length > 0) ? channelOverride : getCurrentChannels();
 
     const resp = await fetch(getApiBase() + '/api/content/generate', {
       method: 'POST',
@@ -1784,9 +1939,53 @@ function toDisplayText(data) {
   return String(data);
 }
 
+// ─── B-2-B-4: 응답에서 채널이 실제로 생성되었는지 판정 ───
+function isChannelGenerated(r, apiCh) {
+  if (!r) return false;
+  if (apiCh === 'instagram') {
+    var cards = r.instagram?.cards;
+    var cap = r.instagram?.caption;
+    return (Array.isArray(cards) && cards.length > 0) || (typeof cap === 'string' && cap.trim() !== '');
+  }
+  if (apiCh === 'shortform') {
+    var sf = r.shortform || {};
+    return !!(sf.filming || sf.script || sf.reelsUpload || sf.reelsTip || sf.shortsUpload || sf.shortsTip);
+  }
+  if (apiCh === 'youtube') {
+    var y = r.youtube || {};
+    return !!(y.title || y.script || y.description);
+  }
+  if (apiCh === 'thread') {
+    return !!(r.thread?.post);
+  }
+  if (apiCh === 'blog') {
+    return !!(r.blog?.post);
+  }
+  return false;
+}
+
+// UI 채널 키(insta/short/...) ↔ API 채널 키(instagram/shortform/...) 매핑
+var UI_TO_API_CHANNEL = { insta: 'instagram', short: 'shortform', youtube: 'youtube', thread: 'thread', blog: 'blog' };
+var API_TO_UI_CHANNEL = { instagram: 'insta', shortform: 'short', youtube: 'youtube', thread: 'thread', blog: 'blog' };
+
+// 응답 r 기준으로 5개 채널 패널의 data-generated 갱신
+function updateChannelGeneratedFlags(r) {
+  Object.keys(UI_TO_API_CHANNEL).forEach(function(uiCh) {
+    var apiCh = UI_TO_API_CHANNEL[uiCh];
+    var panel = document.getElementById('panel-' + uiCh);
+    if (panel) panel.setAttribute('data-generated', isChannelGenerated(r, apiCh) ? 'true' : 'false');
+  });
+}
+
 // ─── Bind results to UI ───
 function bindResults(r) {
   console.log('[bindResults] 전체 응답:', JSON.stringify(r).slice(0, 500));
+
+  // B-2-B-4: contentHash 보관 (단독 채널 호출용)
+  if (r && r.contentHash) {
+    window.currentContentHash = r.contentHash;
+    console.log('[bindResults] contentHash 저장:', r.contentHash);
+  }
 
   // sessionMeta 병합 (region 메타 + 서버가 돌려준 기간 값)
   var prevMeta = window.currentCardSessionMeta || {};
@@ -1826,6 +2025,9 @@ function bindResults(r) {
 
   // Blog
   document.getElementById('blogPost').value = toDisplayText(r.blog?.post);
+
+  // B-2-B-4: 응답 기준으로 패널별 data-generated 마킹 (placeholder 표시)
+  updateChannelGeneratedFlags(r);
 }
 
 // ─── History (localStorage) ───
@@ -1886,6 +2088,9 @@ function updateCurrentHistory() {
     var r = history[idx].result;
     if (!r.instagram) r.instagram = {};
     r.instagram.caption = document.getElementById('instaCaption').value;
+    // B-2-B-4: 단독 인스타 재생성 시 cards 배열도 history에 반영
+    if (cardsData && cardsData.length > 0) r.instagram.cards = cardsData.slice();
+    if (imageIdeas && imageIdeas.length > 0) r.imageIdeas = imageIdeas.slice();
     if (!r.shortform) r.shortform = {};
     r.shortform.filming = document.getElementById('shortFilming').value;
     r.shortform.reelsUpload = document.getElementById('shortReelsUpload').value;
@@ -2036,6 +2241,17 @@ function loadHistory(id) {
   document.getElementById('ytDesc').value = item.result?.youtube?.description || '';
   document.getElementById('threadPost').value = item.result?.thread?.post || item.result?.threads?.post || '';
   document.getElementById('blogPost').value = item.result?.blog?.post || '';
+
+  // B-2-B-4: history 로드 시 contentHash 무효화 (서버 캐시 만료 가능성) + 패널 마킹
+  window.currentContentHash = null;
+  updateChannelGeneratedFlags({
+    instagram: ig,
+    imageIdeas: imageIdeas,
+    shortform: sf,
+    youtube: item.result?.youtube,
+    thread: item.result?.thread || item.result?.threads,
+    blog: item.result?.blog
+  });
 
   showResult();
   showToast('저장된 기록을 불러왔습니다');
