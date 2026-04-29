@@ -1,6 +1,6 @@
 # BSN Assistant — 현재 상태 요약
 
-작성일: 2026-04-29 / main HEAD: `b17c50d`
+작성일: 2026-04-29 / main HEAD: `3ce7bc2`
 
 ## 1. 회사 / 운영 컨텍스트
 - **회사:** BSN빌사남부동산중개법인 — 상업용 빌딩 매매 중개
@@ -37,11 +37,11 @@
 
 | 해시 | 의미 |
 |---|---|
+| `3ce7bc2` | **fix(auth)** — `/api/user/preset` GET·POST의 catch가 토큰 만료(`auth/*`)를 500으로 오반환하던 버그 수정. catch에서 `auth/` prefix 식별 → 401, 그 외만 500. 프론트 `fetchWithTokenRetry`·`loadUserPreset`도 `401 \|\| 500` → `401`만 재시도/fallback. `/api/auth/verify`와 코드 일관성 회복 |
+| `b49341c` | **fix(tabs)** — 결과 화면 비인스타 탭 활성 상태가 다음 결과 진입 시까지 보존되던 버그. `bindResults`·`showInput` 진입부에 `switchChannel('insta')` 추가. 단독 채널 생성 흐름은 별도 함수라 영향 없음 |
 | `b17c50d` | **B-2-B-4** — 탭별 placeholder + `/api/content/generate-channel` 프론트 호출 + 410 fallback. `inflightChannels` Set(채널별 중복 방지) + `confirmShown` 플래그(전역 confirm 다중 표시 방지). `data-generated`는 응답 payload 기준(currentPreset 미사용). 410 시 `doGenerate(channels)` 호출 — 프리셋 ∪ 요청 채널 union으로 재생성 |
 | `a0723de` | **B-2-B-3** — `/api/content/generate` payload에 `channels` 전달. `getCurrentChannels()` 헬퍼 (백엔드 `presetToChannels()` 미러). UI 변경 없음 (헤더 칩이 B-2-B-1에서 이미 커버) |
 | `a242fd3` | **B-2-B-2** — 프리셋 모달 + Firestore 연동 + Firebase ID 토큰 자동 갱신(`fetchWithTokenRetry`) + `ensureFirebaseInitialized()` 가드 |
-| `1bbca09` | **B-2-B-1** — 헤더 프리셋 칩 표시 + ⚙️ 버튼 (`#presetLabel` / `#presetSettingsBtn`) |
-| `8e3e4e5` | contextCache 인메모리 Map → Firestore TTL 컬렉션 이전 (Cloud Functions 다중 인스턴스 대비) |
 
 ## 5. 엔드포인트 목록 (현재)
 **인증:** `POST /api/auth/verify` `POST /api/auth/check-session` `GET /api/auth/config`
@@ -75,8 +75,15 @@
 **다음 후속 (낮은 우선):**
 - 카드 레이아웃 정교화 (split-side / comparison-list 정규식)
 - 학습 데이터 SQLite 전환
-- 운영 시뮬레이션: ~98명 일일 사용량 추정 + OpenAI 월 비용
-- 사내 배포 (단계 검증 종료 시)
+
+**운영 준비 트랙 (검증 종료 후):**
+- 인증 race condition fix (B-2-B-2 후속)
+  - 위치: insta-page.ts `checkInstaSession` 흐름 (sessionId 자동 로그인)
+  - 문제: `ensureFirebaseInitialized()` 가드 누락 + `currentUser` null 시 토큰 갱신 불가
+  - 영향: 토큰 만료 시 default 프리셋 fallback (사용자 영향 작음, 모니터링 노이즈)
+  - 조치: 인증 경로 전수 점검과 묶어 처리. 단독 fix 아님.
+- 98명 일일 사용량 추정 + OpenAI 월 비용 시뮬레이션
+- 사내 배포 (COOP/COEP 헤더, favicon, Firestore 보안 규칙, PM2 cluster 검토)
 
 ## 7. 운영 시 고려사항
 - **OpenAI 비용:** 카드 1회 생성 입력 9,800 + 출력 6,000 토큰 (gpt-5 low). 사용자 ~98명 × 일일 사용량 추정 후 월 비용 시뮬레이션 필요. B-1b로 단일 채널 호출은 출력 토큰 1/3 수준
