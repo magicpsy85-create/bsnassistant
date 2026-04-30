@@ -288,7 +288,6 @@ export interface ContentResult {
     cards: { tag: string; title: string; style: 'dark' | 'light' | 'accent' | 'cta' }[];
     caption: string;
   };
-  imageIdeas: string[];
   shortform: {
     filming: string;
     reelsUpload: string;
@@ -334,7 +333,6 @@ export interface InstagramChannel {
   cards: { tag: string; title: string; style: 'dark' | 'light' | 'accent' | 'cta' }[];
   caption: string;
   hashtags: string[];
-  imageIdeas: string[];
 }
 export interface ShortformChannel {
   filming: string;
@@ -410,7 +408,6 @@ async function generateContent(
   const wantYoutube = channels.includes('youtube');
   const wantThread = channels.includes('thread');
   const wantBlog = channels.includes('blog');
-  const wantImageIdeas = wantInstagram; // imageIdeas는 instagram 채널과 항상 함께
   const researchSummary = buildResearchSummary(research);
   const toneNote = analysis.tone_request ? `\n[사용자 요청 톤] ${analysis.tone_request}` : '';
 
@@ -916,20 +913,8 @@ ${[
   wantBlog ? `블로그 (blog):
 - post: SEO 최적화 긴 글 1500-2000자 + SEO 키워드 (하나의 문자열)` : '',
 ].filter(Boolean).join('\n\n')}
-${wantImageIdeas ? `\n[이미지 아이디어 — imageIdeas]
-각 카드뉴스 배경 이미지에 사용할 시각적 아이디어를 영어로 7개 작성하세요.
-- 주제의 핵심 키워드와 직접 연관된 구체적인 시각적 장면을 묘사하세요
-- 추상적 도시 실루엣 같은 일반적 이미지는 피하세요
-- 각 카드마다 다른 시각적 요소를 사용하세요 (반복 금지)
-${template === 'A' ? `- 2장 (건물 프로필)에는 해당 건물 또는 거리의 시각화를 포함하세요:
-  - 건축 일러스트 스타일, 주변 상권 맥락이 느껴지는 구도
-  - 예: "Architectural illustration of a commercial building in Seongsu-dong Yeonmujang-gil, surrounded by trendy cafes and popup stores, street-level perspective, clean modern style"` : template === 'B' ? `- 2장 (비교의 축)에는 반드시 해당 지역의 지도 일러스트를 포함하세요:
-  - 조감도(aerial view) 스타일, 비교 대상 지역들을 모두 포함한 광역 지도, 각 비교군을 마커로 표시
-  - 예: "Aerial view map illustration of Seoul commercial districts comparing Gangnam and Seongsu, both areas highlighted with distinct colored zones and markers, modern minimal cartographic style"` : `- 2장 (핵심 지표)에는 데이터 시각화 또는 해당 지역 조감도를 포함하세요:
-  - 차트/그래프 느낌 또는 도시 조감도 중 주제에 맞게 선택
-  - 예: "Aerial view map of Seongdong-gu Seoul with data visualization overlay, key metrics displayed as floating cards with numbers, modern infographic style"`}\n` : ''}
 반드시 아래 정확한 JSON 구조로만 응답하세요. 키 이름을 절대 변경하지 마세요.
-모든 값은 문자열(string) 타입이어야 합니다. 객체나 배열로 넣지 마세요 (cards, imageIdeas 제외).
+모든 값은 문자열(string) 타입이어야 합니다. 객체나 배열로 넣지 마세요 (cards 제외).
 JSON 외의 텍스트, 마크다운 코드블록(\`\`\`)은 포함하지 마세요.
 
 {
@@ -941,16 +926,6 @@ ${templateCardsExample}
     ],
     "caption": "캡션 텍스트 전체를 하나의 문자열로"
   }` : '',
-  wantImageIdeas ? `,
-  "imageIdeas": [
-    "Detailed English description of scene for card 1",
-    "Aerial view map illustration of [area] for card 2",
-    "Scene description for card 3",
-    "Scene description for card 4",
-    "Scene description for card 5",
-    "Scene description for card 6",
-    "Scene description for card 7"
-  ]` : '',
   wantShortform ? `,
   "short": {
     "filming": "촬영용 스크립트 전체를 하나의 문자열로",
@@ -1369,7 +1344,6 @@ function normalizeResult(raw: any): ContentResult {
       cards: Array.isArray(ig.cards) ? ig.cards.slice(0, 7) : [],
       caption: toStr(ig.caption),
     },
-    imageIdeas: Array.isArray(raw.imageIdeas) ? raw.imageIdeas.map(String) : [],
     shortform: {
       filming: toStr(sf.filming || sf.script),
       reelsUpload: toStr(sf.reelsUpload || sf.reelsTip || sf.reels_tip),
@@ -1393,7 +1367,6 @@ function getEmptyResult(): ContentResult {
   return {
     region: '',
     instagram: { cards: [], caption: '' },
-    imageIdeas: [],
     shortform: { filming: '', reelsUpload: '', shortsUpload: '' },
     youtube: { title: '', script: '', description: '' },
     thread: { post: '' },
@@ -1438,8 +1411,7 @@ function extractInstagramFromResponse(result: ContentResult, _ctx: ContentContex
   return {
     cards: Array.isArray(ig.cards) ? ig.cards : [],
     caption: cap,
-    hashtags,
-    imageIdeas: Array.isArray(result.imageIdeas) ? result.imageIdeas : []
+    hashtags
   };
 }
 function extractShortformFromResponse(result: ContentResult, _ctx: ContentContext): ShortformChannel {

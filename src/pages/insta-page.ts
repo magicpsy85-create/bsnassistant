@@ -713,7 +713,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
       <button class="btn-channel-generate" onclick="generateSingleChannel('insta')">+ 이 채널만 추가 생성</button>
     </div>
     <div class="card">
-      <div class="section-label">카드뉴스 미리보기 <button id="btnAiImage" onclick="generateCardImages()" style="font-size:11px;padding:3px 10px;border:1px solid rgba(44,74,124,0.3);border-radius:6px;background:none;color:#2C4A7C;cursor:pointer;font-family:inherit;font-weight:500;display:none;">AI 이미지 생성</button></div>
+      <div class="section-label">카드뉴스 미리보기</div>
       <div class="card-preview-wrap">
         <div class="card-preview" id="cardPreview">
           <div class="skeleton" id="cardSkeleton"></div>
@@ -1470,7 +1470,6 @@ function renderCardImgActions(idx) {
   if (!cardsData.length || !cardsData[idx] || idx === 6) { el.innerHTML = ''; return; }
   if (cardImages[idx]) {
     el.innerHTML = '<button class="btn-img-act" onclick="triggerCardUpload()">&#128247; 교체</button>' +
-      '<button class="btn-img-act" onclick="generateSingleCardImage()">&#10024; 재생성</button>' +
       '<button class="btn-img-act" onclick="removeCardImage()">&#10005; 제거</button>';
   } else {
     el.innerHTML = '';
@@ -1567,59 +1566,6 @@ function resizeImage(file, size) {
   });
 }
 
-// ─── 카드 개별 AI 이미지 생성 ───
-async function generateSingleCardImage() {
-  if (!cardsData[currentSlide]) return;
-  var spinner = document.getElementById('cardSpinner');
-  spinner.classList.add('active');
-
-  try {
-    var idx = currentSlide;
-    var card = cardsData[idx];
-    var result = null;
-
-    // 2장(인덱스 1): 카카오맵 우선
-    if (idx === 1) {
-      var mapRegion = extractRegionForMap(null, currentTopic);
-      console.log('[카드 개별] 2장 카카오맵 시도:', mapRegion);
-      result = await captureKakaoMap(mapRegion);
-      if (result) {
-        cardImages[idx] = result;
-        if (cardsData[idx]) cardsData[idx]._mapCard = true;
-        spinner.classList.remove('active');
-        goToSlide(idx);
-        return;
-      }
-    }
-
-    // Gemini 생성
-    console.log('[카드 개별] Gemini 생성:', idx + 1);
-    var resp = await fetch(getApiBase() + '/api/content/generate-card', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cardIndex: idx,
-        topic: currentTopic,
-        tag: card.tag || CARD_TAGS[idx],
-        title: card.title || '',
-        style: card.style || 'dark',
-        imageIdea: imageIdeas[idx] || ''
-      })
-    });
-    var data = await resp.json();
-    if (data.success && data.imageBase64) {
-      cardImages[idx] = data.imageBase64;
-      if (cardsData[idx]) cardsData[idx]._mapCard = false;
-    } else {
-      showToast('이미지 생성에 실패했습니다');
-    }
-  } catch (e) {
-    showToast('이미지 생성에 실패했습니다');
-  }
-  spinner.classList.remove('active');
-  goToSlide(currentSlide);
-}
-
 // ─── 카드 이미지 제거 ───
 function removeCardImage() {
   cardImages[currentSlide] = null;
@@ -1642,69 +1588,6 @@ function extractRegionForMap(result, inputTopic) {
   }
   if (inputTopic && !inputTopic.startsWith('http')) return inputTopic;
   return '서울';
-}
-
-// ─── 카카오맵 서버 캡처 (puppeteer-core) ───
-const mapImageCache = {};
-
-async function captureKakaoMap(region) {
-  if (mapImageCache[region]) { console.log('[카카오맵] 캐시 히트:', region); return mapImageCache[region]; }
-  try {
-    console.log('[카카오맵] 서버 캡처 요청:', region);
-    const resp = await fetch('/api/content/capture-map', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ region })
-    });
-    const data = await resp.json();
-    if (data.error) { console.error('[카카오맵] 서버 에러:', data.error); return null; }
-    if (data.imageBase64) {
-      console.log('[카카오맵] 캡처 성공');
-      mapImageCache[region] = data.imageBase64;
-      return data.imageBase64;
-    }
-    return null;
-  } catch (e) {
-    console.error('[카카오맵] 요청 실패:', e);
-    return null;
-  }
-}
-
-// ─── 카드 이미지 순차 생성 ───
-async function generateCardImages() {
-  if (cardsData.length === 0) return;
-  isGeneratingImages = true;
-  cardImages = new Array(7).fill(null);
-  goToSlide(0);
-  var spinner = document.getElementById('cardSpinner');
-  var aiBtn = document.getElementById('btnAiImage');
-  if (aiBtn) { aiBtn.disabled = true; aiBtn.textContent = '이미지 생성 중...'; aiBtn.style.opacity = '0.5'; }
-
-  for (var i = 0; i < cardsData.length && i < 7; i++) {
-    if (i === 6) continue; // 7장은 고정 디자인, 이미지 생성 스킵
-    var card = cardsData[i];
-    if (currentSlide === i) spinner.classList.add('active');
-    try {
-      // 2장(인덱스 1): 카카오맵 우선
-      if (i === 1) {
-        var mapRegion = extractRegionForMap(null, currentTopic);
-        var mapB64 = await captureKakaoMap(mapRegion);
-        if (!mapB64) { await new Promise(function(r){setTimeout(r,2000)}); mapB64 = await captureKakaoMap(mapRegion); }
-        if (mapB64) { cardImages[i] = mapB64; if (cardsData[i]) cardsData[i]._mapCard = true; if (currentSlide === i) { spinner.classList.remove('active'); goToSlide(i); } continue; }
-      }
-      var resp = await fetch(getApiBase() + '/api/content/generate-card', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cardIndex: i, topic: currentTopic, tag: card.tag || CARD_TAGS[i], title: card.title || '', style: card.style || 'dark', imageIdea: imageIdeas[i] || '' })
-      });
-      var data = await resp.json();
-      if (data.success && data.imageBase64) { cardImages[i] = data.imageBase64; }
-    } catch (e) { console.warn('카드 ' + (i+1) + ' 이미지 실패'); }
-    if (currentSlide === i) { spinner.classList.remove('active'); goToSlide(i); }
-  }
-  isGeneratingImages = false;
-  spinner.classList.remove('active');
-  goToSlide(currentSlide);
-  if (aiBtn) { aiBtn.disabled = false; aiBtn.textContent = '재생성하기'; aiBtn.style.opacity = '1'; }
 }
 
 // ─── ZIP 다운로드 ───
@@ -1845,8 +1728,6 @@ function bindSingleChannel(uiCh, r) {
     cardFontSizes = new Array(7).fill(DEFAULT_FONT_SIZE);
     currentSlide = 0;
     goToSlide(0);
-    var aiBtn = document.getElementById('btnAiImage');
-    if (aiBtn) { aiBtn.style.display = 'inline-block'; aiBtn.textContent = 'AI 이미지 생성'; }
     document.getElementById('instaCaption').value = toDisplayText(r.instagram?.caption);
   } else if (uiCh === 'short') {
     document.getElementById('shortFilming').value = toDisplayText(r.shortform?.filming || r.shortform?.script);
@@ -2003,10 +1884,6 @@ function bindResults(r) {
   cardFontSizes = new Array(7).fill(DEFAULT_FONT_SIZE);
   currentSlide = 0;
   goToSlide(0);
-
-  // AI 이미지 생성 버튼 표시
-  var aiBtn = document.getElementById('btnAiImage');
-  if (aiBtn) { aiBtn.style.display = 'inline-block'; aiBtn.textContent = 'AI 이미지 생성'; }
 
   // Instagram caption
   document.getElementById('instaCaption').value = toDisplayText(r.instagram?.caption);

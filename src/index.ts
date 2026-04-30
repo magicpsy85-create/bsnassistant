@@ -5,7 +5,6 @@ import { generateAdminPageHTML } from './pages/admin-page';
 import { handleChatbotMessage } from './chatbot';
 import { generateInstaPageHTML } from './pages/insta-page';
 import { generateAllContent, regenerateSingleCard, generateChannelFromContext, ALL_CHANNELS, ChannelKey } from './content-generator';
-import { generateSingleCard } from './card-image';
 import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf } from './learn-store';
 import axios from 'axios';
 import multer from 'multer';
@@ -465,96 +464,6 @@ app.post('/api/content/regenerate-card', async (req: Request, res: Response) => 
   }
 });
 
-// ─── 카드 이미지 생성 API ───
-app.post('/api/content/generate-card', async (req: Request, res: Response) => {
-  try {
-    req.setTimeout(300000);
-    res.setTimeout(300000);
-    const { cardIndex, topic, tag, title, style, imageIdea } = req.body;
-    if (typeof cardIndex !== 'number' || !title) {
-      return res.status(400).json({ error: '필수 파라미터가 누락되었습니다.' });
-    }
-    const imageBase64 = await generateSingleCard({
-      cardIndex,
-      topic: topic || '',
-      tag: tag || '',
-      title,
-      style: style || 'dark',
-      imageIdea: imageIdea || undefined
-    });
-    res.json({ success: true, imageBase64 });
-  } catch (err: any) {
-    console.error('카드 이미지 생성 오류:', err);
-    res.status(500).json({ error: '이미지 생성 중 오류가 발생했습니다.' });
-  }
-});
-
-// ─── 지역 좌표 변환 API ───
-const REGION_CACHE: Record<string, { lat: number; lng: number }> = {
-  '성수동': { lat: 37.5445, lng: 127.0560 }, '강남역': { lat: 37.4979, lng: 127.0276 },
-  '강남구': { lat: 37.4979, lng: 127.0276 }, '한남동': { lat: 37.5340, lng: 127.0010 },
-  '이태원': { lat: 37.5345, lng: 126.9946 }, '여의도': { lat: 37.5219, lng: 126.9245 },
-  '홍대': { lat: 37.5563, lng: 126.9236 }, '압구정': { lat: 37.5270, lng: 127.0285 },
-  '청담동': { lat: 37.5247, lng: 127.0474 }, '을지로': { lat: 37.5660, lng: 126.9910 },
-  '종로': { lat: 37.5704, lng: 126.9831 }, '명동': { lat: 37.5636, lng: 126.9827 },
-  '신사동': { lat: 37.5239, lng: 127.0231 }, '서초구': { lat: 37.4837, lng: 127.0146 },
-  '서초동': { lat: 37.4837, lng: 127.0146 }, '삼성동': { lat: 37.5088, lng: 127.0631 },
-  '역삼동': { lat: 37.5007, lng: 127.0365 }, '잠실': { lat: 37.5133, lng: 127.1001 },
-  '마포구': { lat: 37.5538, lng: 126.9084 }, '마포': { lat: 37.5538, lng: 126.9084 },
-  '용산구': { lat: 37.5311, lng: 126.9810 }, '용산': { lat: 37.5311, lng: 126.9810 },
-  '건대': { lat: 37.5404, lng: 127.0696 }, '왕십리': { lat: 37.5614, lng: 127.0380 },
-  '뚝섬': { lat: 37.5475, lng: 127.0470 }, '송파구': { lat: 37.5048, lng: 127.1127 },
-  '영등포': { lat: 37.5171, lng: 126.9078 }, '광화문': { lat: 37.5759, lng: 126.9769 },
-  '논현동': { lat: 37.5112, lng: 127.0288 }, '서교동': { lat: 37.5527, lng: 126.9183 },
-  '연남동': { lat: 37.5660, lng: 126.9260 }, '성동구': { lat: 37.5506, lng: 127.0409 },
-  '중구': { lat: 37.5641, lng: 126.9979 },
-};
-
-function findRegionFromCache(region: string): { lat: number; lng: number } | null {
-  if (REGION_CACHE[region]) return REGION_CACHE[region];
-  const keys = Object.keys(REGION_CACHE).sort((a, b) => b.length - a.length);
-  for (const key of keys) {
-    if (region.includes(key)) return REGION_CACHE[key];
-  }
-  return null;
-}
-
-app.post('/api/content/geocode', async (req: Request, res: Response) => {
-  const { region } = req.body;
-  console.log('[geocode] 요청 region:', JSON.stringify(region));
-  if (!region) return res.status(400).json({ error: '지역명이 필요합니다.' });
-
-  // 부분 매칭 캐시 검색
-  const cached = findRegionFromCache(region);
-  console.log('[geocode] 캐시 결과:', cached ? 'HIT' : 'MISS');
-  if (cached) return res.json({ ...cached, address: region });
-
-  // 카카오 로컬 API
-  const kakaoKey = process.env.KAKAO_REST_API_KEY;
-  if (!kakaoKey) return res.status(500).json({ error: '카카오 API 키가 설정되지 않았습니다.' });
-
-  try {
-    const resp = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-      params: { query: region },
-      headers: { 'Authorization': 'KakaoAK ' + kakaoKey },
-      timeout: 5000
-    });
-    const doc = resp.data?.documents?.[0];
-    if (!doc) return res.status(404).json({ error: '해당 지역을 찾을 수 없습니다.' });
-    const coords = { lat: parseFloat(doc.y), lng: parseFloat(doc.x), address: doc.address_name || region };
-    REGION_CACHE[region] = { lat: coords.lat, lng: coords.lng };
-    res.json(coords);
-  } catch (err: any) {
-    console.error('Geocode 오류:', err.message);
-    res.status(500).json({ error: '좌표 변환 중 오류가 발생했습니다.' });
-  }
-});
-
-// ─── 카카오 JS 키 전달 API ───
-app.get('/api/kakao-key', (_req: Request, res: Response) => {
-  res.json({ key: process.env.KAKAO_JS_API_KEY || '' });
-});
-
 // ─── 외부 승인 관리 ───
 app.get('/api/admin/access-requests', async (_req: Request, res: Response) => {
   try {
@@ -824,97 +733,6 @@ app.delete('/api/learn/corrupted', async (_req: Request, res: Response) => {
     res.json({ removed, remaining: filtered.length });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── 카카오맵 서버 캡처 API (puppeteer-core) ───
-import puppeteer from 'puppeteer-core';
-
-function findChromePath(): string | null {
-  const candidates = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    (process.env.LOCALAPPDATA || '') + '\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  ];
-  for (const p of candidates) {
-    try { if (fs.existsSync(p)) return p; } catch {}
-  }
-  return null;
-}
-
-app.post('/api/content/capture-map', async (req: Request, res: Response) => {
-  let browser: any = null;
-  try {
-    const { region } = req.body;
-    if (!region) return res.json({ error: '지역명이 없습니다' });
-
-    // 좌표 가져오기
-    const cached = findRegionFromCache(region);
-    let coords = cached;
-    if (!coords && process.env.KAKAO_REST_API_KEY) {
-      try {
-        const kakaoRes = await axios.get('https://dapi.kakao.com/v2/local/search/keyword.json', {
-          params: { query: region },
-          headers: { 'Authorization': 'KakaoAK ' + process.env.KAKAO_REST_API_KEY },
-          timeout: 5000
-        });
-        const doc = kakaoRes.data?.documents?.[0];
-        if (doc) coords = { lat: parseFloat(doc.y), lng: parseFloat(doc.x) };
-      } catch {}
-    }
-    if (!coords) return res.json({ error: '지역 좌표를 찾을 수 없습니다' });
-
-    const chromePath = findChromePath();
-    if (!chromePath) return res.json({ error: 'Chrome 브라우저를 찾을 수 없습니다' });
-
-    const KAKAO_JS_KEY = process.env.KAKAO_JS_API_KEY;
-    if (!KAKAO_JS_KEY) return res.json({ error: 'KAKAO_JS_API_KEY 미설정' });
-
-    const mapHtml = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false"></script>
-<style>*{margin:0;padding:0}body{width:1080px;height:1080px;overflow:hidden}#map{width:1080px;height:1080px}</style>
-</head><body><div id="map"></div><script>
-kakao.maps.load(function(){
-  var map=new kakao.maps.Map(document.getElementById('map'),{center:new kakao.maps.LatLng(${coords.lat},${coords.lng}),level:4});
-  new kakao.maps.Marker({position:new kakao.maps.LatLng(${coords.lat},${coords.lng})}).setMap(map);
-  new kakao.maps.Circle({center:new kakao.maps.LatLng(${coords.lat},${coords.lng}),radius:500,strokeWeight:3,strokeColor:'#2C4A7C',strokeOpacity:0.9,fillColor:'#2C4A7C',fillOpacity:0.12}).setMap(map);
-  kakao.maps.event.addListener(map,'tilesloaded',function(){window.__MAP_READY__=true});
-});
-</script></body></html>`;
-
-    console.log('[카카오맵] puppeteer 브라우저 시작:', chromePath);
-    browser = await puppeteer.launch({
-      executablePath: chromePath,
-      headless: 'new' as any,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--window-size=1080,1080']
-    });
-
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1080, height: 1080 });
-    await page.setExtraHTTPHeaders({ 'Referer': 'http://localhost:3000' });
-    await page.setContent(mapHtml, { waitUntil: 'networkidle0', timeout: 20000 });
-
-    console.log('[카카오맵] 타일 로딩 대기 중...');
-    await page.waitForFunction('window.__MAP_READY__ === true', { timeout: 15000 })
-      .catch(() => console.log('[카카오맵] 타일 타임아웃, 그래도 캡처 시도'));
-    await new Promise(r => setTimeout(r, 2000));
-
-    console.log('[카카오맵] 스크린샷 캡처 중...');
-    const screenshot = await page.screenshot({
-      type: 'png',
-      encoding: 'base64',
-      clip: { x: 0, y: 0, width: 1080, height: 1080 }
-    });
-
-    await browser.close();
-    browser = null;
-    console.log('[카카오맵] 캡처 성공, 크기:', (screenshot as string).length);
-    res.json({ imageBase64: screenshot });
-  } catch (e: any) {
-    console.error('[카카오맵] 캡처 에러:', e.message);
-    if (browser) { try { await browser.close(); } catch {} }
-    res.json({ error: e.message });
   }
 });
 
