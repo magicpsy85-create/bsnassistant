@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@types/multer": "^2.1.0",
-    "@types/sharp": "^0.31.1",
     "axios": "^1.13.6",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.3.1",
@@ -28,9 +27,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^6.10.1",
     "openai": "^6.32.0",
-    "pdf-parse": "^1.1.1",
-    "puppeteer-core": "^24.40.0",
-    "sharp": "^0.34.5"
+    "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
