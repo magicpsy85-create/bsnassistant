@@ -274,21 +274,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .img-check-row input[type=checkbox]{width:16px;height:16px;accent-color:#2C4A7C;cursor:pointer;}
     .img-check-row label{font-size:13px;color:#3D3B36;cursor:pointer;}
     .img-check-row .check-hint{font-size:11px;color:#A8A49C;}
-    /* Card image actions (hover) */
-    .card-img-actions{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:none;gap:6px;z-index:4;}
-    .card-preview:hover .card-img-actions{display:flex;}
-    .btn-img-act{padding:4px 10px;border:none;border-radius:5px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 0.15s;}
-    .btn-img-act:hover{background:rgba(0,0,0,0.7);}
-    /* Card spinner */
-    .card-spinner{position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;background:rgba(0,0,0,0.3);display:none;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;gap:8px;}
-    .card-spinner.active{display:flex;}
-    .card-spinner .spin{width:32px;height:32px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;}
-    .card-spinner .spin-text{font-size:12px;color:#fff;}
     @keyframes spin{to{transform:rotate(360deg)}}
-    /* Skeleton */
-    .skeleton{position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;background:linear-gradient(90deg,#e0e0e0 25%,#f0f0f0 50%,#e0e0e0 75%);background-size:200% 100%;animation:skeletonShimmer 1.5s infinite;border-radius:12px;display:none;}
-    .skeleton.active{display:block;}
-    @keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
     /* History */
     .history-section{margin-top:24px;}
@@ -716,7 +702,6 @@ export function generateInstaPageHTML(regionJson?: string): string {
       <div class="section-label">카드뉴스 미리보기</div>
       <div class="card-preview-wrap">
         <div class="card-preview" id="cardPreview">
-          <div class="skeleton" id="cardSkeleton"></div>
           <img class="card-bg" id="cardBgImg" style="display:none;" alt="">
           <button class="card-arrow left" id="cardArrowLeft" onclick="goToSlide(currentSlide-1)" style="display:none;">&#8249;</button>
           <button class="card-arrow right" id="cardArrowRight" onclick="goToSlide(currentSlide+1)">&#8250;</button>
@@ -727,17 +712,13 @@ export function generateInstaPageHTML(regionJson?: string): string {
           <div class="card-main-text" id="cardText" contenteditable="true" spellcheck="false">콘텐츠를 생성하면 여기에 카드뉴스가 표시됩니다</div>
           <div class="card-slide-num" id="cardSlideNum">1 / 7</div>
           <div class="card-nav" id="cardNav"></div>
-          <div class="card-img-actions" id="cardImgActions"></div>
-          <div class="card-spinner" id="cardSpinner"><div class="spin"></div><div class="spin-text">이미지 생성 중...</div></div>
           <div class="card-actions">
             <button class="btn-card-action" title="글자 축소" onclick="changeFontSize(-2)" style="font-size:11px;font-weight:700;">A-</button>
             <button class="btn-card-action" title="글자 확대" onclick="changeFontSize(2)" style="font-size:11px;font-weight:700;">A+</button>
             <button class="btn-card-action btn-regen" id="btnRegenCard" title="이 카드 재생성" onclick="regenerateCurrentCard(this)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
             </button>
-            <button class="btn-card-action" title="전체 다운로드 (ZIP)" onclick="downloadAllCards()">&#8595;</button>
           </div>
-          <input type="file" id="cardFileInput" accept="image/*" style="display:none;" onchange="handleCardUpload(event)">
         </div>
       </div>
     </div>
@@ -1221,15 +1202,11 @@ const CARD_STYLES = {
 };
 let currentSlide = 0;
 let cardsData = [];
-let cardImages = []; // base64 이미지 캐시 (7장)
 let cardFontSizes = []; // 카드별 글자 크기 (기본 30px)
 const DEFAULT_FONT_SIZE = 30;
 const MIN_FONT_SIZE = 20;
 const MAX_FONT_SIZE = 40;
-let imageIdeas = []; // GPT가 생성한 이미지 아이디어
 let currentTopic = '';
-let currentRegion = ''; // GPT가 추출한 지역명
-let isGeneratingImages = false;
 
 // ─── 스타일별 오버레이 (CSS fallback 카드에 적용) ───
 const OVERLAY_STYLES = {
@@ -1337,7 +1314,6 @@ function goToSlide(idx) {
   const text = document.getElementById('cardText');
   const num = document.getElementById('cardSlideNum');
   const bgImg = document.getElementById('cardBgImg');
-  const skeleton = document.getElementById('cardSkeleton');
   const periodEl = document.getElementById('cardPeriod');
   const sourceEl = document.getElementById('cardSource');
 
@@ -1349,7 +1325,6 @@ function goToSlide(idx) {
     preview.style.background = '#0D0D9F';
     preview.style.color = '#FFFFFF';
     bgImg.style.display = 'none';
-    skeleton.classList.remove('active');
     tag.style.display = 'none';
     document.querySelector('.card-watermark').style.display = 'none';
     if (periodEl) periodEl.style.display = 'none';
@@ -1364,7 +1339,6 @@ function goToSlide(idx) {
     document.getElementById('cardArrowRight').style.display = 'none';
     var regenBtn7 = document.getElementById('btnRegenCard');
     if (regenBtn7) regenBtn7.style.display = 'none';
-    renderCardImgActions(idx);
     return;
   }
 
@@ -1416,31 +1390,10 @@ function goToSlide(idx) {
       sourceEl.style.display = showSrc ? '' : 'none';
     }
 
-    if (cardImages[idx]) {
-      // 이미지 + 오버레이 배경
-      bgImg.src = 'data:image/png;base64,' + cardImages[idx];
-      bgImg.style.display = 'block';
-      // 2장 지도 카드는 밝은 오버레이 + 어두운 텍스트
-      if (card._mapCard) {
-        preview.style.background = 'linear-gradient(rgba(255,255,255,0.55),rgba(255,255,255,0.55)), #F8F6F1';
-        preview.style.color = '#1A1A2E';
-        preview.classList.add('style-light');
-      } else {
-        preview.style.background = overlay + ', ' + s.bg;
-      }
-      skeleton.classList.remove('active');
-    } else {
-      bgImg.style.display = 'none';
-      preview.style.background = s.bg;
-      if (isGeneratingImages) {
-        skeleton.classList.add('active');
-      } else {
-        skeleton.classList.remove('active');
-      }
-    }
+    bgImg.style.display = 'none';
+    preview.style.background = s.bg;
   } else {
     bgImg.style.display = 'none';
-    skeleton.classList.remove('active');
     preview.style.background = '#2C4A7C';
     preview.style.color = '#FFFFFF';
     tag.style.display = '';
@@ -1461,19 +1414,6 @@ function goToSlide(idx) {
   // 재생성 버튼 7장 숨김
   var regenBtn = document.getElementById('btnRegenCard');
   if (regenBtn) regenBtn.style.display = (idx === 6 || !cardsData.length) ? 'none' : '';
-  // 이미지 액션 버튼 렌더링
-  renderCardImgActions(idx);
-}
-
-function renderCardImgActions(idx) {
-  var el = document.getElementById('cardImgActions');
-  if (!cardsData.length || !cardsData[idx] || idx === 6) { el.innerHTML = ''; return; }
-  if (cardImages[idx]) {
-    el.innerHTML = '<button class="btn-img-act" onclick="triggerCardUpload()">&#128247; 교체</button>' +
-      '<button class="btn-img-act" onclick="removeCardImage()">&#10005; 제거</button>';
-  } else {
-    el.innerHTML = '';
-  }
 }
 
 // ─── 글자 크기 조절 ───
@@ -1530,93 +1470,6 @@ async function regenerateCurrentCard(btn) {
     btn.classList.remove('spinning');
     btn.disabled = false;
   }
-}
-
-// ─── 카드 이미지 업로드 ───
-function triggerCardUpload() {
-  document.getElementById('cardFileInput').click();
-}
-
-function handleCardUpload(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  resizeImage(file, 1080).then(function(dataUrl) {
-    var b64 = dataUrl.split(',')[1] || dataUrl;
-    cardImages[currentSlide] = b64;
-    if (cardsData[currentSlide]) cardsData[currentSlide]._mapCard = false;
-    goToSlide(currentSlide);
-  });
-  e.target.value = '';
-}
-
-function resizeImage(file, size) {
-  return new Promise(function(resolve) {
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      canvas.width = size; canvas.height = size;
-      var ctx = canvas.getContext('2d');
-      var minDim = Math.min(img.width, img.height);
-      var sx = (img.width - minDim) / 2;
-      var sy = (img.height - minDim) / 2;
-      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.src = URL.createObjectURL(file);
-  });
-}
-
-// ─── 카드 이미지 제거 ───
-function removeCardImage() {
-  cardImages[currentSlide] = null;
-  if (cardsData[currentSlide]) cardsData[currentSlide]._mapCard = false;
-  goToSlide(currentSlide);
-}
-
-// ─── 지역명 추출 ───
-function extractRegionForMap(result, inputTopic) {
-  if (currentRegion) return currentRegion;
-  if (result && result.region) return result.region;
-  if (result && result.instagram && result.instagram.cards) {
-    var allText = result.instagram.cards.map(function(c) { return c.title; }).join(' ');
-    var patterns = ['성수동','강남역','강남구','한남동','이태원','여의도','홍대','압구정','청담동','을지로','종로','명동','신사동','서초구','서초동','삼성동','역삼동','잠실','마포구','마포','용산구','용산','건대','왕십리','송파구','영등포','광화문','논현동','성동구','뚝섬','연남동','중구'];
-    for (var j = 0; j < patterns.length; j++) { if (allText.includes(patterns[j])) return patterns[j]; }
-  }
-  if (result && result.youtube && result.youtube.title) {
-    var patterns2 = ['성수동','강남역','강남구','한남동','이태원','여의도','홍대','압구정','청담동','을지로','종로','명동','신사동','서초','삼성동','역삼동','잠실','마포','용산','건대','왕십리','송파','영등포','광화문','논현동','성동구'];
-    for (var k = 0; k < patterns2.length; k++) { if (result.youtube.title.includes(patterns2[k])) return patterns2[k]; }
-  }
-  if (inputTopic && !inputTopic.startsWith('http')) return inputTopic;
-  return '서울';
-}
-
-// ─── ZIP 다운로드 ───
-async function downloadAllCards() {
-  const available = cardImages.filter(Boolean);
-  if (available.length === 0) { alert('다운로드할 카드 이미지가 없습니다. 이미지 생성이 완료된 후 시도해주세요.'); return; }
-
-  // JSZip을 동적 로드
-  if (!window.JSZip) {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    document.head.appendChild(s);
-    await new Promise(r => s.onload = r);
-  }
-
-  const zip = new JSZip();
-  cardImages.forEach((b64, i) => {
-    if (b64) {
-      zip.file('card_' + String(i + 1).padStart(2, '0') + '.png', b64, { base64: true });
-    }
-  });
-
-  const blob = await zip.generateAsync({ type: 'blob' });
-  const a = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'BSN_' + encodeURIComponent((currentTopic || 'content').slice(0, 20)) + '_' + date + '.zip';
-  a.click();
-  URL.revokeObjectURL(a.href);
 }
 
 // ─── Mode switch (호환 래퍼) ───
@@ -1721,10 +1574,8 @@ function handleChannelCacheMiss(uiCh, apiCh) {
 function bindSingleChannel(uiCh, r) {
   if (!r) return;
   if (uiCh === 'insta') {
-    // 카드뉴스 + 캡션 + imageIdeas 재바인딩
+    // 카드뉴스 + 캡션 재바인딩
     cardsData = r.instagram?.cards || [];
-    imageIdeas = r.imageIdeas || [];
-    cardImages = new Array(7).fill(null);
     cardFontSizes = new Array(7).fill(DEFAULT_FONT_SIZE);
     currentSlide = 0;
     goToSlide(0);
@@ -1878,9 +1729,6 @@ function bindResults(r) {
 
   // Instagram cards
   cardsData = r.instagram?.cards || [];
-  imageIdeas = r.imageIdeas || [];
-  currentRegion = r.region || '';
-  cardImages = new Array(7).fill(null);
   cardFontSizes = new Array(7).fill(DEFAULT_FONT_SIZE);
   currentSlide = 0;
   goToSlide(0);
@@ -1927,7 +1775,6 @@ function saveHistory(mode, input, result) {
     // 이미지 데이터 제외한 result만 저장
     const safeResult = {
       instagram: { cards: result.instagram?.cards || [], caption: toDisplayText(result.instagram?.caption) },
-      imageIdeas: result.imageIdeas || [],
       shortform: { filming: toDisplayText(result.shortform?.filming), reelsUpload: toDisplayText(result.shortform?.reelsUpload), shortsUpload: toDisplayText(result.shortform?.shortsUpload) },
       youtube: { title: toDisplayText(result.youtube?.title), script: toDisplayText(result.youtube?.script), description: toDisplayText(result.youtube?.description) },
       thread: { post: toDisplayText(result.thread?.post) },
@@ -1968,7 +1815,6 @@ function updateCurrentHistory() {
     r.instagram.caption = document.getElementById('instaCaption').value;
     // B-2-B-4: 단독 인스타 재생성 시 cards 배열도 history에 반영
     if (cardsData && cardsData.length > 0) r.instagram.cards = cardsData.slice();
-    if (imageIdeas && imageIdeas.length > 0) r.imageIdeas = imageIdeas.slice();
     if (!r.shortform) r.shortform = {};
     r.shortform.filming = document.getElementById('shortFilming').value;
     r.shortform.reelsUpload = document.getElementById('shortReelsUpload').value;
@@ -2100,8 +1946,6 @@ function loadHistory(id) {
       style: c.style || 'dark'
     };
   });
-  imageIdeas = item.result?.imageIdeas || [];
-  cardImages = new Array(7).fill(null);
   cardFontSizes = (item.cardFontSizes && item.cardFontSizes.length === 7) ? [...item.cardFontSizes] : new Array(7).fill(DEFAULT_FONT_SIZE);
   currentSlide = 0;
   goToSlide(0);
@@ -2124,7 +1968,6 @@ function loadHistory(id) {
   window.currentContentHash = null;
   updateChannelGeneratedFlags({
     instagram: ig,
-    imageIdeas: imageIdeas,
     shortform: sf,
     youtube: item.result?.youtube,
     thread: item.result?.thread || item.result?.threads,
