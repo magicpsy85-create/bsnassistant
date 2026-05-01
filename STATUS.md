@@ -1,6 +1,6 @@
 # BSN Assistant — 현재 상태 요약
 
-작성일: 2026-04-29 / main HEAD: `3ce7bc2`
+작성일: 2026-05-01 / main HEAD: `5d04226`
 
 ## 1. 회사 / 운영 컨텍스트
 - **회사:** BSN빌사남부동산중개법인 — 상업용 빌딩 매매 중개
@@ -18,7 +18,7 @@
 | DB | Firestore (구성원·상담기록·규정), SQLite (실거래 캐시) |
 | 인증 | Firebase Auth (Google) |
 | AI | OpenAI **GPT-5** (콘텐츠 생성, `reasoning_effort:'low'`), GPT-4o (챗봇·AI분석) |
-| 외부 API | 국토교통부 실거래가, 네이버 뉴스, Brave Search (리포트/Places만), 카카오맵 |
+| 외부 API | 국토교통부 실거래가, 네이버 뉴스, Brave Search (실거래가 insight + 리포트) |
 | 호스팅 | Firebase Hosting + Cloud Functions |
 
 페이지는 SPA 아닌 **SSR**: `src/pages/*-page.ts`가 거대한 템플릿 리터럴로 HTML+CSS+JS 인라인 반환.
@@ -37,11 +37,11 @@
 
 | 해시 | 의미 |
 |---|---|
-| `3ce7bc2` | **fix(auth)** — `/api/user/preset` GET·POST의 catch가 토큰 만료(`auth/*`)를 500으로 오반환하던 버그 수정. catch에서 `auth/` prefix 식별 → 401, 그 외만 500. 프론트 `fetchWithTokenRetry`·`loadUserPreset`도 `401 \|\| 500` → `401`만 재시도/fallback. `/api/auth/verify`와 코드 일관성 회복 |
-| `b49341c` | **fix(tabs)** — 결과 화면 비인스타 탭 활성 상태가 다음 결과 진입 시까지 보존되던 버그. `bindResults`·`showInput` 진입부에 `switchChannel('insta')` 추가. 단독 채널 생성 흐름은 별도 함수라 영향 없음 |
-| `b17c50d` | **B-2-B-4** — 탭별 placeholder + `/api/content/generate-channel` 프론트 호출 + 410 fallback. `inflightChannels` Set(채널별 중복 방지) + `confirmShown` 플래그(전역 confirm 다중 표시 방지). `data-generated`는 응답 payload 기준(currentPreset 미사용). 410 시 `doGenerate(channels)` 호출 — 프리셋 ∪ 요청 채널 union으로 재생성 |
-| `a0723de` | **B-2-B-3** — `/api/content/generate` payload에 `channels` 전달. `getCurrentChannels()` 헬퍼 (백엔드 `presetToChannels()` 미러). UI 변경 없음 (헤더 칩이 B-2-B-1에서 이미 커버) |
-| `a242fd3` | **B-2-B-2** — 프리셋 모달 + Firestore 연동 + Firebase ID 토큰 자동 갱신(`fetchWithTokenRetry`) + `ensureFirebaseInitialized()` 가드 |
+| `5d04226` | **Merge A-5c-1** — env cleanup + trend-monitor archive + dead HTML removal (no-ff 머지) |
+| `c5079db` | **A-5c-1** — `.env.example` 삭제 + `env.example` 정확화(KAKAO/GEMINI 제거, BRAVE/NAVER 실제 사용 경로 표기, FUNCTION_URL 신설), `.env`에서 KAKAO/GEMINI 주석 제거, `src/trend-monitor.ts` → `archive/`로 이동(차후 부활), `archive/README.md` 신설, `insta_debug.html`(13개월 dead, 752줄) 삭제, `.gitignore`에 `.env.backup-*` 추가 |
+| `ae0697a` | **Merge A-5b** — remove unused dependencies (no-ff 머지) |
+| `871e089` | **A-5b** — `puppeteer-core`·`sharp`·`@types/sharp` 의존성 제거 (Gemini 이미지 생성 + 카카오맵 캡처 dead code 정리 후속). package-lock.json 1287줄 감소, npm install 363 packages |
+| `c22fc0d` | **Merge A-5a** — remove image generation dead code (no-ff 머지). 본 commit `9328cd6`에서 insta-page.ts 프론트 dead code -157줄 제거 (cardImages·imageIdeas·downloadAllCards(ZIP)·triggerCardUpload·handleCardUpload·resizeImage·removeCardImage·extractRegionForMap·skeleton/spinner CSS 통째 제거) |
 
 ## 5. 엔드포인트 목록 (현재)
 **인증:** `POST /api/auth/verify` `POST /api/auth/check-session` `GET /api/auth/config`
@@ -51,7 +51,7 @@
 **콘텐츠 생성 (B-2-B-4 갱신):**
 - `POST /api/content/generate` (B-2-B-3에서 프론트가 `channels` 배열 전달 — getCurrentChannels())
 - `POST /api/content/generate-channel` (`{channel, contentHash}`, 캐시 미스 시 410. B-2-B-4에서 프론트 연결 완료 — 비프리셋 채널 탭 placeholder 버튼 클릭 시 호출)
-- `POST /api/content/regenerate-card` `POST /api/content/generate-card` `POST /api/content/geocode` `POST /api/content/capture-map`
+- `POST /api/content/regenerate-card`
 - `GET /api/content/recommend-news`
 
 **학습:** `GET|POST|DELETE /api/learn/articles*` `POST /api/learn/add` `POST /api/learn/upload-pdf` `GET|DELETE /api/learn/corrupted`
@@ -59,7 +59,6 @@
 **관리자 — 기록:** `GET /api/admin/records` `PUT /api/admin/records/:id/status|report-error`
 **관리자 — 드래프트·규정:** `GET|POST|PUT|DELETE /api/admin/drafts[/:id]` `POST /api/admin/drafts/apply` `GET /api/admin/rules` `POST /api/admin/rules/update|section` `DELETE /api/admin/rules/section/:sectionName`
 **실거래가:** `GET /api/regions` `GET /api/transaction/{test|debug|query|ranking}` `POST /api/transaction/{insight|report}`
-**기타:** `GET /api/kakao-key`
 
 ## 6. 진행 중 / 다음 작업
 
@@ -86,7 +85,7 @@
 
 ## 7. 운영 시 고려사항
 - **OpenAI 비용:** 카드 1회 생성 입력 9,800 + 출력 6,000 토큰 (gpt-5 low). 사용자 ~98명 × 일일 사용량 추정 후 월 비용 시뮬레이션 필요. B-1b로 단일 채널 호출은 출력 토큰 1/3 수준
-- **응답 시간 기준치:** 카드 생성 평균 80초, 재생성 12~15초, 캐시 hit 채널 단독 31초. 80초 GPT 호출이 **전체의 95~98%** — 추가 최적화는 GPT 측 변수
+- **응답 시간 기준치:** 카드 생성 — 단일 채널 instagram 기본 ~40초 (B-1b 적용 후, 검증 baseline `c5079db`) / 5채널 풀 호출 ~80초 (B-1b 이전). 재생성 12~15초, 캐시 hit 채널 단독 31초. GPT 호출이 **전체의 92~98%** — 추가 최적화는 GPT 측 변수
 - **API 한도:** OpenAI rate limit (조직별 RPM/TPM), 국토교통부 실거래 API (호출 빈도 무관하지만 응답 지연 가능), 네이버 뉴스 API (일일 25,000건), Brave Search (요금제별)
 - **세션 타임아웃:** 서버 5분 (`req.setTimeout(300000)`). GPT 호출이 5분 초과하면 클라이언트 타임아웃 — 카드 생성에서 일부 발생 가능
 - **PM2 단일 프로세스:** contextCache가 인메모리 Map이므로 Cloud Functions 다중 인스턴스 환경에선 캐시 미스 빈발 예상. **배포 시 Firestore TTL 컬렉션 또는 Redis 검토 필요**
@@ -127,7 +126,7 @@
 직책이 대표/상무/이사/팀장이면 `{이름}팀` 자동 생성. 소속은 빌딩/PENT/CARE/경영 4개.
 
 ### 8-7. 환경 변수 (.env)
-`OPENAI_API_KEY`, `MOLIT_API_KEY`, `FB_WEB_API_KEY`, `BRAVE_API_KEY`, `NAVER_CLIENT_ID/SECRET`, `KAKAO_REST_API_KEY/JS_API_KEY`. **누락 시 401·환경 변수 안내 메시지 반환** (콘텐츠 생성 엔드포인트).
+`OPENAI_API_KEY`, `MOLIT_API_KEY`, `FB_WEB_API_KEY`, `BRAVE_API_KEY`, `NAVER_CLIENT_ID/SECRET`. **누락 시 401·환경 변수 안내 메시지 반환** (콘텐츠 생성 엔드포인트).
 
 ### 8-8. 배포 명령
 - 로컬: `npx tsc && pm2 restart bsn-assistant`
