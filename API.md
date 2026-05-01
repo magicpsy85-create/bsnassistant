@@ -135,30 +135,12 @@ Firebase 클라이언트 설정 반환.
 ### POST /api/content/generate
 5채널 SNS 콘텐츠 자동 생성.
 - **Body**: `{ input: string, mode?: "text" | "url" }`
-- **응답**: `{ result: ContentResult }` (insta, short, youtube, threads, blog, imageIdeas)
+- **응답**: `{ result: ContentResult }` (insta, short, youtube, threads, blog)
 - **파이프라인**: A단계(분석) → B단계(리서치: 네이버+국토부+Brave) → C단계(GPT-5 생성)
-
-### POST /api/content/generate-card
-개별 카드 이미지 생성.
-- **Body**: `{ cardIndex, topic?, tag, title, style, imageIdea? }`
-- **응답**: `{ success: true, imageBase64 }`
-
-### POST /api/content/geocode
-지역명 → 좌표 변환 (카카오 API).
-- **Body**: `{ region: string }`
-- **응답**: `{ lat, lng, address }`
-
-### GET /api/kakao-key
-카카오 JS API 키 반환.
 
 ### GET /api/content/recommend-news
 AI 뉴스 추천 (네이버 뉴스 + 학습 키워드 기반).
 - **응답**: `{ articles: { title, description, link }[] }`
-
-### POST /api/content/capture-map
-카카오맵 캡처 (Puppeteer).
-- **Body**: `{ region: string }`
-- **응답**: `{ imageBase64 }`
 
 ---
 
