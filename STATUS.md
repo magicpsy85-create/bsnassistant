@@ -1,6 +1,6 @@
 # BSN Assistant — 현재 상태 요약
 
-작성일: 2026-05-01 / main HEAD: `5d04226`
+작성일: 2026-05-01 / main HEAD: `ba815a9`
 
 ## 1. 회사 / 운영 컨텍스트
 - **회사:** BSN빌사남부동산중개법인 — 상업용 빌딩 매매 중개
@@ -37,11 +37,11 @@
 
 | 해시 | 의미 |
 |---|---|
-| `5d04226` | **Merge A-5c-1** — env cleanup + trend-monitor archive + dead HTML removal (no-ff 머지) |
-| `c5079db` | **A-5c-1** — `.env.example` 삭제 + `env.example` 정확화(KAKAO/GEMINI 제거, BRAVE/NAVER 실제 사용 경로 표기, FUNCTION_URL 신설), `.env`에서 KAKAO/GEMINI 주석 제거, `src/trend-monitor.ts` → `archive/`로 이동(차후 부활), `archive/README.md` 신설, `insta_debug.html`(13개월 dead, 752줄) 삭제, `.gitignore`에 `.env.backup-*` 추가 |
-| `ae0697a` | **Merge A-5b** — remove unused dependencies (no-ff 머지) |
-| `871e089` | **A-5b** — `puppeteer-core`·`sharp`·`@types/sharp` 의존성 제거 (Gemini 이미지 생성 + 카카오맵 캡처 dead code 정리 후속). package-lock.json 1287줄 감소, npm install 363 packages |
-| `c22fc0d` | **Merge A-5a** — remove image generation dead code (no-ff 머지). 본 commit `9328cd6`에서 insta-page.ts 프론트 dead code -157줄 제거 (cardImages·imageIdeas·downloadAllCards(ZIP)·triggerCardUpload·handleCardUpload·resizeImage·removeCardImage·extractRegionForMap·skeleton/spinner CSS 통째 제거) |
+| `ba815a9` | **Merge fix-admin-auth** — requireAdmin middleware (admin 19 routes) + auth/verify catch branching (no-ff 머지) |
+| `35d7e3e` | **fix(security)** — `requireAdmin` 미들웨어 신설 (Bearer token → verifyIdToken → email → members 조회 → `role === '관리자'` 검증). admin 19 routes(members 3 + access-requests 4 + records 3 + drafts 5 + rules 4)에 일괄 적용. `/api/auth/verify` catch 분기 정정(`auth/*` → 401, 그 외 → 500, 메모리 #18 부합) |
+| `0200638` | **Merge A-5c-2** — docs cleanup: KAKAO removal, dead endpoints, git log sync, response time baseline (no-ff 머지) |
+| `5151c17` | **A-5c-2** — CLAUDE.md KAKAO 환경변수 2줄 제거, STATUS.md 7곳 갱신(main HEAD·외부 API·git log 5건·dead 엔드포인트 3건·기타 줄·응답시간 baseline·KAKAO 환경변수), API.md 4개 stale 섹션 통째 제거(`/generate-card`·`/geocode`·`/kakao-key`·`/capture-map`) + imageIdeas 응답 필드 제거 |
+| `ae0697a` | **Merge A-5b** — remove unused dependencies (no-ff 머지). 본 commit `871e089`에서 `puppeteer-core`·`sharp`·`@types/sharp` 의존성 제거 (Gemini 이미지 생성 + 카카오맵 캡처 dead code 정리 후속) |
 
 ## 5. 엔드포인트 목록 (현재)
 **인증:** `POST /api/auth/verify` `POST /api/auth/check-session` `GET /api/auth/config`
