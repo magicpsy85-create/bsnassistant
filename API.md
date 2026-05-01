@@ -28,10 +28,12 @@ Firebase 클라이언트 설정 반환.
 ## 페이지
 
 ### GET /
-챗봇 페이지 HTML.
+실거래가 페이지로 redirect.
+- **응답**: 302 → `/insta#transaction`
+- **메모**: 챗봇 페이지는 `/chatbot` 라우트
 
 ### GET /chatbot
-챗봇 페이지 HTML (alias).
+챗봇 페이지 HTML.
 - **인증**: 없음 (페이지 진입은 클라이언트 사이드 Firebase Auth)
 - **응답**: HTML (`generateChatbotPageHTML()`)
 
