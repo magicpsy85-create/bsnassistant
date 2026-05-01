@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.env.backup-*
 data/transactions.db
 data/transactions.db-wal
 data/transactions.db-shm
