@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { generateChatbotPageHTML } from './pages/chatbot-page';
 import { generateAdminPageHTML } from './pages/admin-page';
 import { handleChatbotMessage } from './chatbot';
@@ -50,6 +50,31 @@ app.use(express.json({ limit: '50mb' }));
 // 서버 기본 타임아웃 5분 (GPT 호출 대기)
 app.use((_req: any, _res: any, next: any) => { _req.setTimeout(300000); next(); });
 
+// 관리자 권한 검증 미들웨어
+// Authorization: Bearer <idToken> 필수 → Firebase Auth 토큰 검증 → email → members 조회 → role === '관리자' 확인
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!idToken) return res.status(401).json({ error: 'idToken 필요' });
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) return res.status(403).json({ error: '이메일 정보 없음' });
+    const snap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+    if (snap.empty) return res.status(403).json({ error: '등록되지 않은 사용자' });
+    const member = snap.docs[0].data();
+    if (member.role !== '관리자') return res.status(403).json({ error: '관리자 권한 필요' });
+    (req as any).member = member;
+    next();
+  } catch (e: any) {
+    const code = e?.code || e?.errorInfo?.code || '';
+    if (typeof code === 'string' && code.indexOf('auth/') === 0) {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+    console.error('[requireAdmin] 오류:', e.message);
+    res.status(500).json({ error: 'auth check failed' });
+  }
+}
+
 // ─── 멤버 목록 API ───
 app.get('/api/members', async (_req: Request, res: Response) => {
   res.json(await getMembers());
@@ -59,7 +84,7 @@ app.get('/api/members', async (_req: Request, res: Response) => {
 const AUTO_TEAM_POSITIONS = ['대표', '상무', '이사', '팀장'];
 const LOCKED_MEMBERS: Record<number, string> = { 94: '사장', 95: '부사장' };
 
-app.post('/api/admin/members', async (req: Request, res: Response) => {
+app.post('/api/admin/members', requireAdmin, async (req: Request, res: Response) => {
   const { name, position, department, team, phone, joinDate, birthDate, email, note, role } = req.body;
   if (!name || !phone) return res.status(400).json({ error: '이름과 연락처는 필수입니다.' });
   const members = await getMembers();
@@ -77,7 +102,7 @@ app.post('/api/admin/members', async (req: Request, res: Response) => {
 });
 
 // 멤버 수정
-app.put('/api/admin/members/:no', async (req: Request, res: Response) => {
+app.put('/api/admin/members/:no', requireAdmin, async (req: Request, res: Response) => {
   const no = parseInt(req.params.no);
   const updates = req.body;
 
@@ -102,7 +127,7 @@ app.put('/api/admin/members/:no', async (req: Request, res: Response) => {
 });
 
 // 멤버 삭제
-app.delete('/api/admin/members/:no', async (req: Request, res: Response) => {
+app.delete('/api/admin/members/:no', requireAdmin, async (req: Request, res: Response) => {
   const no = parseInt(req.params.no);
   await deleteMember(no);
   res.json({ success: true });
@@ -171,7 +196,11 @@ app.post('/api/auth/verify', async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.error('[Firebase 인증 오류]', e.message);
-    res.status(401).json({ error: '인증 실패' });
+    const code = e?.code || e?.errorInfo?.code || '';
+    if (typeof code === 'string' && code.indexOf('auth/') === 0) {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+    res.status(500).json({ error: 'verify failed' });
   }
 });
 
@@ -465,7 +494,7 @@ app.post('/api/content/regenerate-card', async (req: Request, res: Response) => 
 });
 
 // ─── 외부 승인 관리 ───
-app.get('/api/admin/access-requests', async (_req: Request, res: Response) => {
+app.get('/api/admin/access-requests', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const snap = await firestore.collection('access_requests').orderBy('requestedAt', 'desc').get();
     res.json(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -474,7 +503,7 @@ app.get('/api/admin/access-requests', async (_req: Request, res: Response) => {
   }
 });
 
-app.post('/api/admin/access-requests/:id/approve', async (req: Request, res: Response) => {
+app.post('/api/admin/access-requests/:id/approve', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, position, department, team, phone, joinDate, role, processedBy } = req.body;
@@ -530,7 +559,7 @@ app.post('/api/admin/access-requests/:id/approve', async (req: Request, res: Res
   }
 });
 
-app.post('/api/admin/access-requests/:id/reject', async (req: Request, res: Response) => {
+app.post('/api/admin/access-requests/:id/reject', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { processedBy } = req.body;
     await firestore.collection('access_requests').doc(req.params.id).update({
@@ -544,7 +573,7 @@ app.post('/api/admin/access-requests/:id/reject', async (req: Request, res: Resp
   }
 });
 
-app.delete('/api/admin/access-requests/:id', async (req: Request, res: Response) => {
+app.delete('/api/admin/access-requests/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
     await firestore.collection('access_requests').doc(req.params.id).delete();
     res.json({ success: true });
@@ -792,7 +821,7 @@ app.get('/api/chatbot/top-questions', async (_req: Request, res: Response) => {
 // ═══ 관리자 API ═══
 
 // 상담 기록 조회
-app.get('/api/admin/records', async (req: Request, res: Response) => {
+app.get('/api/admin/records', requireAdmin, async (req: Request, res: Response) => {
   let records = await getRecords();
   const userId = req.query.userId as string;
   if (userId) {
@@ -802,7 +831,7 @@ app.get('/api/admin/records', async (req: Request, res: Response) => {
 });
 
 // 상담 상태 변경
-app.put('/api/admin/records/:id/status', async (req: Request, res: Response) => {
+app.put('/api/admin/records/:id/status', requireAdmin, async (req: Request, res: Response) => {
   const { status } = req.body;
   if (status !== 'AI해결' && status !== '직접 문의' && status !== '오류') {
     return res.status(400).json({ error: '유효하지 않은 상태입니다.' });
@@ -812,7 +841,7 @@ app.put('/api/admin/records/:id/status', async (req: Request, res: Response) => 
 });
 
 // 오류 신고 — 기존 레코드를 오류로 업데이트
-app.put('/api/admin/records/:id/report-error', async (req: Request, res: Response) => {
+app.put('/api/admin/records/:id/report-error', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { errorNote } = req.body;
     if (!errorNote) return res.status(400).json({ error: '오류 내용 필요' });
@@ -831,12 +860,12 @@ app.put('/api/admin/records/:id/report-error', async (req: Request, res: Respons
 });
 
 // 규정 초안 조회
-app.get('/api/admin/drafts', async (_req: Request, res: Response) => {
+app.get('/api/admin/drafts', requireAdmin, async (_req: Request, res: Response) => {
   res.json(await getRuleDrafts());
 });
 
 // 규정 초안 추가
-app.post('/api/admin/drafts', async (req: Request, res: Response) => {
+app.post('/api/admin/drafts', requireAdmin, async (req: Request, res: Response) => {
   const { section, itemNumber, action, content, reason, updatedBy } = req.body;
   const draft: RuleDraft = {
     id: crypto.randomUUID(),
@@ -854,20 +883,20 @@ app.post('/api/admin/drafts', async (req: Request, res: Response) => {
 });
 
 // 규정 초안 수정
-app.put('/api/admin/drafts/:id', async (req: Request, res: Response) => {
+app.put('/api/admin/drafts/:id', requireAdmin, async (req: Request, res: Response) => {
   const updated = await updateRuleDraft(req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: 'not found' });
   res.json({ success: true });
 });
 
 // 규정 초안 삭제
-app.delete('/api/admin/drafts/:id', async (req: Request, res: Response) => {
+app.delete('/api/admin/drafts/:id', requireAdmin, async (req: Request, res: Response) => {
   await deleteRuleDraft(req.params.id);
   res.json({ success: true });
 });
 
 // 규정 초안 일괄 적용
-app.post('/api/admin/drafts/apply', async (_req: Request, res: Response) => {
+app.post('/api/admin/drafts/apply', requireAdmin, async (_req: Request, res: Response) => {
   const drafts = (await getRuleDrafts()).filter(d => !d.applied);
   if (drafts.length === 0) {
     return res.json({ success: true, applied: 0 });
@@ -911,12 +940,12 @@ app.post('/api/admin/drafts/apply', async (_req: Request, res: Response) => {
 });
 
 // 현재 규정 조회
-app.get('/api/admin/rules', async (_req: Request, res: Response) => {
+app.get('/api/admin/rules', requireAdmin, async (_req: Request, res: Response) => {
   res.json({ content: await loadRulesFile() });
 });
 
 // 규정 직접 수정 (섹션별 또는 전체)
-app.post('/api/admin/rules/update', async (req: Request, res: Response) => {
+app.post('/api/admin/rules/update', requireAdmin, async (req: Request, res: Response) => {
   const { content } = req.body;
   if (typeof content !== 'string') {
     return res.status(400).json({ error: '내용이 필요합니다.' });
@@ -926,7 +955,7 @@ app.post('/api/admin/rules/update', async (req: Request, res: Response) => {
 });
 
 // 섹션 추가
-app.post('/api/admin/rules/section', async (req: Request, res: Response) => {
+app.post('/api/admin/rules/section', requireAdmin, async (req: Request, res: Response) => {
   const { sectionName, updatedBy } = req.body;
   if (!sectionName || typeof sectionName !== 'string') {
     return res.status(400).json({ error: '섹션 이름이 필요합니다.' });
@@ -949,7 +978,7 @@ app.post('/api/admin/rules/section', async (req: Request, res: Response) => {
 });
 
 // 섹션 삭제
-app.delete('/api/admin/rules/section/:sectionName', async (req: Request, res: Response) => {
+app.delete('/api/admin/rules/section/:sectionName', requireAdmin, async (req: Request, res: Response) => {
   const sectionName = decodeURIComponent(req.params.sectionName);
   const updatedBy = req.body?.updatedBy || '알 수 없음';
   let rules = await loadRulesFile();
