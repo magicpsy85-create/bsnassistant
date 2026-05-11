@@ -153,7 +153,8 @@ NAVER_CLIENT_SECRET=
 - 당월 데이터: 6시간 TTL
 - 비당월 미확정: 24시간 TTL
 - 0건 응답: 재호출
-- 정기 재검증: 매월 1일(현재월+이전월), 분기 1일(1·4·7·10월) 전수 재검증
+- SQLite 캐시 on-demand lazy TTL 정책: 당월 6시간 / 비당월 24시간. cron·스케줄러 없음 — refresh는 getTransactions(sggCd, dealYm) 호출 시 TTL 만료 시점에만 발생. cdealDay 취소 필터는 read-time에 txHideCancelled 토글로 적용 (캐시는 raw 행 보존).
+- 정기 재검증: 2026-05-11 기준 미구현. 향후 신모델 Phase 1에서 서울 daily cron + 비서울 lazy daily 신규 구축 예정.
 
 ### 랭킹 API
 - 전국 → 17개 시/도별 랭킹
@@ -166,7 +167,7 @@ NAVER_CLIENT_SECRET=
 ### 필터링 (실거래 데이터)
 - `buildingType === '집합'` 제외 (집합건물)
 - `shareDealingType !== ''` 제외 (지분거래)
-- cdealDay 존재 시 해약 처리 (통계 기본 제외, 토글 가능)
+- cdealDay 해약 처리는 read-time 동적 필터 — txHideCancelled 토글로 통계 제외 여부 결정 (캐시는 raw 보존)
 
 ## 구성원 관리
 
