@@ -1657,6 +1657,9 @@ async function doGenerate(channelOverride) {
 
     currentTopic = input;
     bindResults(data.result);
+    // B-2-B-3: 생성 성공 시 this-time-only 채널 state 초기화 + 칩 재렌더 (실패 시 보존하여 동일 채널 재시도 가능)
+    thisTimeOnlyChannels = [];
+    renderMainChannelChips();
     saveHistory(mode, input, data.result);
     showResult();
   } catch (err) {
