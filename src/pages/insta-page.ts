@@ -995,7 +995,15 @@ function getApiBase() {
   } catch(e) {}
   return cfBaseUrl || '';
 }
-(function(){ var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n; })();
+var userRole = localStorage.getItem('bsn_user_role') || '';
+function applyRoleVisibility() {
+  var studyBtn = document.querySelector('.btn-study');
+  if (studyBtn) studyBtn.style.display = (userRole === '관리자') ? '' : 'none';
+}
+(function(){
+  var n=localStorage.getItem('bsn_user_name'); if(n) document.getElementById('navUserName').textContent=n;
+  applyRoleVisibility();
+})();
 // ─── Card news data ───
 const CARD_TAGS = ['문제 제기','손해 인식','관점 전환','해결 방법','증거','결심','CTA'];
 const BADGE_MATRIX = {
@@ -2056,6 +2064,10 @@ document.getElementById('cardTag').addEventListener('keydown', function(e) {
 var selectedPdfFiles = [];
 
 function showLearnView() {
+  if (userRole !== '관리자') {
+    alert('학습 기능은 관리자 전용입니다.');
+    return;
+  }
   document.getElementById('inputView').style.display = 'none';
   document.getElementById('resultView').style.display = 'none';
   document.getElementById('transactionView').style.display = 'none';
@@ -3497,6 +3509,9 @@ async function doInstaLogin() {
     localStorage.setItem('bsn_firebase_token', idToken);
     localStorage.setItem('bsn_session_id', data.user.sessionId || '');
     sessionStorage.setItem('bsn_session_active', 'true');
+
+    userRole = data.user.role;
+    applyRoleVisibility();
 
     document.getElementById('instaLoginOverlay').style.display = 'none';
     initCardNav();
