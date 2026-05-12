@@ -1642,7 +1642,10 @@ async function doGenerate(channelOverride) {
       if (suggestionMeta.region2) requestBody.region2 = suggestionMeta.region2;
       if (suggestionMeta.rankBy) requestBody.rankBy = suggestionMeta.rankBy;
     }
-    requestBody.channels = (Array.isArray(channelOverride) && channelOverride.length > 0) ? channelOverride : getCurrentChannels();
+    // B-2-B-3: override 우선, 미전달 시 preset ∪ this-time-only union (Set으로 중복 제거, insertion order 보존 → instagram 우선 유지)
+    requestBody.channels = (Array.isArray(channelOverride) && channelOverride.length > 0)
+      ? channelOverride
+      : Array.from(new Set([...getCurrentChannels(), ...thisTimeOnlyChannels]));
 
     const resp = await fetch(getApiBase() + '/api/content/generate', {
       method: 'POST',
