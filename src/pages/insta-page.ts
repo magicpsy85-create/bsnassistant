@@ -88,6 +88,15 @@ export function generateInstaPageHTML(regionJson?: string): string {
     .preset-modal-btn-cancel,.preset-modal-btn-save{flex:1;padding:10px;font-size:13px;border-radius:6px;cursor:pointer;border:none;font-family:inherit;}
     .preset-modal-btn-cancel{background:var(--bg);border:1px solid var(--border);color:var(--text);}
     .preset-modal-btn-save{background:var(--navy);color:#fff;font-weight:500;}
+    /* B-2-B-3: 메인 채널 chip row (생성 버튼 위) */
+    .main-channel-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;}
+    .main-channel-chips:empty{display:none;}
+    .main-channel-chips-divider{width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0;}
+    .main-channel-chip{display:inline-flex;align-items:center;padding:6px 12px;font-size:12px;border-radius:16px;font-family:inherit;border:1px solid transparent;line-height:1;}
+    .main-channel-chip--preset{background:var(--navy);color:#fff;border-color:var(--navy);cursor:default;}
+    .main-channel-chip--available{background:transparent;color:var(--sub);border-color:var(--border);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;}
+    .main-channel-chip--available:hover{border-color:var(--navy-dark);color:var(--navy-dark);}
+    .main-channel-chip--available.active{background:var(--navy-light);color:var(--navy-dark);border-color:var(--navy);}
     .btn-study{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--navy-border);border-radius:8px;background:var(--navy-light);color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;text-decoration:none;}
     .btn-study:hover{background:var(--navy);color:#fff;}
     .btn-study .badge{background:var(--navy);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700;}
@@ -637,6 +646,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
       <div class="input-guide">텍스트, 키워드, 기사 URL 모두 입력 가능 · URL 입력 시 기사를 자동 추출합니다</div>
     </div>
 
+    <div class="main-channel-chips" id="mainChannelChips"></div>
     <button class="btn-generate" id="generateBtn" onclick="doGenerate()">콘텐츠 생성하기</button>
   </div>
 
@@ -4274,6 +4284,9 @@ var currentPreset = {
 var modalSelectedPreset = null;
 var modalCustomChannels = [];
 
+// B-2-B-3: this-time-only 채널 (preset과 분리). 생성 1회용. 성공 시 자동 초기화.
+var thisTimeOnlyChannels = [];
+
 // 현재 프리셋 → 채널 배열. 백엔드 presetToChannels()와 동일한 규칙.
 function getCurrentChannels() {
   if (currentPreset.selectedPreset === 'custom') {
@@ -4281,6 +4294,45 @@ function getCurrentChannels() {
     return ch.indexOf('instagram') >= 0 ? ch : ['instagram'].concat(ch);
   }
   return PRESET_TO_CHANNELS[currentPreset.selectedPreset] || ['instagram'];
+}
+
+// B-2-B-3: 메인 영역 채널 chip row 렌더링
+// preset 칩(solid, 표시 전용) | divider | available 칩(ghost, 클릭 토글 → thisTimeOnlyChannels)
+function renderMainChannelChips() {
+  var container = document.getElementById('mainChannelChips');
+  if (!container) return;
+
+  var presetChannels = getCurrentChannels();
+  var available = [];
+  for (var i = 0; i < ALL_CHANNELS.length; i++) {
+    if (presetChannels.indexOf(ALL_CHANNELS[i]) < 0) available.push(ALL_CHANNELS[i]);
+  }
+
+  var html = '';
+  for (var j = 0; j < presetChannels.length; j++) {
+    var ch = presetChannels[j];
+    html += '<span class="main-channel-chip main-channel-chip--preset">' + CHANNEL_LABELS[ch] + '</span>';
+  }
+  if (presetChannels.length > 0 && available.length > 0) {
+    html += '<span class="main-channel-chips-divider"></span>';
+  }
+  for (var k = 0; k < available.length; k++) {
+    var ach = available[k];
+    var activeClass = thisTimeOnlyChannels.indexOf(ach) >= 0 ? ' active' : '';
+    html += '<button type="button" class="main-channel-chip main-channel-chip--available' + activeClass + '" data-channel="' + ach + '" onclick="toggleThisTimeOnlyChannel(\\'' + ach + '\\')">+ ' + CHANNEL_LABELS[ach] + '</button>';
+  }
+
+  container.innerHTML = html;
+}
+
+function toggleThisTimeOnlyChannel(channel) {
+  var idx = thisTimeOnlyChannels.indexOf(channel);
+  if (idx >= 0) {
+    thisTimeOnlyChannels.splice(idx, 1);
+  } else {
+    thisTimeOnlyChannels.push(channel);
+  }
+  renderMainChannelChips();
 }
 
 /**
@@ -4410,6 +4462,7 @@ function updatePresetDisplay() {
   if (label) {
     label.textContent = (PRESET_LABELS[currentPreset.selectedPreset] || '빠르게') + ' 모드';
   }
+  renderMainChannelChips();
 }
 
 function openPresetModal() {
@@ -4534,6 +4587,9 @@ function attachPresetHandlers() {
       if (e.target === backdrop) closePresetModal();
     });
   }
+
+  // B-2-B-3: 메인 칩 초기 렌더 (loadUserPreset 실패·예외 경로에서 비어 있지 않도록 보장)
+  renderMainChannelChips();
 }
 
 if (document.readyState === 'loading') {
