@@ -689,13 +689,13 @@ app.get('/api/content/recommend-news', requireAuth, async (_req: Request, res: R
 // ─── 학습 자료 API ───
 const pdfUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 }, fileFilter: (_req, file, cb) => { file.mimetype === 'application/pdf' ? cb(null, true) : cb(new Error('PDF 파일만 업로드 가능합니다')); } });
 
-app.get('/api/learn/articles', (_req: Request, res: Response) => {
+app.get('/api/learn/articles', requireAdmin, (_req: Request, res: Response) => {
   const articles = getArticles();
   const stats = getArticleStats();
   res.json({ articles, ...stats });
 });
 
-app.post('/api/learn/add', async (req: Request, res: Response) => {
+app.post('/api/learn/add', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { urls } = req.body;
     if (!Array.isArray(urls) || urls.length === 0) return res.status(400).json({ error: 'URL 목록이 필요합니다.' });
@@ -706,7 +706,7 @@ app.post('/api/learn/add', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/learn/upload-pdf', (req: Request, res: Response, next: any) => {
+app.post('/api/learn/upload-pdf', requireAdmin, (req: Request, res: Response, next: any) => {
   pdfUpload.array('files', 10)(req, res, (err: any) => {
     if (err) {
       console.error('[PDF 업로드] multer 에러:', err.message);
@@ -729,13 +729,13 @@ app.post('/api/learn/upload-pdf', (req: Request, res: Response, next: any) => {
   }
 });
 
-app.delete('/api/learn/articles/:id', (req: Request, res: Response) => {
+app.delete('/api/learn/articles/:id', requireAdmin, (req: Request, res: Response) => {
   const remaining = deleteArticle(req.params.id);
   res.json({ success: true, remaining });
 });
 
 // ─── 잘못 분류된 학습 데이터 조회/정리 ───
-app.get('/api/learn/corrupted', async (_req: Request, res: Response) => {
+app.get('/api/learn/corrupted', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
     if (!fs.existsSync(learnedPath)) {
@@ -759,7 +759,7 @@ app.get('/api/learn/corrupted', async (_req: Request, res: Response) => {
   }
 });
 
-app.delete('/api/learn/corrupted', async (_req: Request, res: Response) => {
+app.delete('/api/learn/corrupted', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const learnedPath = path.join(__dirname, '..', 'data', 'learned_articles.json');
     if (!fs.existsSync(learnedPath)) {

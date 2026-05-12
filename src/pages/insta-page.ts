@@ -2074,7 +2074,7 @@ function hideLearnView() {
 
 async function loadLearnData() {
   try {
-    var resp = await fetch('/api/learn/articles');
+    var resp = await fetchWithTokenRetry('/api/learn/articles');
     var data = await resp.json();
     renderLearnStats(data);
     renderLearnArticles(data.articles || []);
@@ -2083,7 +2083,7 @@ async function loadLearnData() {
 }
 
 function updateStudyBadge() {
-  fetch('/api/learn/articles').then(function(r) { return r.json(); }).then(function(d) {
+  fetchWithTokenRetry('/api/learn/articles').then(function(r) { return r.json(); }).then(function(d) {
     document.getElementById('studyBadge').textContent = d.total || 0;
   }).catch(function() {});
 }
@@ -2213,7 +2213,7 @@ async function doLearnAdd() {
   }, 1000);
 
   try {
-    var resp = await fetch('/api/learn/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls }) });
+    var resp = await fetchWithTokenRetry('/api/learn/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls }) });
     var data = await resp.json();
     clearInterval(interval);
     document.getElementById('learnProgressBar').style.width = '100%';
@@ -2293,7 +2293,7 @@ async function doPdfUpload() {
     var fd = new FormData();
     selectedPdfFiles.forEach(function(f) { fd.append('files', f); });
     console.log('[PDF] 업로드 시작, 파일 수:', selectedPdfFiles.length);
-    var resp = await fetch('/api/learn/upload-pdf', { method: 'POST', body: fd });
+    var resp = await fetchWithTokenRetry('/api/learn/upload-pdf', { method: 'POST', body: fd });
     console.log('[PDF] 응답 상태:', resp.status);
     var data = await resp.json();
     console.log('[PDF] 응답 데이터:', JSON.stringify(data).slice(0, 300));
@@ -2323,7 +2323,7 @@ async function doPdfUpload() {
 // 삭제
 function doLearnDelete(id) {
   if (!confirm('이 기사를 학습 목록에서 삭제할까요?')) return;
-  fetch('/api/learn/articles/' + id, { method: 'DELETE' }).then(function() { loadLearnData(); });
+  fetchWithTokenRetry('/api/learn/articles/' + id, { method: 'DELETE' }).then(function() { loadLearnData(); });
 }
 
 // ─── AI 뉴스 추천 ───
