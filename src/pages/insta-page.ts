@@ -1459,7 +1459,7 @@ async function regenerateCurrentCard(btn) {
   if (meta.rankBy) reqBody.rankBy = meta.rankBy;
 
   try {
-    var resp = await fetch(getApiBase() + '/api/content/regenerate-card', {
+    var resp = await fetchWithTokenRetry(getApiBase() + '/api/content/regenerate-card', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reqBody)
@@ -1526,7 +1526,7 @@ async function generateSingleChannel(uiCh) {
   }
 
   try {
-    var resp = await fetch(getApiBase() + '/api/content/generate-channel', {
+    var resp = await fetchWithTokenRetry(getApiBase() + '/api/content/generate-channel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ channel: apiCh, contentHash: window.currentContentHash })
@@ -1647,7 +1647,7 @@ async function doGenerate(channelOverride) {
       ? channelOverride
       : Array.from(new Set([...getCurrentChannels(), ...thisTimeOnlyChannels]));
 
-    const resp = await fetch(getApiBase() + '/api/content/generate', {
+    const resp = await fetchWithTokenRetry(getApiBase() + '/api/content/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
@@ -2337,7 +2337,7 @@ async function loadRecommendNews(force) {
   }
   wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#A8A49C;font-size:13px;"><div style="width:20px;height:20px;border:2px solid #E2E2E2;border-top-color:#2C4A7C;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;"></div>추천 기사를 찾고 있습니다...</div>';
   try {
-    var resp = await fetch('/api/content/recommend-news');
+    var resp = await fetchWithTokenRetry('/api/content/recommend-news');
     var data = await resp.json();
     if (data.error && (!data.articles || !data.articles.length)) {
       wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#A8A49C;font-size:13px;">' + escHtml(data.error) + '</div>';

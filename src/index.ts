@@ -75,6 +75,29 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// 사용자 인증 검증 미들웨어 (관리자/직원 무관, role 체크 없음)
+// Authorization: Bearer <idToken> 필수 → Firebase Auth 토큰 검증 → email → members 등록 확인
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!idToken) return res.status(401).json({ error: 'idToken 필요' });
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) return res.status(403).json({ error: '이메일 정보 없음' });
+    const snap = await firestore.collection('members').where('email', '==', email).limit(1).get();
+    if (snap.empty) return res.status(403).json({ error: '등록되지 않은 사용자' });
+    (req as any).member = snap.docs[0].data();
+    next();
+  } catch (e: any) {
+    const code = e?.code || e?.errorInfo?.code || '';
+    if (typeof code === 'string' && code.indexOf('auth/') === 0) {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+    console.error('[requireAuth] 오류:', e.message);
+    res.status(500).json({ error: 'auth check failed' });
+  }
+}
+
 // ─── 멤버 목록 API ───
 app.get('/api/members', async (_req: Request, res: Response) => {
   res.json(await getMembers());
@@ -356,7 +379,7 @@ app.get('/insta', (_req: Request, res: Response) => {
 });
 
 // ─── 콘텐츠 생성 API ───
-app.post('/api/content/generate', async (req: Request, res: Response) => {
+app.post('/api/content/generate', requireAuth, async (req: Request, res: Response) => {
   const tReq = Date.now();
   try {
     req.setTimeout(300000); // 5분 타임아웃
@@ -420,7 +443,7 @@ app.post('/api/content/generate', async (req: Request, res: Response) => {
 });
 
 // ─── 채널별 후속 생성 API (B-1b) ───
-app.post('/api/content/generate-channel', async (req: Request, res: Response) => {
+app.post('/api/content/generate-channel', requireAuth, async (req: Request, res: Response) => {
   const tReq = Date.now();
   try {
     req.setTimeout(180000);
@@ -448,7 +471,7 @@ app.post('/api/content/generate-channel', async (req: Request, res: Response) =>
 });
 
 // ─── 카드 단일 재생성 API ───
-app.post('/api/content/regenerate-card', async (req: Request, res: Response) => {
+app.post('/api/content/regenerate-card', requireAuth, async (req: Request, res: Response) => {
   const tReq = Date.now();
   try {
     req.setTimeout(180000);
@@ -583,7 +606,7 @@ app.delete('/api/admin/access-requests/:id', requireAdmin, async (req: Request, 
 });
 
 // ─── AI 뉴스 추천 API ───
-app.get('/api/content/recommend-news', async (_req: Request, res: Response) => {
+app.get('/api/content/recommend-news', requireAuth, async (_req: Request, res: Response) => {
   try {
     const naverId = process.env.NAVER_CLIENT_ID;
     const naverSecret = process.env.NAVER_CLIENT_SECRET;
