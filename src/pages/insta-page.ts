@@ -3402,7 +3402,15 @@ async function ensureFirebaseInitialized() {
     }
     var config = await configRes.json();
     firebase.initializeApp(config);
-    console.log('[Firebase] 초기화 완료');
+    // sessionId 자동 로그인 시점 currentUser 복원 보장: onAuthStateChanged 첫 emission 대기
+    // 미적용 시 페이지 로드 자동 fetch(loadRecommendNews 등)가 currentUser null로 401
+    await new Promise(function(resolve) {
+      var unsubscribe = firebase.auth().onAuthStateChanged(function() {
+        unsubscribe();
+        resolve(null);
+      });
+    });
+    console.log('[Firebase] 초기화 + Auth state 복원 완료');
     return true;
   } catch (e) {
     console.warn('[Firebase] 초기화 실패', e && e.message);
