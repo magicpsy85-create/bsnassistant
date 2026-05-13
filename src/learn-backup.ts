@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { firestore } from './firebase-admin';
-import { LearnData } from './learn-store';
+import type { LearnData } from './learn-store';
 
 const BACKUP_DIR = path.join(__dirname, '..', 'data', 'backups');
 const FIRESTORE_DEBOUNCE_MS = 5 * 60 * 1000;
