@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import OpenAI from 'openai';
+import { backupLearnedArticles } from './learn-backup';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const DATA_PATH = path.join(__dirname, '..', 'data', 'learned_articles.json');
@@ -22,7 +23,7 @@ export interface LearnedArticle {
   analyzedAt: string;
 }
 
-interface LearnData {
+export interface LearnData {
   articles: LearnedArticle[];
   lastUpdated: string;
 }
@@ -44,6 +45,15 @@ function saveData(data: LearnData): void {
   const tmp = DATA_PATH + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
   fs.renameSync(tmp, DATA_PATH);
+
+  // fire-and-forget: 백업 실패가 학습 저장 main path에 영향 없음
+  backupLearnedArticles(data).catch(err =>
+    console.error('[learn-backup] hook failed:', err)
+  );
+}
+
+export function getLearnData(): LearnData {
+  return loadData();
 }
 
 // ── 출처 매핑 ───

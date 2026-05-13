@@ -5,7 +5,8 @@ import { generateAdminPageHTML } from './pages/admin-page';
 import { handleChatbotMessage } from './chatbot';
 import { generateInstaPageHTML } from './pages/insta-page';
 import { generateAllContent, regenerateSingleCard, generateChannelFromContext, ALL_CHANNELS, ChannelKey } from './content-generator';
-import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf } from './learn-store';
+import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf, getLearnData } from './learn-store';
+import { backupLearnedArticles } from './learn-backup';
 import axios from 'axios';
 import multer from 'multer';
 import {
@@ -2280,5 +2281,15 @@ if (isDirectRun) {
     console.log(`  -> 챗봇:    http://localhost:${PORT}`);
     console.log(`  -> 관리자:  http://localhost:${PORT}/admin`);
     console.log('');
+
+    // 초기 학습 데이터 백업 (cold start 안전망, debounce 무시)
+    try {
+      const initialData = getLearnData();
+      backupLearnedArticles(initialData, { force: true }).catch(err =>
+        console.error('[learn-backup] startup backup failed:', err)
+      );
+    } catch (err) {
+      console.error('[learn-backup] startup load failed:', err);
+    }
   });
 }
