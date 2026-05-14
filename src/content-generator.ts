@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import axios from 'axios';
 import { buildLearningContext } from './learn-store';
+import { getBrandVoice } from './brand-voice';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = 'gpt-5';
@@ -949,8 +950,14 @@ ${templateCardsExample}
 ].join('')}
 }`;
 
+  // Brand Voice Infobase prepend (빈 값 시 fallback)
+  const brandVoice = await getBrandVoice();
+  const brandVoicePrefix = brandVoice.principles
+    ? `${brandVoice.principles}\n\n${brandVoice.companyInfo}\n\n${brandVoice.cardRules}\n\n---\n\n`
+    : '';
+
   // 학습 데이터가 있으면 시스템 프롬프트에 추가
-  const fullSystemContent = learningCtx ? systemContent + '\n' + learningCtx : systemContent;
+  const fullSystemContent = brandVoicePrefix + (learningCtx ? systemContent + '\n' + learningCtx : systemContent);
 
   console.log('[DEBUG] System prompt 길이:', fullSystemContent.length);
   console.log('[DEBUG] 학습 컨텍스트 포함:', learningCtx ? '있음 (' + learningCtx.length + '자)' : '없음');
@@ -1511,9 +1518,11 @@ export async function generateAllContent(
   };
 
   // ContentContext 캐시 (B-1b: 채널별 후속 호출용)
+  const brandVoiceForHash = await getBrandVoice();
   const contentHash = options.contentHash || computeContentHash({
     input, template,
-    region: options.region, region1: options.region1, region2: options.region2, rankBy: options.rankBy
+    region: options.region, region1: options.region1, region2: options.region2, rankBy: options.rankBy,
+    brandVoiceVersion: brandVoiceForHash.version
   });
   await contextCache.set(contentHash, ctx);
 

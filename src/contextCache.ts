@@ -12,6 +12,7 @@ export function computeContentHash(parts: {
   region1?: string;
   region2?: string;
   rankBy?: string;
+  brandVoiceVersion?: number;
 }): string {
   const key = JSON.stringify({
     input: parts.input || '',
@@ -19,7 +20,8 @@ export function computeContentHash(parts: {
     region: parts.region || '',
     region1: parts.region1 || '',
     region2: parts.region2 || '',
-    rankBy: parts.rankBy || ''
+    rankBy: parts.rankBy || '',
+    brandVoiceVersion: parts.brandVoiceVersion || 0
   });
   return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
 }

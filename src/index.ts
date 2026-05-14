@@ -7,6 +7,7 @@ import { generateInstaPageHTML } from './pages/insta-page';
 import { generateAllContent, regenerateSingleCard, generateChannelFromContext, ALL_CHANNELS, ChannelKey } from './content-generator';
 import { getArticles, getArticleStats, deleteArticle, addArticlesFromUrls, addArticlesFromPdf, getLearnData } from './learn-store';
 import { backupLearnedArticles } from './learn-backup';
+import { preloadBrandVoice } from './brand-voice';
 import axios from 'axios';
 import multer from 'multer';
 import {
@@ -2291,5 +2292,10 @@ if (isDirectRun) {
     } catch (err) {
       console.error('[learn-backup] startup load failed:', err);
     }
+
+    // Brand Voice Infobase 초기 로드 (cold start 안전망)
+    preloadBrandVoice().catch(err =>
+      console.error('[brand-voice] startup preload failed:', err)
+    );
   });
 }
