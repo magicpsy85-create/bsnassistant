@@ -917,7 +917,7 @@ export function generateInstaPageHTML(regionJson?: string): string {
       </select>
       <button id="txRankCustomBtn" onclick="txLoadRanking()" style="display:none;padding:7px 16px;border:none;border-radius:8px;background:var(--navy);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">조회</button>
     </div>
-    <div id="txRankCustomRange" style="display:none;margin-bottom:10px;display:none;gap:12px;align-items:flex-start;">
+    <div id="txRankCustomRange" style="display:none;margin-bottom:10px;gap:12px;align-items:flex-start;">
       <div style="flex:1;">
         <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;">시작</div>
         <div class="tx-ym-picker">
@@ -3656,8 +3656,14 @@ async function txLoadRanking() {
   txRankOpenId = null;
   txUpdateCompareFloat();
 
-  // sessionStorage 캐시 확인
-  var cacheKey = 'txRank_' + sido + '_' + (sgg || 'all') + '_' + months + '_' + txRankSortBy;
+  // sessionStorage 캐시 확인 (custom/ytd는 실제 기간을 키에 반영)
+  var periodKey = months;
+  if (txRankCustomMode) {
+    periodKey = 'custom_' + txRankStartYear + String(txRankStartMon).padStart(2,'0') + '_' + txRankEndYear + String(txRankEndMon).padStart(2,'0');
+  } else if (months === 'ytd') {
+    periodKey = 'ytd_' + new Date().getFullYear();
+  }
+  var cacheKey = 'txRank_' + sido + '_' + (sgg || 'all') + '_' + periodKey + '_' + txRankSortBy;
   try {
     var cached = sessionStorage.getItem(cacheKey);
     if (cached) {

@@ -1364,16 +1364,17 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
     const months = parseInt(String(req.query.months || '6'));
     const sortBy = String(req.query.sortBy || 'totalCount');
     const sgg = req.query.sgg ? String(req.query.sgg) : null;
+    const startMonth = req.query.startMonth ? String(req.query.startMonth) : null;
+    const endMonth = req.query.endMonth ? String(req.query.endMonth) : null;
 
-    // 서버 메모리 캐시 확인
-    const cacheKey = 'rank_' + sido + '_' + (sgg || 'all') + '_' + months + '_' + sortBy;
+    // 서버 메모리 캐시 확인 (period 식별 정보 포함 — startMonth/endMonth 우선)
+    const periodKey = startMonth && endMonth ? startMonth + '_' + endMonth : 'm' + months;
+    const cacheKey = 'rank_' + sido + '_' + (sgg || 'all') + '_' + periodKey + '_' + sortBy;
     const cached = rankingCache.get(cacheKey);
     if (cached && (Date.now() - cached.ts) < RANKING_CACHE_TTL) {
       console.log('[랭킹 캐시] 히트:', cacheKey);
       return res.json(cached.data);
     }
-    const startMonth = req.query.startMonth ? String(req.query.startMonth) : null;
-    const endMonth = req.query.endMonth ? String(req.query.endMonth) : null;
 
     const now = new Date();
     const ymList: string[] = [];
