@@ -1358,6 +1358,12 @@ app.get('/api/transaction/query', async (req: Request, res: Response) => {
 });
 
 // ─── 실거래가 랭킹 API ───
+function periodFromYmList(ymList: string[]): { start: string | null; end: string | null } {
+  if (!ymList || ymList.length === 0) return { start: null, end: null };
+  const sorted = [...ymList].sort();
+  return { start: sorted[0], end: sorted[sorted.length - 1] };
+}
+
 app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
   try {
     const sido = String(req.query.sido || '전국');
@@ -1431,7 +1437,7 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
       sidoRanking.sort(sortFn);
 
-      const result = { type: 'sido' as const, sido: '전국', period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, ranking: sidoRanking };
+      const result = { type: 'sido' as const, sido: '전국', period: periodFromYmList(ymList), prevPeriod: periodFromYmList(prevYmList), ranking: sidoRanking };
       rankingCache.set(cacheKey, { data: result, ts: Date.now() });
       res.json(result);
       return;
@@ -1472,7 +1478,7 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
       dongRanking.sort(sortFn);
 
-      const result = { type: 'dong' as const, sido, sgg, period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, fullStats, ranking: dongRanking };
+      const result = { type: 'dong' as const, sido, sgg, period: periodFromYmList(ymList), prevPeriod: periodFromYmList(prevYmList), fullStats, ranking: dongRanking };
       rankingCache.set(cacheKey, { data: result, ts: Date.now() });
       res.json(result);
       return;
@@ -1505,7 +1511,7 @@ app.get('/api/transaction/ranking', async (req: Request, res: Response) => {
 
     ranking.sort(sortFn);
 
-    const result = { type: 'sgg' as const, sido, period: { start: ymList[ymList.length - 1], end: ymList[0] }, prevPeriod: { start: prevYmList[prevYmList.length - 1], end: prevYmList[0] }, ranking };
+    const result = { type: 'sgg' as const, sido, period: periodFromYmList(ymList), prevPeriod: periodFromYmList(prevYmList), ranking };
     rankingCache.set(cacheKey, { data: result, ts: Date.now() });
     res.json(result);
   } catch (e: any) {
@@ -1943,11 +1949,10 @@ app.post('/api/transaction/report', async (req: Request, res: Response) => {
     const { regions, period, prevPeriod } = req.body;
     if (!regions || !Array.isArray(regions)) return res.status(400).json({ error: 'regions 데이터 필요' });
 
-    // 항상 빠른 날짜 → 늦은 날짜 순서로 정렬
+    // 응답 raw가 이미 작은→큰으로 정렬됨 (periodFromYmList 표준화)
     const formatPeriod = (p: any): string => {
       if (!p) return '';
-      let s = p.start, e = p.end;
-      if (parseInt(s) > parseInt(e)) { const t = s; s = e; e = t; }
+      const s = p.start, e = p.end;
       return `${s.substring(0,4)}년 ${parseInt(s.substring(4))}월 ~ ${e.substring(0,4)}년 ${parseInt(e.substring(4))}월`;
     };
     const periodText = formatPeriod(period);

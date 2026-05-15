@@ -3289,7 +3289,6 @@ function txShowReport(reportText) {
   var periodEl = document.getElementById('txReportPeriod');
   if (txRankingData && txRankingData.period) {
     var ps = txRankingData.period.start, pe = txRankingData.period.end;
-    if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
     var label = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
     periodEl.textContent = '분석 기간: ' + label;
     periodEl.style.display = 'block';
@@ -3674,18 +3673,14 @@ async function txLoadRanking() {
         loading.style.display = 'none';
         var pl = parsed.period || {};
         var pvl = parsed.prevPeriod || {};
-        // 항상 빠른 날짜 → 늦은 날짜 순서로 표시
+        // 응답 raw가 이미 작은→큰으로 정렬됨
         var periodLabel = '';
         var prevLabel = '';
         if (pl.start) {
-          var ps = pl.start, pe = pl.end;
-          if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
-          periodLabel = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
+          periodLabel = pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4);
         }
         if (pvl.start) {
-          var pps = pvl.start, ppe = pvl.end;
-          if (parseInt(pps) > parseInt(ppe)) { var tt = pps; pps = ppe; ppe = tt; }
-          prevLabel = pps.substring(0,4) + '.' + pps.substring(4) + ' ~ ' + ppe.substring(0,4) + '.' + ppe.substring(4);
+          prevLabel = pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4);
         }
         document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
         try {
@@ -3733,18 +3728,14 @@ async function txLoadRanking() {
 
     var pl = data.period || {};
     var pvl = data.prevPeriod || {};
-    // 항상 빠른 날짜 → 늦은 날짜 순서로 표시
+    // 응답 raw가 이미 작은→큰으로 정렬됨
     var periodLabel = '';
     var prevLabel = '';
     if (pl.start) {
-      var ps = pl.start, pe = pl.end;
-      if (parseInt(ps) > parseInt(pe)) { var t = ps; ps = pe; pe = t; }
-      periodLabel = ps.substring(0,4) + '.' + ps.substring(4) + ' ~ ' + pe.substring(0,4) + '.' + pe.substring(4);
+      periodLabel = pl.start.substring(0,4) + '.' + pl.start.substring(4) + ' ~ ' + pl.end.substring(0,4) + '.' + pl.end.substring(4);
     }
     if (pvl.start) {
-      var pps = pvl.start, ppe = pvl.end;
-      if (parseInt(pps) > parseInt(ppe)) { var tt = pps; pps = ppe; ppe = tt; }
-      prevLabel = pps.substring(0,4) + '.' + pps.substring(4) + ' ~ ' + ppe.substring(0,4) + '.' + ppe.substring(4);
+      prevLabel = pvl.start.substring(0,4) + '.' + pvl.start.substring(4) + ' ~ ' + pvl.end.substring(0,4) + '.' + pvl.end.substring(4);
     }
     document.getElementById('txRankPeriodInfo').textContent = periodLabel + ' 기준 / 전년 동기(' + prevLabel + ') 대비 / 상업업무용 부동산';
 
