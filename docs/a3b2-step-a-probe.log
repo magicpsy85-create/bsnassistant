@@ -1,0 +1,165 @@
+◇ injected env (11) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+KEY length: 64 / prefix: 1b9ffcd8...
+부천 sample bjdongCd: 10100
+
+========== Call 1 — 강남구 개포동 (baseline + 매핑 검증) ==========
+URL (key masked): http://apis.data.go.kr/1613000/ArchPmsHubService/getApBasisOulnInfo?serviceKey=***&sigunguCd=11680&bjdongCd=10300&startDate=20240101&endDate=20241231&numOfRows=100&pageNo=1
+HTTP 200
+RAW (first 2000 chars):
+<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE</resultMsg></header><body><items><item><rnum>1</rnum><platPlc>서울특별시 강남구 개포동 12-4번지</platPlc><sigunguCd>11680</sigunguCd><bjdongCd>10300</bjdongCd><platGbCd>0</platGbCd><bun>0012</bun><ji>0004</ji><mgmPmsrgstPk>1000000000000000499048</mgmPmsrgstPk><bldNm>석탑프라자</bldNm><splotNm> </splotNm><block> </block><lot> </lot><jimokCdNm>대</jimokCdNm><jiyukCdNm>상대보호구역</jiyukCdNm><jiguCdNm>대공방어협조구역</jiguCdNm><guyukCd>UQQ300</guyukCd><guyukCdNm>지구단위계획구역</guyukCdNm><jimokCd>08</jimokCd><jiyukCd>UOA120</jiyukCd><jiguCd>UNE200</jiguCd><archGbCd>0700</archGbCd><archGbCdNm>용도변경</archGbCdNm><platArea>2272</platArea><archArea>1152.45</archArea><bcRat>50.72</bcRat><totArea>16074.93</totArea><vlRatEstmTotArea>9074.07</vlRatEstmTotArea><vlRat>399.39</vlRat><mainBldCnt>1</mainBldCnt><atchBldDongCnt>0</atchBldDongCnt><mainPurpsCd>10000</mainPurpsCd><mainPurpsCdNm>교육연구시설</mainPurpsCdNm><hhldCnt>0</hhldCnt><hoCnt>87</hoCnt><fmlyCnt>0</fmlyCnt><totPkngCnt>0</totPkngCnt><stcnsSchedDay> </stcnsSchedDay><stcnsDelayDay> </stcnsDelayDay><realStcnsDay> </realStcnsDay><archPmsDay>20240417</archPmsDay><useAprDay> </useAprDay><crtnDay>20240417</crtnDay></item><item><rnum>2</rnum><platPlc>서울특별시 강남구 개포동 12-6번지</platPlc><sigunguCd>11680</sigunguCd><bjdongCd>10300</bjdongCd><platGbCd>0</platGbCd><bun>0012</bun><ji>0006</ji><mgmPmsrgstPk>1000000000000000529743</mgmPmsrgstPk><bldNm> </bldNm><splotNm> </splotNm><block> </block><lot> </lot><jimokCdNm>대</jimokCdNm><jiyukCdNm>상대보호구역</jiyukCdNm><jiguCdNm>대공방어협조구역</jiguCdNm><guyukCd>UQQ300</guyukCd><guyukCdNm>지구단위계획구역</guyukCdNm><jimokCd>08</jimokCd><jiyukCd>UOA120</jiyukCd><jiguCd>UNE200</jiguCd><archGbCd> </archGbCd><archGbCdNm> </archGbCdNm><platArea>1164.9</platArea><archArea>36</archArea><bcRat>0</bcRat><totArea>54</totArea><vlRatEstmTotArea>0</vlRatEstmTotArea><vlRat>0</vlRat><mainBldCnt>0</mainBldCnt><atchBldDongCnt>0</atchBldDongCnt><mainPurpsCd> </mainPurpsCd><mainPurpsCdNm> </mainPurpsCd
+
+resultCode: 00 / msg: NORMAL SERVICE
+totalCount: 47
+items count: 47
+field names (42): rnum, platPlc, sigunguCd, bjdongCd, platGbCd, bun, ji, mgmPmsrgstPk, bldNm, splotNm, block, lot, jimokCdNm, jiyukCdNm, jiguCdNm, guyukCd, guyukCdNm, jimokCd, jiyukCd, jiguCd, archGbCd, archGbCdNm, platArea, archArea, bcRat, totArea, vlRatEstmTotArea, vlRat, mainBldCnt, atchBldDongCnt, mainPurpsCd, mainPurpsCdNm, hhldCnt, hoCnt, fmlyCnt, totPkngCnt, stcnsSchedDay, stcnsDelayDay, realStcnsDay, archPmsDay, useAprDay, crtnDay
+first item full:
+{
+  "rnum": "1",
+  "platPlc": "서울특별시 강남구 개포동 12-4번지",
+  "sigunguCd": "11680",
+  "bjdongCd": "10300",
+  "platGbCd": "0",
+  "bun": "0012",
+  "ji": "0004",
+  "mgmPmsrgstPk": "1000000000000000499048",
+  "bldNm": "석탑프라자",
+  "splotNm": "",
+  "block": "",
+  "lot": "",
+  "jimokCdNm": "대",
+  "jiyukCdNm": "상대보호구역",
+  "jiguCdNm": "대공방어협조구역",
+  "guyukCd": "UQQ300",
+  "guyukCdNm": "지구단위계획구역",
+  "jimokCd": "08",
+  "jiyukCd": "UOA120",
+  "jiguCd": "UNE200",
+  "archGbCd": "0700",
+  "archGbCdNm": "용도변경",
+  "platArea": "2272",
+  "archArea": "1152.45",
+  "bcRat": "50.72",
+  "totArea": "16074.93",
+  "vlRatEstmTotArea": "9074.07",
+  "vlRat": "399.39",
+  "mainBldCnt": "1",
+  "atchBldDongCnt": "0",
+  "mainPurpsCd": "10000",
+  "mainPurpsCdNm": "교육연구시설",
+  "hhldCnt": "0",
+  "hoCnt": "87",
+  "fmlyCnt": "0",
+  "totPkngCnt": "0",
+  "stcnsSchedDay": "",
+  "stcnsDelayDay": "",
+  "realStcnsDay": "",
+  "archPmsDay": "20240417",
+  "useAprDay": "",
+  "crtnDay": "20240417"
+}
+
+========== Call 2 — 부천 41192 + bjdong 10100 ==========
+URL (key masked): http://apis.data.go.kr/1613000/ArchPmsHubService/getApBasisOulnInfo?serviceKey=***&sigunguCd=41192&bjdongCd=10100&startDate=20240101&endDate=20241231&numOfRows=100&pageNo=1
+HTTP 200
+RAW (first 2000 chars):
+<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE</resultMsg></header><body><items><item><rnum>1</rnum><platPlc>경기도 부천시 원미구 원미동 2-7번지</platPlc><sigunguCd>41192</sigunguCd><bjdongCd>10100</bjdongCd><platGbCd>0</platGbCd><bun>0002</bun><ji>0007</ji><mgmPmsrgstPk>1097100021203</mgmPmsrgstPk><bldNm> </bldNm><splotNm> </splotNm><block> </block><lot> </lot><jimokCdNm>대</jimokCdNm><jiyukCdNm>제2종일반주거지역</jiyukCdNm><jiguCdNm> </jiguCdNm><guyukCd> </guyukCd><guyukCdNm> </guyukCdNm><jimokCd>08</jimokCd><jiyukCd>UQA122</jiyukCd><jiguCd> </jiguCd><archGbCd> </archGbCd><archGbCdNm> </archGbCdNm><platArea>603.1</platArea><archArea>12</archArea><bcRat>0</bcRat><totArea>12</totArea><vlRatEstmTotArea>0</vlRatEstmTotArea><vlRat>0</vlRat><mainBldCnt>0</mainBldCnt><atchBldDongCnt>0</atchBldDongCnt><mainPurpsCd> </mainPurpsCd><mainPurpsCdNm> </mainPurpsCdNm><hhldCnt>0</hhldCnt><hoCnt>0</hoCnt><fmlyCnt>0</fmlyCnt><totPkngCnt>0</totPkngCnt><stcnsSchedDay> </stcnsSchedDay><stcnsDelayDay> </stcnsDelayDay><realStcnsDay> </realStcnsDay><archPmsDay>20110811</archPmsDay><useAprDay> </useAprDay><crtnDay>20240827</crtnDay></item><item><rnum>2</rnum><platPlc>경기도 부천시 원미구 원미동 4-9번지</platPlc><sigunguCd>41192</sigunguCd><bjdongCd>10100</bjdongCd><platGbCd>0</platGbCd><bun>0004</bun><ji>0009</ji><mgmPmsrgstPk>1097100058263</mgmPmsrgstPk><bldNm> </bldNm><splotNm> </splotNm><block> </block><lot> </lot><jimokCdNm>공장용지</jimokCdNm><jiyukCdNm>준공업지역</jiyukCdNm><jiguCdNm> </jiguCdNm><guyukCd>UOA120</guyukCd><guyukCdNm>상대보호구역</guyukCdNm><jimokCd>09</jimokCd><jiyukCd>UQA330</jiyukCd><jiguCd> </jiguCd><archGbCd> </archGbCd><archGbCdNm> </archGbCdNm><platArea>1318.5</platArea><archArea>288</archArea><bcRat>0</bcRat><totArea>288</totArea><vlRatEstmTotArea>0</vlRatEstmTotArea><vlRat>0</vlRat><mainBldCnt>0</mainBldCnt><atchBldDongCnt>0</atchBldDongCnt><mainPurpsCd> </mainPurpsCd><mainPurpsCdNm> </mainPurpsCdNm><hhldCnt>0</hhldCnt><hoCnt>0</hoCnt><fmlyCnt>0</fmlyCnt><totPkngCnt>0</totPkngCnt><stcnsS
+
+resultCode: 00 / msg: NORMAL SERVICE
+totalCount: 58
+items count: 58
+field names (42): rnum, platPlc, sigunguCd, bjdongCd, platGbCd, bun, ji, mgmPmsrgstPk, bldNm, splotNm, block, lot, jimokCdNm, jiyukCdNm, jiguCdNm, guyukCd, guyukCdNm, jimokCd, jiyukCd, jiguCd, archGbCd, archGbCdNm, platArea, archArea, bcRat, totArea, vlRatEstmTotArea, vlRat, mainBldCnt, atchBldDongCnt, mainPurpsCd, mainPurpsCdNm, hhldCnt, hoCnt, fmlyCnt, totPkngCnt, stcnsSchedDay, stcnsDelayDay, realStcnsDay, archPmsDay, useAprDay, crtnDay
+first item full:
+{
+  "rnum": "1",
+  "platPlc": "경기도 부천시 원미구 원미동 2-7번지",
+  "sigunguCd": "41192",
+  "bjdongCd": "10100",
+  "platGbCd": "0",
+  "bun": "0002",
+  "ji": "0007",
+  "mgmPmsrgstPk": "1097100021203",
+  "bldNm": "",
+  "splotNm": "",
+  "block": "",
+  "lot": "",
+  "jimokCdNm": "대",
+  "jiyukCdNm": "제2종일반주거지역",
+  "jiguCdNm": "",
+  "guyukCd": "",
+  "guyukCdNm": "",
+  "jimokCd": "08",
+  "jiyukCd": "UQA122",
+  "jiguCd": "",
+  "archGbCd": "",
+  "archGbCdNm": "",
+  "platArea": "603.1",
+  "archArea": "12",
+  "bcRat": "0",
+  "totArea": "12",
+  "vlRatEstmTotArea": "0",
+  "vlRat": "0",
+  "mainBldCnt": "0",
+  "atchBldDongCnt": "0",
+  "mainPurpsCd": "",
+  "mainPurpsCdNm": "",
+  "hhldCnt": "0",
+  "hoCnt": "0",
+  "fmlyCnt": "0",
+  "totPkngCnt": "0",
+  "stcnsSchedDay": "",
+  "stcnsDelayDay": "",
+  "realStcnsDay": "",
+  "archPmsDay": "20110811",
+  "useAprDay": "",
+  "crtnDay": "20240827"
+}
+
+부천 매칭 sub-sgg: 41192
+
+========== 14필드 매핑 자동 검증 ==========
+✓ permitDate → archPmsDay
+✓ mainUse → mainPurpsCdNm, mainPurpsCd
+✓ permitType → archGbCdNm, archGbCd
+✓ plotAr → platArea
+✓ buildingAr → archArea
+✓ totalFloorAr → totArea
+✓ bldCoverRatio → bcRat
+✓ flrAreaRatio → vlRat
+✓ useAprDay → useAprDay
+✓ cnstrtSchedDay → stcnsSchedDay
+✓ bldNm → bldNm
+✓ mgmPmsrgstPk → mgmPmsrgstPk
+✓ hhldHoFmlyCnt → hhldCnt, hoCnt, fmlyCnt
+✓ totPkngCnt → totPkngCnt
+
+========== 신규 필드 (14 매핑 외) ==========
+신규 24건 (known set 18):
+  - rnum
+  - platPlc
+  - sigunguCd
+  - bjdongCd
+  - platGbCd
+  - bun
+  - ji
+  - splotNm
+  - block
+  - lot
+  - jimokCdNm
+  - jiyukCdNm
+  - jiguCdNm
+  - guyukCd
+  - guyukCdNm
+  - jimokCd
+  - jiyukCd
+  - jiguCd
+  - vlRatEstmTotArea
+  - mainBldCnt
+  - atchBldDongCnt
+  - stcnsDelayDay
+  - realStcnsDay
+  - crtnDay
+
+========== sub-sgg schema variance ==========
+✓ schema 완전 일치
+
+저장: C:\Users\magic\Documents\bsnassistant\docs\a3b2-step-a-probe.json
