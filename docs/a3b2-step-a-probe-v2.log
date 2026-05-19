@@ -1,0 +1,35 @@
+◇ injected env (11) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+========== PROBE 1: 부천 매핑 ==========
+24 dong × 3 sub = 72 probes
+
+저장: C:\Users\magic\Documents\bsnassistant\docs\a3b2-step-a-bucheon-mapping.json
+결과: unique 매칭 0/24, ambiguous 24
+⚠ ambiguous: [{"dong":"원미동","matches":0},{"dong":"심곡동","matches":0},{"dong":"춘의동","matches":0},{"dong":"도당동","matches":0},{"dong":"약대동","matches":0},{"dong":"소사동","matches":0},{"dong":"역곡동","matches":0},{"dong":"중동","matches":0},{"dong":"상동","matches":0},{"dong":"소사본동","matches":0},{"dong":"심곡본동","matches":0},{"dong":"범박동","matches":0},{"dong":"괴안동","matches":0},{"dong":"송내동","matches":0},{"dong":"옥길동","matches":0},{"dong":"계수동","matches":0},{"dong":"오정동","matches":0},{"dong":"여월동","matches":0},{"dong":"작동","matches":0},{"dong":"원종동","matches":0},{"dong":"고강동","matches":0},{"dong":"대장동","matches":0},{"dong":"삼정동","matches":0},{"dong":"내동","matches":0}]
+
+========== PROBE 2: archPmsDay semantics ==========
+
+[2024 1년치 (baseline)] 20240101~20241231
+  total=47 items=47
+  archPmsDay: 20081105~20241119 (inRange: false)
+  crtnDay   : 20240105~20241217 (inRange: true)
+
+[2024-01 단일월] 20240101~20240131
+  total=5 items=5
+  archPmsDay: 20220419~20240124 (inRange: false)
+  crtnDay   : 20240105~20240124 (inRange: true)
+
+[2020-01 과거 단일월] 20200101~20200131
+  total=0 items=0
+  archPmsDay: undefined~undefined (inRange: false)
+  crtnDay   : undefined~undefined (inRange: false)
+
+[2025-01 미래 단일월] 20250101~20250131
+  total=10 items=10
+  archPmsDay: 20010326~20250117 (inRange: false)
+  crtnDay   : 20250102~20250124 (inRange: true)
+
+========== semantics 결론 ==========
+startDate/endDate 기준: crtnDay
+
+저장: C:\Users\magic\Documents\bsnassistant\docs\a3b2-step-a-semantics.json

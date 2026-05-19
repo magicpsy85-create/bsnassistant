@@ -1,0 +1,687 @@
+{
+  "runAt": "2026-05-19T05:06:42.687Z",
+  "totalProbes": 72,
+  "uniqueMatches": 0,
+  "totalDongs": 24,
+  "ambiguous": [
+    {
+      "dong": "원미동",
+      "matches": 0
+    },
+    {
+      "dong": "심곡동",
+      "matches": 0
+    },
+    {
+      "dong": "춘의동",
+      "matches": 0
+    },
+    {
+      "dong": "도당동",
+      "matches": 0
+    },
+    {
+      "dong": "약대동",
+      "matches": 0
+    },
+    {
+      "dong": "소사동",
+      "matches": 0
+    },
+    {
+      "dong": "역곡동",
+      "matches": 0
+    },
+    {
+      "dong": "중동",
+      "matches": 0
+    },
+    {
+      "dong": "상동",
+      "matches": 0
+    },
+    {
+      "dong": "소사본동",
+      "matches": 0
+    },
+    {
+      "dong": "심곡본동",
+      "matches": 0
+    },
+    {
+      "dong": "범박동",
+      "matches": 0
+    },
+    {
+      "dong": "괴안동",
+      "matches": 0
+    },
+    {
+      "dong": "송내동",
+      "matches": 0
+    },
+    {
+      "dong": "옥길동",
+      "matches": 0
+    },
+    {
+      "dong": "계수동",
+      "matches": 0
+    },
+    {
+      "dong": "오정동",
+      "matches": 0
+    },
+    {
+      "dong": "여월동",
+      "matches": 0
+    },
+    {
+      "dong": "작동",
+      "matches": 0
+    },
+    {
+      "dong": "원종동",
+      "matches": 0
+    },
+    {
+      "dong": "고강동",
+      "matches": 0
+    },
+    {
+      "dong": "대장동",
+      "matches": 0
+    },
+    {
+      "dong": "삼정동",
+      "matches": 0
+    },
+    {
+      "dong": "내동",
+      "matches": 0
+    }
+  ],
+  "subSggBjdong": {
+    "41192": {},
+    "41194": {},
+    "41196": {}
+  },
+  "allProbes": [
+    {
+      "dong": "원미동",
+      "bjdongCd": "10100",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 58,
+      "totalCount": 58
+    },
+    {
+      "dong": "원미동",
+      "bjdongCd": "10100",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "원미동",
+      "bjdongCd": "10100",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 69,
+      "totalCount": 69
+    },
+    {
+      "dong": "심곡동",
+      "bjdongCd": "10200",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "심곡동",
+      "bjdongCd": "10200",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 28,
+      "totalCount": 28
+    },
+    {
+      "dong": "심곡동",
+      "bjdongCd": "10200",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 55,
+      "totalCount": 55
+    },
+    {
+      "dong": "춘의동",
+      "bjdongCd": "10300",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 87,
+      "totalCount": 87
+    },
+    {
+      "dong": "춘의동",
+      "bjdongCd": "10300",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 15,
+      "totalCount": 15
+    },
+    {
+      "dong": "춘의동",
+      "bjdongCd": "10300",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 115
+    },
+    {
+      "dong": "도당동",
+      "bjdongCd": "10400",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 145
+    },
+    {
+      "dong": "도당동",
+      "bjdongCd": "10400",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 48,
+      "totalCount": 48
+    },
+    {
+      "dong": "도당동",
+      "bjdongCd": "10400",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 66,
+      "totalCount": 66
+    },
+    {
+      "dong": "약대동",
+      "bjdongCd": "10500",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 21,
+      "totalCount": 21
+    },
+    {
+      "dong": "약대동",
+      "bjdongCd": "10500",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 71,
+      "totalCount": 71
+    },
+    {
+      "dong": "약대동",
+      "bjdongCd": "10500",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 133
+    },
+    {
+      "dong": "소사동",
+      "bjdongCd": "10600",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 8,
+      "totalCount": 8
+    },
+    {
+      "dong": "소사동",
+      "bjdongCd": "10600",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 52,
+      "totalCount": 52
+    },
+    {
+      "dong": "소사동",
+      "bjdongCd": "10600",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 36,
+      "totalCount": 36
+    },
+    {
+      "dong": "역곡동",
+      "bjdongCd": "10700",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 38,
+      "totalCount": 38
+    },
+    {
+      "dong": "역곡동",
+      "bjdongCd": "10700",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 14,
+      "totalCount": 14
+    },
+    {
+      "dong": "역곡동",
+      "bjdongCd": "10700",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 229
+    },
+    {
+      "dong": "중동",
+      "bjdongCd": "10800",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 59,
+      "totalCount": 59
+    },
+    {
+      "dong": "중동",
+      "bjdongCd": "10800",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 0,
+      "totalCount": 0
+    },
+    {
+      "dong": "중동",
+      "bjdongCd": "10800",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 154
+    },
+    {
+      "dong": "상동",
+      "bjdongCd": "10900",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 47,
+      "totalCount": 47
+    },
+    {
+      "dong": "상동",
+      "bjdongCd": "10900",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 0,
+      "totalCount": 0
+    },
+    {
+      "dong": "상동",
+      "bjdongCd": "10900",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 0,
+      "totalCount": 0
+    },
+    {
+      "dong": "소사본동",
+      "bjdongCd": "10100",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 58,
+      "totalCount": 58
+    },
+    {
+      "dong": "소사본동",
+      "bjdongCd": "10100",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "소사본동",
+      "bjdongCd": "10100",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 69,
+      "totalCount": 69
+    },
+    {
+      "dong": "심곡본동",
+      "bjdongCd": "10200",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "심곡본동",
+      "bjdongCd": "10200",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 28,
+      "totalCount": 28
+    },
+    {
+      "dong": "심곡본동",
+      "bjdongCd": "10200",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 55,
+      "totalCount": 55
+    },
+    {
+      "dong": "범박동",
+      "bjdongCd": "10300",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 87,
+      "totalCount": 87
+    },
+    {
+      "dong": "범박동",
+      "bjdongCd": "10300",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 15,
+      "totalCount": 15
+    },
+    {
+      "dong": "범박동",
+      "bjdongCd": "10300",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 115
+    },
+    {
+      "dong": "괴안동",
+      "bjdongCd": "10400",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 145
+    },
+    {
+      "dong": "괴안동",
+      "bjdongCd": "10400",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 48,
+      "totalCount": 48
+    },
+    {
+      "dong": "괴안동",
+      "bjdongCd": "10400",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 66,
+      "totalCount": 66
+    },
+    {
+      "dong": "송내동",
+      "bjdongCd": "10500",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 21,
+      "totalCount": 21
+    },
+    {
+      "dong": "송내동",
+      "bjdongCd": "10500",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 71,
+      "totalCount": 71
+    },
+    {
+      "dong": "송내동",
+      "bjdongCd": "10500",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 133
+    },
+    {
+      "dong": "옥길동",
+      "bjdongCd": "10600",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 8,
+      "totalCount": 8
+    },
+    {
+      "dong": "옥길동",
+      "bjdongCd": "10600",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 52,
+      "totalCount": 52
+    },
+    {
+      "dong": "옥길동",
+      "bjdongCd": "10600",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 36,
+      "totalCount": 36
+    },
+    {
+      "dong": "계수동",
+      "bjdongCd": "10700",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 38,
+      "totalCount": 38
+    },
+    {
+      "dong": "계수동",
+      "bjdongCd": "10700",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 14,
+      "totalCount": 14
+    },
+    {
+      "dong": "계수동",
+      "bjdongCd": "10700",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 229
+    },
+    {
+      "dong": "오정동",
+      "bjdongCd": "10100",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 58,
+      "totalCount": 58
+    },
+    {
+      "dong": "오정동",
+      "bjdongCd": "10100",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "오정동",
+      "bjdongCd": "10100",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 69,
+      "totalCount": 69
+    },
+    {
+      "dong": "여월동",
+      "bjdongCd": "10200",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 62,
+      "totalCount": 62
+    },
+    {
+      "dong": "여월동",
+      "bjdongCd": "10200",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 28,
+      "totalCount": 28
+    },
+    {
+      "dong": "여월동",
+      "bjdongCd": "10200",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 55,
+      "totalCount": 55
+    },
+    {
+      "dong": "작동",
+      "bjdongCd": "10300",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 87,
+      "totalCount": 87
+    },
+    {
+      "dong": "작동",
+      "bjdongCd": "10300",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 15,
+      "totalCount": 15
+    },
+    {
+      "dong": "작동",
+      "bjdongCd": "10300",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 115
+    },
+    {
+      "dong": "원종동",
+      "bjdongCd": "10400",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 145
+    },
+    {
+      "dong": "원종동",
+      "bjdongCd": "10400",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 48,
+      "totalCount": 48
+    },
+    {
+      "dong": "원종동",
+      "bjdongCd": "10400",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 66,
+      "totalCount": 66
+    },
+    {
+      "dong": "고강동",
+      "bjdongCd": "10500",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 21,
+      "totalCount": 21
+    },
+    {
+      "dong": "고강동",
+      "bjdongCd": "10500",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 71,
+      "totalCount": 71
+    },
+    {
+      "dong": "고강동",
+      "bjdongCd": "10500",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 133
+    },
+    {
+      "dong": "대장동",
+      "bjdongCd": "10600",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 8,
+      "totalCount": 8
+    },
+    {
+      "dong": "대장동",
+      "bjdongCd": "10600",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 52,
+      "totalCount": 52
+    },
+    {
+      "dong": "대장동",
+      "bjdongCd": "10600",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 36,
+      "totalCount": 36
+    },
+    {
+      "dong": "삼정동",
+      "bjdongCd": "10700",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 38,
+      "totalCount": 38
+    },
+    {
+      "dong": "삼정동",
+      "bjdongCd": "10700",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 14,
+      "totalCount": 14
+    },
+    {
+      "dong": "삼정동",
+      "bjdongCd": "10700",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 229
+    },
+    {
+      "dong": "내동",
+      "bjdongCd": "10800",
+      "sub": "41192",
+      "matched": false,
+      "itemsCount": 59,
+      "totalCount": 59
+    },
+    {
+      "dong": "내동",
+      "bjdongCd": "10800",
+      "sub": "41194",
+      "matched": false,
+      "itemsCount": 0,
+      "totalCount": 0
+    },
+    {
+      "dong": "내동",
+      "bjdongCd": "10800",
+      "sub": "41196",
+      "matched": false,
+      "itemsCount": 100,
+      "totalCount": 154
+    }
+  ]
+}
