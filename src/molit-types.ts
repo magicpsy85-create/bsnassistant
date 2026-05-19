@@ -77,3 +77,105 @@ export type TransactionByType = {
   sh: SHTransaction;
   apt: AptTransaction;
 };
+
+// ============================================================
+// Stage B-1 — BuildingPermit (A-3b-2)
+// ============================================================
+
+/**
+ * BuildingPermit — ArchPmsHubService getApBasisOulnInfo 응답 매핑
+ *
+ * - 42 raw 필드 중 38 채택 (rnum + splotNm + block + lot 4건 drop)
+ * - 14필드 논리 매핑: docs/a3b2-step-a-probe.json estimatedMappings 참조 (14/14 PASS)
+ * - 신규 20필드: docs/a3b2-step-a-probe.json results[0].allFieldNames 참조
+ *
+ * 주요 주의:
+ * - mgmPmsrgstPk는 22자리 BIGINT → JavaScript Number 정밀도 한계로 string 강제
+ * - sample 빈 값 가능 필드: stcnsDelayDay, realStcnsDay (시간 지나면 채워짐)
+ * - BSN 빌딩 화이트리스트 적용 위치는 UI 레이어 (mainPurpsCdNm 기준)
+ * - 본 interface는 raw mapping 전용 — save/get 함수는 B-2 wrapper에서 추가
+ */
+export interface BuildingPermit {
+  // === PK + 식별 ===
+  mgmPmsrgstPk: string;             // 22자리 BIGINT, string 강제
+  archPmsDay: string;                // 허가일 YYYYMMDD (= permitDate 매핑)
+
+  // === 위치 (요청 echo + 응답 위치) ===
+  sigunguCd: string;
+  bjdongCd: string;
+  platPlc: string;                   // 전체 주소 텍스트
+  platGbCd: string;                  // 0=대지/1=산/2=블록
+  bun: string;                       // 본번 (zero-pad)
+  ji: string;                        // 부번 (zero-pad)
+
+  // === 지목/용도지역/지구 (Nm = UI 표시, Cd = code join용) ===
+  jimokCdNm: string;
+  jimokCd: string;
+  jiyukCdNm: string;
+  jiyukCd: string;
+  jiguCdNm: string;
+  jiguCd: string;
+  guyukCdNm: string;
+  guyukCd: string;
+
+  // === 건물 정보 ===
+  bldNm: string;                     // 건물명
+  archGbCdNm: string;                // 허가 구분명 (= permitType 매핑)
+  archGbCd: string;
+  mainPurpsCdNm: string;             // 주용도명 (= mainUse 매핑, 화이트리스트 키)
+  mainPurpsCd: string;
+
+  // === 면적/비율 ===
+  platArea: number;                  // 대지면적 ㎡ (= plotAr 매핑)
+  archArea: number;                  // 건축면적 ㎡ (= buildingAr 매핑)
+  totArea: number;                   // 연면적 ㎡ (= totalFloorAr 매핑)
+  vlRatEstmTotArea: number;          // 용적률 산정 연면적 (vlRat 분자)
+  bcRat: number;                     // 건폐율 (= bldCoverRatio 매핑)
+  vlRat: number;                     // 용적률 (= flrAreaRatio 매핑)
+
+  // === 건물 구성 (UI 표시 X, 필터링 시그널만) ===
+  mainBldCnt: number;                // 주동 수
+  atchBldDongCnt: number;            // 부속동 수
+
+  // === 세대/호/가구 ===
+  hhldCnt: number;
+  hoCnt: number;
+  fmlyCnt: number;
+
+  // === 주차 ===
+  totPkngCnt: number;
+
+  // === 일정 ===
+  stcnsSchedDay: string;             // 착공 예정일 (= cnstrtSchedDay 매핑)
+  stcnsDelayDay: string;             // 착공 지연일 (sample 빈 값 가능)
+  realStcnsDay: string;              // 실착공일 (sample 빈 값 가능)
+  useAprDay: string;                 // 사용 승인일
+
+  // === 대장 메타 ===
+  crtnDay: string;                   // 대장 생성일 YYYYMMDD
+}
+
+/**
+ * BSN 빌딩 매수자 설득 콘텐츠 대상 — mainPurpsCdNm 화이트리스트
+ *
+ * 정책 α: ArchPmsHubService 응답은 빌딩+아파트+주택+공장 모두 포함하므로
+ *   저장 단계는 무필터, UI 표시 시점에 본 화이트리스트 적용.
+ * SJ 영업 관점에 따라 update 가능 (raw value 정확 형태는 운영 중 raw 확인 권고).
+ */
+export const BUILDING_PURPS_WHITELIST: ReadonlySet<string> = new Set([
+  '업무시설',
+  '제1종근린생활시설',
+  '제2종근린생활시설',
+  '판매시설',
+  '숙박시설',
+  '의료시설',
+  '교육연구시설',
+  '문화및집회시설',
+]);
+
+/** BSN UI 표시 가능 빌딩 인허가 판정 헬퍼 */
+export function isBuildingForBsn(
+  permit: Pick<BuildingPermit, 'mainPurpsCdNm'>
+): boolean {
+  return BUILDING_PURPS_WHITELIST.has(permit.mainPurpsCdNm);
+}

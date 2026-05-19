@@ -150,6 +150,82 @@ try {
     CREATE INDEX IF NOT EXISTS idx_fetch_log_v2_lookup ON fetch_log_v2(sgg_cd, deal_ym, type);
   `);
 
+  // ============================================================
+  // Stage B-1 — building_permits + permit_fetch_log (A-3b-2)
+  // ============================================================
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS building_permits (
+      mgm_pmsrgst_pk      TEXT PRIMARY KEY,        -- 22자리 BIGINT, TEXT 강제
+
+      arch_pms_day        TEXT NOT NULL,            -- YYYYMMDD
+      sigungu_cd          TEXT NOT NULL,
+      bjdong_cd           TEXT NOT NULL,
+      plat_plc            TEXT NOT NULL,
+      plat_gb_cd          TEXT,
+      bun                 TEXT,
+      ji                  TEXT,
+
+      jimok_cd_nm         TEXT,
+      jimok_cd            TEXT,
+      jiyuk_cd_nm         TEXT,
+      jiyuk_cd            TEXT,
+      jigu_cd_nm          TEXT,
+      jigu_cd             TEXT,
+      guyuk_cd_nm         TEXT,
+      guyuk_cd            TEXT,
+
+      bld_nm              TEXT,
+      arch_gb_cd_nm       TEXT,
+      arch_gb_cd          TEXT,
+      main_purps_cd_nm    TEXT NOT NULL,            -- 화이트리스트 필터 키
+      main_purps_cd       TEXT,
+
+      plat_area           REAL,
+      arch_area           REAL,
+      tot_area            REAL,
+      vl_rat_estm_tot_area REAL,
+      bc_rat              REAL,
+      vl_rat              REAL,
+
+      main_bld_cnt        INTEGER,
+      atch_bld_dong_cnt   INTEGER,
+
+      hhld_cnt            INTEGER,
+      ho_cnt              INTEGER,
+      fmly_cnt            INTEGER,
+      tot_pkng_cnt        INTEGER,
+
+      stcns_sched_day     TEXT,
+      stcns_delay_day     TEXT,
+      real_stcns_day      TEXT,
+      use_apr_day         TEXT,
+      crtn_day            TEXT
+    )
+  `);
+
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_permits_sgg_archday
+    ON building_permits (sigungu_cd, arch_pms_day)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_permits_bjdong
+    ON building_permits (bjdong_cd)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_permits_purps
+    ON building_permits (main_purps_cd_nm)`);
+
+  // permit_fetch_log — 결정 #4 (나) 별도 테이블 (fetch_log_v2 4단계 migration 회피)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS permit_fetch_log (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      sigungu_cd      TEXT NOT NULL,
+      bjdong_cd       TEXT NOT NULL,
+      arch_pms_ym     TEXT NOT NULL,                  -- archPmsDay YYYYMM 단위
+      fetched_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      row_count       INTEGER NOT NULL DEFAULT 0,
+      UNIQUE (sigungu_cd, bjdong_cd, arch_pms_ym)
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_permit_fetch_log_lookup
+    ON permit_fetch_log (sigungu_cd, bjdong_cd, arch_pms_ym)`);
+
   console.log('[DB] transactions.db 초기화 완료');
 } catch (e: any) {
   console.warn('[DB] SQLite 사용 불가 (Cloud Functions 환경):', e.message);
