@@ -210,6 +210,8 @@ try {
     ON building_permits (bjdong_cd)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_permits_purps
     ON building_permits (main_purps_cd_nm)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_permits_sgg_crtnday
+    ON building_permits (sigungu_cd, crtn_day)`);
 
   // permit_fetch_log — 결정 #4 (나) 별도 테이블 (fetch_log_v2 4단계 migration 회피)
   db.exec(`
@@ -217,14 +219,26 @@ try {
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       sigungu_cd      TEXT NOT NULL,
       bjdong_cd       TEXT NOT NULL,
-      arch_pms_ym     TEXT NOT NULL,                  -- archPmsDay YYYYMM 단위
+      crtn_ym         TEXT NOT NULL,                  -- crtnDay YYYYMM 단위 (semantics 확정 결과)
       fetched_at      TEXT NOT NULL DEFAULT (datetime('now')),
       row_count       INTEGER NOT NULL DEFAULT 0,
-      UNIQUE (sigungu_cd, bjdong_cd, arch_pms_ym)
+      UNIQUE (sigungu_cd, bjdong_cd, crtn_ym)
     )
   `);
+
+  // 멱등 migration: 기존 환경(arch_pms_ym) → crtn_ym RENAME
+  {
+    const cols = db.prepare("PRAGMA table_info(permit_fetch_log)").all() as Array<{name: string}>;
+    const hasArchPmsYm = cols.some(c => c.name === 'arch_pms_ym');
+    const hasCrtnYm = cols.some(c => c.name === 'crtn_ym');
+    if (hasArchPmsYm && !hasCrtnYm) {
+      db.exec(`ALTER TABLE permit_fetch_log RENAME COLUMN arch_pms_ym TO crtn_ym`);
+    }
+  }
+
+  db.exec(`DROP INDEX IF EXISTS idx_permit_fetch_log_lookup`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_permit_fetch_log_lookup
-    ON permit_fetch_log (sigungu_cd, bjdong_cd, arch_pms_ym)`);
+    ON permit_fetch_log (sigungu_cd, bjdong_cd, crtn_ym)`);
 
   console.log('[DB] transactions.db 초기화 완료');
 } catch (e: any) {
