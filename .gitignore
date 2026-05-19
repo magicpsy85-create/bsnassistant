@@ -8,6 +8,7 @@ data/transactions.db-shm
 data/learned_articles.json
 data/backups/
 *.log
+!docs/a3b2-*.log
 명단.CSV
 deploy-test1-*.json
 *-firebase-adminsdk-*.json
