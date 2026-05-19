@@ -1,6 +1,6 @@
 # BSN Assistant — 현재 상태 요약
 
-작성일: 2026-05-07 / main HEAD: `b8d9925`
+작성일: 2026-05-19 / main HEAD: `2f005bf`
 
 ## 1. 회사 / 운영 컨텍스트
 - **회사:** BSN빌사남부동산중개법인 — 상업용 빌딩 매매 중개
@@ -37,11 +37,11 @@
 
 | 해시 | 의미 |
 |---|---|
-| `b8d9925` | **Merge chore-learn-data-untrack** — `data/learned_articles.json` git untrack (단일 서버 로컬 캐시 운영 모델 a-2) (no-ff 머지) |
-| `5ad5e3f` | **chore** — `data/learned_articles.json` git untrack (`git rm --cached` + `.gitignore` 추가). 운영 모델 a-2(단일 서버 로컬 캐시) 결정 후속. A-5c-3 후속 작업. 머지 과정 working tree 파일 손실 사고 → dangling blob 복구. 머지 직후 102 articles (130836 B) 정상 read 검증 완료 |
-| `ac1d0c9` | **Merge fix-api-md-root-redirect** — API.md GET / 응답 항목 정정 (no-ff 머지) |
-| `1c1192f` | **fix(docs)** — API.md `GET /` 응답 설명을 "챗봇 페이지"에서 "302 redirect to `/insta#transaction`"로 정정 (실제 라우트 동작 반영) |
-| `2989dd1` | **Merge A-5c-3** — API.md 미문서화 엔드포인트 13건 신설(content/transaction/learn/admin) + `ChannelPreset` 타입 정의 추가 (no-ff 머지) |
+| `2f005bf` | **feat(b-2c)** — `getBuildingPermits` wrapper + 9 helpers (ArchPmsHubService). 강남 47 / 부천 58 dry-run PASS, cache hit 8ms, 부천 fan-out sub=41192 echo 저장 |
+| `3d05115` | **feat(b-2b)** — `permit_fetch_log` 컬럼 `arch_pms_ym→crtn_ym` (semantics 확정 반영) + 멱등 ALTER RENAME COLUMN + `building_permits` `idx_permits_sgg_crtnday` 추가 |
+| `17bc88d` | **feat(b-2a)** — `region_codes.json` 부천 41190 entry에 `subSggBjdong` 추가 (41192:9 + 41194:7 + 41196:8 = 24 dongs) |
+| `06bcf19` | **fix(probe-v2)** — `platPlc` 정규식 매칭으로 부천 dong 매핑 24/24 unique 확정. 송내동/내동·심곡동/심곡본동·소사동/소사본동 정확 분리 |
+| `2b71a61` | **chore** — `docs/a3b2-*.log` gitignore 예외 룰 추가 (`!docs/a3b2-*.log`). probe 영구화 시 `-f` 강제 추가 회피 |
 
 ## 5. 엔드포인트 목록 (현재)
 **인증:** `POST /api/auth/verify` `POST /api/auth/check-session` `GET /api/auth/config`
@@ -66,15 +66,41 @@
 - **B-1b** (`e116b15`) — 채널 분리 백엔드. 캐시 hit 시 31초(분석·검색 스킵)
 - **사용자 프리셋 백엔드** (`c47ad21`) — `/api/user/preset` GET·POST, `members.channelPreset`
 - **contextCache Firestore TTL 이전** (`8e3e4e5`) — 다중 인스턴스 대비
-- **B-2-B-1** (`1bbca09`) — 헤더 ⚙️ + 프리셋 모드 표시
-- **B-2-B-2** (`a242fd3`) — 모달 + Firestore 저장/로드 + Firebase ID 토큰 자동 갱신 + `ensureFirebaseInitialized()` 가드
-- **B-2-B-3** (`a0723de`) — `/api/content/generate` payload에 `channels` 전달. **메인 칩은 미추가 결정** — 헤더 칩이 동일 기능 커버 (D 옵션). sessionStorage 캐시 미도입 (Q 옵션) — 메모리 `currentPreset` 변수만 사용
-- **B-2-B-4** (`b17c50d`) — 탭별 placeholder UI + `/api/content/generate-channel` 프론트 연결. **결정사항:** ① data-generated는 응답 payload 기준(프리셋 변경 시 마킹 흔들림 방지) ② inflightChannels Set은 채널별·confirmShown은 전역(병렬 호출 허용·다중 confirm 차단) ③ 410 fallback은 자동이 아닌 confirm 후 `doGenerate(channels)` — 프리셋 ∪ 요청 채널 union으로 재생성하여 사용자 의도 보존
-- **인증 race condition fix (B-2-B-2 후속)** — `a242fd3`에서 insta-page.ts `initInstaAuth`(3679)·`doInstaLogin`(3731)에 `ensureFirebaseInitialized()` 가드 적용 완료 (2026-04-29 검증). 잔여분(`currentUser` null 시 토큰 갱신)은 별도 백로그로 분리.
+- **B-2-B-1~4** (`1bbca09`·`a242fd3`·`a0723de`·`b17c50d`) — 프리셋 모달 + Firestore + 채널 분리 UI + placeholder 흐름
+- **B-2-B-3 main chip 시리즈** (`174146c`·`599bc65`·`0bbc101`) — 메인 채널 칩 UI + this-time-only 토글 + union logic
+- **인증 평가 트랙** (`bd5d076`·`06b34db`·`f29e337`·`48a8aae`) — content·learn 라우트 requireAuth/requireAdmin + ensureFirebaseInitialized 강화 + learn UI role guard
+- **학습 데이터 백업** (`86fda48`·`8ae0c8d`) — saveData hook + 로컬 30일/매월 영구 + Firestore debounce
+- **A-3a Brand Voice Infobase** (`482b2f6`) — Firestore `brand_voice/main` + in-memory TTL + system prompt prepend
+- **A-3b MOLIT 3종 확장** (`ab96b11`) — land/sh/apt endpoint + PropertyType + 4종 interface + saveXxxRows 분리
+
+**완료 (A-3b-2 트랙 — origin 반영):**
+- ✅ **Stage A~A-6** (`2081c97`·`5008af5`·`10fcc22`·`d626dcd`·`1282112`) — bjdong_map.min.json 도입 + dongs 행안부 전수 교체 + 부천 sub-sgg 합집합 + prefix root cause fix
+- ✅ **실거래가 period 트랙** (`3202d13`·`ab41b39`) — 기간 직접 설정 캐시 충돌 fix + period 응답 순서 통일
+- ✅ **B-2-pre v1** (`7b4491d`) — `probe-arch-permit.ts` + 14필드 매핑 14/14 PASS + 42필드 카운트 확정
+- ✅ **gitignore 예외** (`2b71a61`) — `!docs/a3b2-*.log` 패턴 추가
+- ✅ **Stage B-1** (`4380cdb`) — `BuildingPermit` interface 38 필드 + `building_permits`/`permit_fetch_log` 테이블 + `BUILDING_PURPS_WHITELIST` 8종
+- ✅ **B-2-pre v2** (`b33e511`·`06bcf19`) — 부천 24/24 unique 매핑 + `crtnDay` semantics 확정 (startDate/endDate 기준은 archPmsDay가 아닌 crtnDay)
+- ✅ **Stage B-2a** (`17bc88d`) — `region_codes.json` 부천 41190 `subSggBjdong` 24 추가
+- ✅ **Stage B-2b** (`3d05115`) — `permit_fetch_log` `arch_pms_ym→crtn_ym` migration + `idx_permits_sgg_crtnday`
+- ✅ **Stage B-2c** (`2f005bf`) — `getBuildingPermits` wrapper + 9 helpers, dry-run PASS (강남 47 / 부천 58 / cache 8ms / sub=41192 echo)
+
+**진행 중:** 없음 (A-3b-2 트랙 완결)
+
+**다음 후보 (SJ 결정 대기):**
+- **A-3c** — R-ONE / DataLab / KOSIS 외부 통계 통합 (env 키 등록됨, 카탈로그 콘텐츠 보강)
+- **A-4** — cron flow + dynamic finder + catalog generator (자동화 핵심, 큰 작업)
+- **B-3** — `initial-fetch-permits` 사전 채움 (호출량 17분~1시간, BSN 운영 가치 평가 후 결정)
+- **B-4 (선택)** — BSN UI dropdown region master 전환 + 빌딩/인허가 cross-promote (정책 α UI 필터링)
 
 **다음 후속 (낮은 우선):**
 - 카드 레이아웃 정교화 (split-side / comparison-list 정규식)
 - 학습 데이터 SQLite 전환
+
+**기타 백로그:**
+- 실거래가 dead code cleanup (~80줄, `txSetPeriod`/`txCustomMode`/`txStart*`/`txEnd*`/`txDoQuery` 류, 결정 #4 (가) 별도 트랙)
+- 모달 제거 검토 ~2026-05-26 (a5_series_state 메모)
+- GPT 모델 업그레이드 평가 (결정 #5 (가) 별도 트랙)
+- transactions historical 행정동 row 88건 (상도1동·대저1·2동) — 정책 (c) 보존 채택, B-2 join miss logging 활용
 
 **운영 준비 트랙 (검증 종료 후):**
 - 인증 흐름 정비:
