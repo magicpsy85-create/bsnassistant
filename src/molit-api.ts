@@ -403,3 +403,289 @@ export async function getTransactionsByPeriod(sggCd: string, months: number): Pr
 }
 
 export { formatYm };
+
+// ============================================================
+// Stage B-2c (A-3b-2) — ArchPmsHubService wrapper
+// ============================================================
+
+import * as fs from 'fs';
+import * as path from 'path';
+import type { BuildingPermit } from './molit-types';
+
+const ARCH_PMS_BASE = 'http://apis.data.go.kr/1613000/ArchPmsHubService/getApBasisOulnInfo';
+const REGION_PATH = path.join(process.cwd(), 'data', 'region_codes.json');
+
+export interface PermitYmRange {
+  from: string;  // 'YYYYMM'
+  to: string;    // 'YYYYMM'
+}
+
+// region_codes.json module-level cache (PM2 restart 시 reload)
+let regionCache: any = null;
+function loadRegion(): any {
+  if (!regionCache) regionCache = JSON.parse(fs.readFileSync(REGION_PATH, 'utf-8'));
+  return regionCache;
+}
+
+// dongName + sigunguCd → (sub, bjdongCd) resolve. 부천 41190은 subSggBjdong 정적 매핑.
+function resolveSubSggBjdong(sigunguCd: string, dongName: string): { sub: string; bjdongCd: string } | null {
+  const region = loadRegion();
+  // 부천 41190 fan-out 케이스
+  if (sigunguCd === '41190') {
+    for (const sdName of Object.keys(region)) {
+      const sd = region[sdName];
+      if (typeof sd !== 'object' || sd === null) continue;
+      for (const sggName of Object.keys(sd)) {
+        if (sd[sggName]?.code === '41190') {
+          const sb = sd[sggName].subSggBjdong;
+          if (!sb) return null;
+          for (const sub of Object.keys(sb)) {
+            const bjdongCd = sb[sub]?.[dongName];
+            if (bjdongCd) return { sub, bjdongCd };
+          }
+        }
+      }
+    }
+    return null;
+  }
+  // 일반 sgg
+  for (const sdName of Object.keys(region)) {
+    const sd = region[sdName];
+    if (typeof sd !== 'object' || sd === null) continue;
+    for (const sggName of Object.keys(sd)) {
+      if (sd[sggName]?.code === sigunguCd) {
+        const bjdongCd = sd[sggName].bjdongCodes?.[dongName];
+        if (bjdongCd) return { sub: sigunguCd, bjdongCd };
+      }
+    }
+  }
+  return null;
+}
+
+// ymRange 검증 (YYYYMM 형식 + from<=to + 12개월 이내)
+function validateYmRange(r: PermitYmRange): void {
+  if (!/^\d{6}$/.test(r.from) || !/^\d{6}$/.test(r.to)) {
+    throw new Error(`Invalid ymRange format (expected YYYYMM): ${JSON.stringify(r)}`);
+  }
+  if (r.from > r.to) throw new Error(`ymRange.from > to: ${JSON.stringify(r)}`);
+  const fy = parseInt(r.from.slice(0, 4), 10), fm = parseInt(r.from.slice(4, 6), 10);
+  const ty = parseInt(r.to.slice(0, 4), 10),   tm = parseInt(r.to.slice(4, 6), 10);
+  if ((ty - fy) * 12 + (tm - fm) > 11) {
+    throw new Error(`ymRange > 12 months (yearly fetch limit): ${JSON.stringify(r)}`);
+  }
+}
+
+function enumerateYms(from: string, to: string): string[] {
+  const yms: string[] = [];
+  let cur = from;
+  while (cur <= to) {
+    yms.push(cur);
+    const y = parseInt(cur.slice(0, 4), 10);
+    const m = parseInt(cur.slice(4, 6), 10);
+    const next = new Date(y, m, 1);  // m은 0-indexed라 +1 효과
+    cur = `${next.getFullYear()}${String(next.getMonth() + 1).padStart(2, '0')}`;
+  }
+  return yms;
+}
+
+// raw XML item → BuildingPermit (38 필드)
+function parseRawToPermit(raw: any): BuildingPermit {
+  const toStr = (v: any) => String(v ?? '').trim();
+  const toNum = (v: any) => { const n = parseFloat(String(v ?? '').trim()); return Number.isNaN(n) ? 0 : n; };
+  const toInt = (v: any) => { const n = parseInt(String(v ?? '').trim(), 10); return Number.isNaN(n) ? 0 : n; };
+  return {
+    mgmPmsrgstPk: toStr(raw.mgmPmsrgstPk),
+    archPmsDay: toStr(raw.archPmsDay),
+    sigunguCd: toStr(raw.sigunguCd),
+    bjdongCd: toStr(raw.bjdongCd),
+    platPlc: toStr(raw.platPlc),
+    platGbCd: toStr(raw.platGbCd),
+    bun: toStr(raw.bun),
+    ji: toStr(raw.ji),
+    jimokCdNm: toStr(raw.jimokCdNm),
+    jimokCd: toStr(raw.jimokCd),
+    jiyukCdNm: toStr(raw.jiyukCdNm),
+    jiyukCd: toStr(raw.jiyukCd),
+    jiguCdNm: toStr(raw.jiguCdNm),
+    jiguCd: toStr(raw.jiguCd),
+    guyukCdNm: toStr(raw.guyukCdNm),
+    guyukCd: toStr(raw.guyukCd),
+    bldNm: toStr(raw.bldNm),
+    archGbCdNm: toStr(raw.archGbCdNm),
+    archGbCd: toStr(raw.archGbCd),
+    mainPurpsCdNm: toStr(raw.mainPurpsCdNm),
+    mainPurpsCd: toStr(raw.mainPurpsCd),
+    platArea: toNum(raw.platArea),
+    archArea: toNum(raw.archArea),
+    totArea: toNum(raw.totArea),
+    vlRatEstmTotArea: toNum(raw.vlRatEstmTotArea),
+    bcRat: toNum(raw.bcRat),
+    vlRat: toNum(raw.vlRat),
+    mainBldCnt: toInt(raw.mainBldCnt),
+    atchBldDongCnt: toInt(raw.atchBldDongCnt),
+    hhldCnt: toInt(raw.hhldCnt),
+    hoCnt: toInt(raw.hoCnt),
+    fmlyCnt: toInt(raw.fmlyCnt),
+    totPkngCnt: toInt(raw.totPkngCnt),
+    stcnsSchedDay: toStr(raw.stcnsSchedDay),
+    stcnsDelayDay: toStr(raw.stcnsDelayDay),
+    realStcnsDay: toStr(raw.realStcnsDay),
+    useAprDay: toStr(raw.useAprDay),
+    crtnDay: toStr(raw.crtnDay),
+  };
+}
+
+// ArchPmsHub fetch (페이지네이션)
+async function fetchArchPmsHub(sub: string, bjdongCd: string, startDate: string, endDate: string): Promise<BuildingPermit[]> {
+  const KEY = process.env.MOLIT_API_KEY;
+  if (!KEY) throw new Error('MOLIT_API_KEY 없음');
+  const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: false });
+  const all: BuildingPermit[] = [];
+  let pageNo = 1;
+  let totalCount = 0;
+  do {
+    const params = new URLSearchParams({
+      serviceKey: KEY, sigunguCd: sub, bjdongCd, startDate, endDate,
+      numOfRows: '100', pageNo: String(pageNo),
+    });
+    const url = `${ARCH_PMS_BASE}?${params.toString()}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) { console.warn(`[permit] HTTP ${r.status} page ${pageNo}`); break; }
+    const parsed = parser.parse(await r.text());
+    const header = parsed?.response?.header;
+    const rCode = header?.resultCode;
+    if (rCode !== '00' && rCode !== '000') {
+      console.warn(`[permit] resultCode=${rCode} msg=${header?.resultMsg}`);
+      break;
+    }
+    totalCount = parseInt(parsed?.response?.body?.totalCount || '0', 10);
+    const items = parsed?.response?.body?.items?.item;
+    const arr = Array.isArray(items) ? items : items ? [items] : [];
+    all.push(...arr.map(parseRawToPermit));
+    if (arr.length < 100) break;
+    pageNo++;
+    if (pageNo > 100) break;
+    await new Promise(r => setTimeout(r, 100));
+  } while (all.length < totalCount);
+  return all;
+}
+
+function savePermits(rows: BuildingPermit[]): void {
+  if (rows.length === 0) return;
+  const insert = db.prepare(`INSERT OR REPLACE INTO building_permits (
+    mgm_pmsrgst_pk, arch_pms_day, sigungu_cd, bjdong_cd, plat_plc, plat_gb_cd, bun, ji,
+    jimok_cd_nm, jimok_cd, jiyuk_cd_nm, jiyuk_cd, jigu_cd_nm, jigu_cd, guyuk_cd_nm, guyuk_cd,
+    bld_nm, arch_gb_cd_nm, arch_gb_cd, main_purps_cd_nm, main_purps_cd,
+    plat_area, arch_area, tot_area, vl_rat_estm_tot_area, bc_rat, vl_rat,
+    main_bld_cnt, atch_bld_dong_cnt, hhld_cnt, ho_cnt, fmly_cnt, tot_pkng_cnt,
+    stcns_sched_day, stcns_delay_day, real_stcns_day, use_apr_day, crtn_day
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const txn = db.transaction((items: BuildingPermit[]) => {
+    for (const r of items) {
+      insert.run(
+        r.mgmPmsrgstPk, r.archPmsDay, r.sigunguCd, r.bjdongCd, r.platPlc, r.platGbCd, r.bun, r.ji,
+        r.jimokCdNm, r.jimokCd, r.jiyukCdNm, r.jiyukCd, r.jiguCdNm, r.jiguCd, r.guyukCdNm, r.guyukCd,
+        r.bldNm, r.archGbCdNm, r.archGbCd, r.mainPurpsCdNm, r.mainPurpsCd,
+        r.platArea, r.archArea, r.totArea, r.vlRatEstmTotArea, r.bcRat, r.vlRat,
+        r.mainBldCnt, r.atchBldDongCnt, r.hhldCnt, r.hoCnt, r.fmlyCnt, r.totPkngCnt,
+        r.stcnsSchedDay, r.stcnsDelayDay, r.realStcnsDay, r.useAprDay, r.crtnDay
+      );
+    }
+  });
+  txn(rows);
+}
+
+function rowToPermit(r: any): BuildingPermit {
+  return {
+    mgmPmsrgstPk: r.mgm_pmsrgst_pk, archPmsDay: r.arch_pms_day, sigunguCd: r.sigungu_cd, bjdongCd: r.bjdong_cd,
+    platPlc: r.plat_plc, platGbCd: r.plat_gb_cd, bun: r.bun, ji: r.ji,
+    jimokCdNm: r.jimok_cd_nm, jimokCd: r.jimok_cd, jiyukCdNm: r.jiyuk_cd_nm, jiyukCd: r.jiyuk_cd,
+    jiguCdNm: r.jigu_cd_nm, jiguCd: r.jigu_cd, guyukCdNm: r.guyuk_cd_nm, guyukCd: r.guyuk_cd,
+    bldNm: r.bld_nm, archGbCdNm: r.arch_gb_cd_nm, archGbCd: r.arch_gb_cd,
+    mainPurpsCdNm: r.main_purps_cd_nm, mainPurpsCd: r.main_purps_cd,
+    platArea: r.plat_area, archArea: r.arch_area, totArea: r.tot_area, vlRatEstmTotArea: r.vl_rat_estm_tot_area,
+    bcRat: r.bc_rat, vlRat: r.vl_rat,
+    mainBldCnt: r.main_bld_cnt, atchBldDongCnt: r.atch_bld_dong_cnt,
+    hhldCnt: r.hhld_cnt, hoCnt: r.ho_cnt, fmlyCnt: r.fmly_cnt, totPkngCnt: r.tot_pkng_cnt,
+    stcnsSchedDay: r.stcns_sched_day, stcnsDelayDay: r.stcns_delay_day, realStcnsDay: r.real_stcns_day,
+    useAprDay: r.use_apr_day, crtnDay: r.crtn_day,
+  };
+}
+
+function getPermits(sub: string, bjdongCd: string, ymFrom: string, ymTo: string): BuildingPermit[] {
+  const rows = db.prepare(`SELECT * FROM building_permits
+    WHERE sigungu_cd = ? AND bjdong_cd = ?
+      AND crtn_day BETWEEN ? AND ?
+    ORDER BY crtn_day DESC`)
+    .all(sub, bjdongCd, ymFrom + '01', ymTo + '31') as any[];
+  return rows.map(rowToPermit);
+}
+
+function getPermitFetchLog(sub: string, bjdongCd: string, ym: string): any {
+  return db.prepare(`SELECT * FROM permit_fetch_log
+    WHERE sigungu_cd = ? AND bjdong_cd = ? AND crtn_ym = ?`)
+    .get(sub, bjdongCd, ym);
+}
+
+function savePermitFetchLog(sub: string, bjdongCd: string, ym: string, rowCount: number): void {
+  db.prepare(`INSERT OR REPLACE INTO permit_fetch_log
+    (sigungu_cd, bjdong_cd, crtn_ym, fetched_at, row_count) VALUES (?, ?, ?, ?, ?)`)
+    .run(sub, bjdongCd, ym, new Date().toISOString(), rowCount);
+}
+
+function isPermitCacheValid(sub: string, bjdongCd: string, ym: string): boolean {
+  const log = getPermitFetchLog(sub, bjdongCd, ym);
+  if (!log) return false;
+  if (log.row_count === 0) return false;  // 0건 cache 무시 (transactions 패턴)
+  if (isFinalData(ym)) return true;
+  const currentYm = formatYm(new Date());
+  const cacheHours = (ym === currentYm) ? 6 : 24;
+  const elapsedMs = Date.now() - new Date(log.fetched_at).getTime();
+  return elapsedMs < cacheHours * 3600_000;
+}
+
+/**
+ * BSN 빌딩 매수자 설득 콘텐츠 — ArchPmsHubService 인허가 wrapper
+ *
+ * signature: (sigunguCd, dongName, ymRange)
+ *   - 41190(부천) 자동 fan-out via subSggBjdong
+ *   - 일반 sgg는 sigunguCd 직접 사용
+ * cache: permit_fetch_log crtn_ym 단위 (semantics = crtnDay)
+ * fetch: yearly (ArchPmsHub startDate~endDate는 crtnDay 기준)
+ * 정책 α: 저장 무필터, UI는 BUILDING_PURPS_WHITELIST 필터링
+ */
+export async function getBuildingPermits(
+  sigunguCd: string,
+  dongName: string,
+  ymRange: PermitYmRange
+): Promise<BuildingPermit[]> {
+  validateYmRange(ymRange);
+
+  const resolved = resolveSubSggBjdong(sigunguCd, dongName);
+  if (!resolved) {
+    console.warn(`[permit] resolve miss: sgg=${sigunguCd}, dong=${dongName}`);
+    return [];
+  }
+  const { sub, bjdongCd } = resolved;
+
+  const yms = enumerateYms(ymRange.from, ymRange.to);
+  const allValid = yms.every(ym => isPermitCacheValid(sub, bjdongCd, ym));
+
+  if (!allValid) {
+    const startDate = ymRange.from + '01';
+    const endDate = ymRange.to + '31';
+    try {
+      const rows = await fetchArchPmsHub(sub, bjdongCd, startDate, endDate);
+      savePermits(rows);
+      // yearly fetch → 월별 split: 각 ym에 fetch_log row INSERT
+      for (const ym of yms) {
+        const ymCount = rows.filter(r => r.crtnDay.slice(0, 6) === ym).length;
+        savePermitFetchLog(sub, bjdongCd, ym, ymCount);
+      }
+    } catch (e: any) {
+      console.warn(`[permit] fetch fallback (stale cache): ${e?.message || e}`);
+    }
+  }
+
+  return getPermits(sub, bjdongCd, ymRange.from, ymRange.to);
+}
