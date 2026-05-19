@@ -92,13 +92,14 @@ async function probeBucheonMapping() {
   for (const [dongName, bjdongCd] of dongEntries) {
     for (const sub of subSggs) {
       const r = await probe(sub, bjdongCd, '20240101', '20241231');
-      const umdNm = r.firstItem?.umdNm;
-      const norm = (s?: string) => (s || '').replace(/\s/g, '');
-      const matched = norm(umdNm) === norm(dongName);
-      allProbes.push({ dong: dongName, bjdongCd, sub, matched, umdNm, itemsCount: r.itemsCount, totalCount: r.totalCount });
+      const platPlc: string = r.firstItem?.platPlc || '';
+      const dongMatch = platPlc.match(/(\S+동)\s/);
+      const responseDong = dongMatch?.[1];
+      const matched = responseDong === dongName;
+      allProbes.push({ dong: dongName, bjdongCd, sub, matched, responseDong, platPlc, itemsCount: r.itemsCount, totalCount: r.totalCount });
       if (matched) {
         subSggBjdong[sub][dongName] = bjdongCd;
-        console.log(`  ✓ ${dongName}/${bjdongCd} → ${sub} [umdNm=${umdNm}, ${r.itemsCount}/${r.totalCount}건]`);
+        console.log(`  ✓ ${dongName}/${bjdongCd} → ${sub} [platPlc=${platPlc}, ${r.itemsCount}/${r.totalCount}건]`);
       }
       await new Promise(r => setTimeout(r, 500));
     }

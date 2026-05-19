@@ -1,117 +1,49 @@
 {
-  "runAt": "2026-05-19T05:06:42.687Z",
+  "runAt": "2026-05-19T05:19:38.496Z",
   "totalProbes": 72,
-  "uniqueMatches": 0,
+  "uniqueMatches": 24,
   "totalDongs": 24,
-  "ambiguous": [
-    {
-      "dong": "원미동",
-      "matches": 0
-    },
-    {
-      "dong": "심곡동",
-      "matches": 0
-    },
-    {
-      "dong": "춘의동",
-      "matches": 0
-    },
-    {
-      "dong": "도당동",
-      "matches": 0
-    },
-    {
-      "dong": "약대동",
-      "matches": 0
-    },
-    {
-      "dong": "소사동",
-      "matches": 0
-    },
-    {
-      "dong": "역곡동",
-      "matches": 0
-    },
-    {
-      "dong": "중동",
-      "matches": 0
-    },
-    {
-      "dong": "상동",
-      "matches": 0
-    },
-    {
-      "dong": "소사본동",
-      "matches": 0
-    },
-    {
-      "dong": "심곡본동",
-      "matches": 0
-    },
-    {
-      "dong": "범박동",
-      "matches": 0
-    },
-    {
-      "dong": "괴안동",
-      "matches": 0
-    },
-    {
-      "dong": "송내동",
-      "matches": 0
-    },
-    {
-      "dong": "옥길동",
-      "matches": 0
-    },
-    {
-      "dong": "계수동",
-      "matches": 0
-    },
-    {
-      "dong": "오정동",
-      "matches": 0
-    },
-    {
-      "dong": "여월동",
-      "matches": 0
-    },
-    {
-      "dong": "작동",
-      "matches": 0
-    },
-    {
-      "dong": "원종동",
-      "matches": 0
-    },
-    {
-      "dong": "고강동",
-      "matches": 0
-    },
-    {
-      "dong": "대장동",
-      "matches": 0
-    },
-    {
-      "dong": "삼정동",
-      "matches": 0
-    },
-    {
-      "dong": "내동",
-      "matches": 0
-    }
-  ],
+  "ambiguous": [],
   "subSggBjdong": {
-    "41192": {},
-    "41194": {},
-    "41196": {}
+    "41192": {
+      "원미동": "10100",
+      "심곡동": "10200",
+      "춘의동": "10300",
+      "도당동": "10400",
+      "약대동": "10500",
+      "소사동": "10600",
+      "역곡동": "10700",
+      "중동": "10800",
+      "상동": "10900"
+    },
+    "41194": {
+      "소사본동": "10100",
+      "심곡본동": "10200",
+      "범박동": "10300",
+      "괴안동": "10400",
+      "송내동": "10500",
+      "옥길동": "10600",
+      "계수동": "10700"
+    },
+    "41196": {
+      "오정동": "10100",
+      "여월동": "10200",
+      "작동": "10300",
+      "원종동": "10400",
+      "고강동": "10500",
+      "대장동": "10600",
+      "삼정동": "10700",
+      "내동": "10800"
+    }
   },
   "allProbes": [
     {
       "dong": "원미동",
       "bjdongCd": "10100",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "원미동",
+      "platPlc": "경기도 부천시 원미구 원미동 2-7번지",
       "itemsCount": 58,
       "totalCount": 58
     },
@@ -120,6 +52,8 @@
       "bjdongCd": "10100",
       "sub": "41194",
       "matched": false,
+      "responseDong": "소사본동",
+      "platPlc": "경기도 부천시 소사구 소사본동 52-9번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -128,6 +62,8 @@
       "bjdongCd": "10100",
       "sub": "41196",
       "matched": false,
+      "responseDong": "오정동",
+      "platPlc": "경기도 부천시 오정구 오정동 1-3번지",
       "itemsCount": 69,
       "totalCount": 69
     },
@@ -135,7 +71,9 @@
       "dong": "심곡동",
       "bjdongCd": "10200",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "심곡동",
+      "platPlc": "경기도 부천시 원미구 심곡동 40-51번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -144,6 +82,8 @@
       "bjdongCd": "10200",
       "sub": "41194",
       "matched": false,
+      "responseDong": "심곡본동",
+      "platPlc": "경기도 부천시 소사구 심곡본동 526-15번지",
       "itemsCount": 28,
       "totalCount": 28
     },
@@ -152,6 +92,8 @@
       "bjdongCd": "10200",
       "sub": "41196",
       "matched": false,
+      "responseDong": "여월동",
+      "platPlc": "경기도 부천시 오정구 여월동 4번지",
       "itemsCount": 55,
       "totalCount": 55
     },
@@ -159,7 +101,9 @@
       "dong": "춘의동",
       "bjdongCd": "10300",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "춘의동",
+      "platPlc": "경기도 부천시 원미구 춘의동 1번지",
       "itemsCount": 87,
       "totalCount": 87
     },
@@ -168,6 +112,8 @@
       "bjdongCd": "10300",
       "sub": "41194",
       "matched": false,
+      "responseDong": "범박동",
+      "platPlc": "경기도 부천시 소사구 범박동 4-13번지",
       "itemsCount": 15,
       "totalCount": 15
     },
@@ -176,6 +122,8 @@
       "bjdongCd": "10300",
       "sub": "41196",
       "matched": false,
+      "responseDong": "작동",
+      "platPlc": "경기도 부천시 오정구 작동 55-4번지",
       "itemsCount": 100,
       "totalCount": 115
     },
@@ -183,7 +131,9 @@
       "dong": "도당동",
       "bjdongCd": "10400",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "도당동",
+      "platPlc": "경기도 부천시 원미구 도당동 4-3번지",
       "itemsCount": 100,
       "totalCount": 145
     },
@@ -192,6 +142,8 @@
       "bjdongCd": "10400",
       "sub": "41194",
       "matched": false,
+      "responseDong": "괴안동",
+      "platPlc": "경기도 부천시 소사구 괴안동 1-21번지",
       "itemsCount": 48,
       "totalCount": 48
     },
@@ -200,6 +152,8 @@
       "bjdongCd": "10400",
       "sub": "41196",
       "matched": false,
+      "responseDong": "원종동",
+      "platPlc": "경기도 부천시 오정구 원종동 9-10번지",
       "itemsCount": 66,
       "totalCount": 66
     },
@@ -207,7 +161,9 @@
       "dong": "약대동",
       "bjdongCd": "10500",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "약대동",
+      "platPlc": "경기도 부천시 원미구 약대동 47-16번지",
       "itemsCount": 21,
       "totalCount": 21
     },
@@ -216,6 +172,8 @@
       "bjdongCd": "10500",
       "sub": "41194",
       "matched": false,
+      "responseDong": "송내동",
+      "platPlc": "경기도 부천시 소사구 송내동 249-9번지",
       "itemsCount": 71,
       "totalCount": 71
     },
@@ -224,6 +182,8 @@
       "bjdongCd": "10500",
       "sub": "41196",
       "matched": false,
+      "responseDong": "고강동",
+      "platPlc": "경기도 부천시 오정구 고강동 2-38번지",
       "itemsCount": 100,
       "totalCount": 133
     },
@@ -231,7 +191,9 @@
       "dong": "소사동",
       "bjdongCd": "10600",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "소사동",
+      "platPlc": "경기도 부천시 원미구 소사동 2번지",
       "itemsCount": 8,
       "totalCount": 8
     },
@@ -240,6 +202,8 @@
       "bjdongCd": "10600",
       "sub": "41194",
       "matched": false,
+      "responseDong": "옥길동",
+      "platPlc": "경기도 부천시 소사구 옥길동 201번지",
       "itemsCount": 52,
       "totalCount": 52
     },
@@ -248,6 +212,8 @@
       "bjdongCd": "10600",
       "sub": "41196",
       "matched": false,
+      "responseDong": "대장동",
+      "platPlc": "경기도 부천시 오정구 대장동 115-9번지",
       "itemsCount": 36,
       "totalCount": 36
     },
@@ -255,7 +221,9 @@
       "dong": "역곡동",
       "bjdongCd": "10700",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "역곡동",
+      "platPlc": "경기도 부천시 원미구 역곡동 4-10번지",
       "itemsCount": 38,
       "totalCount": 38
     },
@@ -264,6 +232,8 @@
       "bjdongCd": "10700",
       "sub": "41194",
       "matched": false,
+      "responseDong": "계수동",
+      "platPlc": "경기도 부천시 소사구 계수동 3-23번지",
       "itemsCount": 14,
       "totalCount": 14
     },
@@ -272,6 +242,8 @@
       "bjdongCd": "10700",
       "sub": "41196",
       "matched": false,
+      "responseDong": "삼정동",
+      "platPlc": "경기도 부천시 오정구 삼정동 12-4번지",
       "itemsCount": 100,
       "totalCount": 229
     },
@@ -279,7 +251,9 @@
       "dong": "중동",
       "bjdongCd": "10800",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "중동",
+      "platPlc": "경기도 부천시 원미구 중동 676-10번지",
       "itemsCount": 59,
       "totalCount": 59
     },
@@ -288,6 +262,7 @@
       "bjdongCd": "10800",
       "sub": "41194",
       "matched": false,
+      "platPlc": "",
       "itemsCount": 0,
       "totalCount": 0
     },
@@ -296,6 +271,8 @@
       "bjdongCd": "10800",
       "sub": "41196",
       "matched": false,
+      "responseDong": "내동",
+      "platPlc": "경기도 부천시 오정구 내동 19-1번지",
       "itemsCount": 100,
       "totalCount": 154
     },
@@ -303,7 +280,9 @@
       "dong": "상동",
       "bjdongCd": "10900",
       "sub": "41192",
-      "matched": false,
+      "matched": true,
+      "responseDong": "상동",
+      "platPlc": "경기도 부천시 원미구 상동 21번지",
       "itemsCount": 47,
       "totalCount": 47
     },
@@ -312,6 +291,7 @@
       "bjdongCd": "10900",
       "sub": "41194",
       "matched": false,
+      "platPlc": "",
       "itemsCount": 0,
       "totalCount": 0
     },
@@ -320,6 +300,7 @@
       "bjdongCd": "10900",
       "sub": "41196",
       "matched": false,
+      "platPlc": "",
       "itemsCount": 0,
       "totalCount": 0
     },
@@ -328,6 +309,8 @@
       "bjdongCd": "10100",
       "sub": "41192",
       "matched": false,
+      "responseDong": "원미동",
+      "platPlc": "경기도 부천시 원미구 원미동 2-7번지",
       "itemsCount": 58,
       "totalCount": 58
     },
@@ -335,7 +318,9 @@
       "dong": "소사본동",
       "bjdongCd": "10100",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "소사본동",
+      "platPlc": "경기도 부천시 소사구 소사본동 52-9번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -344,6 +329,8 @@
       "bjdongCd": "10100",
       "sub": "41196",
       "matched": false,
+      "responseDong": "오정동",
+      "platPlc": "경기도 부천시 오정구 오정동 1-3번지",
       "itemsCount": 69,
       "totalCount": 69
     },
@@ -352,6 +339,8 @@
       "bjdongCd": "10200",
       "sub": "41192",
       "matched": false,
+      "responseDong": "심곡동",
+      "platPlc": "경기도 부천시 원미구 심곡동 40-51번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -359,7 +348,9 @@
       "dong": "심곡본동",
       "bjdongCd": "10200",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "심곡본동",
+      "platPlc": "경기도 부천시 소사구 심곡본동 526-15번지",
       "itemsCount": 28,
       "totalCount": 28
     },
@@ -368,6 +359,8 @@
       "bjdongCd": "10200",
       "sub": "41196",
       "matched": false,
+      "responseDong": "여월동",
+      "platPlc": "경기도 부천시 오정구 여월동 4번지",
       "itemsCount": 55,
       "totalCount": 55
     },
@@ -376,6 +369,8 @@
       "bjdongCd": "10300",
       "sub": "41192",
       "matched": false,
+      "responseDong": "춘의동",
+      "platPlc": "경기도 부천시 원미구 춘의동 1번지",
       "itemsCount": 87,
       "totalCount": 87
     },
@@ -383,7 +378,9 @@
       "dong": "범박동",
       "bjdongCd": "10300",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "범박동",
+      "platPlc": "경기도 부천시 소사구 범박동 4-13번지",
       "itemsCount": 15,
       "totalCount": 15
     },
@@ -392,6 +389,8 @@
       "bjdongCd": "10300",
       "sub": "41196",
       "matched": false,
+      "responseDong": "작동",
+      "platPlc": "경기도 부천시 오정구 작동 55-4번지",
       "itemsCount": 100,
       "totalCount": 115
     },
@@ -400,6 +399,8 @@
       "bjdongCd": "10400",
       "sub": "41192",
       "matched": false,
+      "responseDong": "도당동",
+      "platPlc": "경기도 부천시 원미구 도당동 4-3번지",
       "itemsCount": 100,
       "totalCount": 145
     },
@@ -407,7 +408,9 @@
       "dong": "괴안동",
       "bjdongCd": "10400",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "괴안동",
+      "platPlc": "경기도 부천시 소사구 괴안동 1-21번지",
       "itemsCount": 48,
       "totalCount": 48
     },
@@ -416,6 +419,8 @@
       "bjdongCd": "10400",
       "sub": "41196",
       "matched": false,
+      "responseDong": "원종동",
+      "platPlc": "경기도 부천시 오정구 원종동 9-10번지",
       "itemsCount": 66,
       "totalCount": 66
     },
@@ -424,6 +429,8 @@
       "bjdongCd": "10500",
       "sub": "41192",
       "matched": false,
+      "responseDong": "약대동",
+      "platPlc": "경기도 부천시 원미구 약대동 47-16번지",
       "itemsCount": 21,
       "totalCount": 21
     },
@@ -431,7 +438,9 @@
       "dong": "송내동",
       "bjdongCd": "10500",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "송내동",
+      "platPlc": "경기도 부천시 소사구 송내동 249-9번지",
       "itemsCount": 71,
       "totalCount": 71
     },
@@ -440,6 +449,8 @@
       "bjdongCd": "10500",
       "sub": "41196",
       "matched": false,
+      "responseDong": "고강동",
+      "platPlc": "경기도 부천시 오정구 고강동 2-38번지",
       "itemsCount": 100,
       "totalCount": 133
     },
@@ -448,6 +459,8 @@
       "bjdongCd": "10600",
       "sub": "41192",
       "matched": false,
+      "responseDong": "소사동",
+      "platPlc": "경기도 부천시 원미구 소사동 2번지",
       "itemsCount": 8,
       "totalCount": 8
     },
@@ -455,7 +468,9 @@
       "dong": "옥길동",
       "bjdongCd": "10600",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "옥길동",
+      "platPlc": "경기도 부천시 소사구 옥길동 201번지",
       "itemsCount": 52,
       "totalCount": 52
     },
@@ -464,6 +479,8 @@
       "bjdongCd": "10600",
       "sub": "41196",
       "matched": false,
+      "responseDong": "대장동",
+      "platPlc": "경기도 부천시 오정구 대장동 115-9번지",
       "itemsCount": 36,
       "totalCount": 36
     },
@@ -472,6 +489,8 @@
       "bjdongCd": "10700",
       "sub": "41192",
       "matched": false,
+      "responseDong": "역곡동",
+      "platPlc": "경기도 부천시 원미구 역곡동 4-10번지",
       "itemsCount": 38,
       "totalCount": 38
     },
@@ -479,7 +498,9 @@
       "dong": "계수동",
       "bjdongCd": "10700",
       "sub": "41194",
-      "matched": false,
+      "matched": true,
+      "responseDong": "계수동",
+      "platPlc": "경기도 부천시 소사구 계수동 3-23번지",
       "itemsCount": 14,
       "totalCount": 14
     },
@@ -488,6 +509,8 @@
       "bjdongCd": "10700",
       "sub": "41196",
       "matched": false,
+      "responseDong": "삼정동",
+      "platPlc": "경기도 부천시 오정구 삼정동 12-4번지",
       "itemsCount": 100,
       "totalCount": 229
     },
@@ -496,6 +519,8 @@
       "bjdongCd": "10100",
       "sub": "41192",
       "matched": false,
+      "responseDong": "원미동",
+      "platPlc": "경기도 부천시 원미구 원미동 2-7번지",
       "itemsCount": 58,
       "totalCount": 58
     },
@@ -504,6 +529,8 @@
       "bjdongCd": "10100",
       "sub": "41194",
       "matched": false,
+      "responseDong": "소사본동",
+      "platPlc": "경기도 부천시 소사구 소사본동 52-9번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -511,7 +538,9 @@
       "dong": "오정동",
       "bjdongCd": "10100",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "오정동",
+      "platPlc": "경기도 부천시 오정구 오정동 1-3번지",
       "itemsCount": 69,
       "totalCount": 69
     },
@@ -520,6 +549,8 @@
       "bjdongCd": "10200",
       "sub": "41192",
       "matched": false,
+      "responseDong": "심곡동",
+      "platPlc": "경기도 부천시 원미구 심곡동 40-51번지",
       "itemsCount": 62,
       "totalCount": 62
     },
@@ -528,6 +559,8 @@
       "bjdongCd": "10200",
       "sub": "41194",
       "matched": false,
+      "responseDong": "심곡본동",
+      "platPlc": "경기도 부천시 소사구 심곡본동 526-15번지",
       "itemsCount": 28,
       "totalCount": 28
     },
@@ -535,7 +568,9 @@
       "dong": "여월동",
       "bjdongCd": "10200",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "여월동",
+      "platPlc": "경기도 부천시 오정구 여월동 4번지",
       "itemsCount": 55,
       "totalCount": 55
     },
@@ -544,6 +579,8 @@
       "bjdongCd": "10300",
       "sub": "41192",
       "matched": false,
+      "responseDong": "춘의동",
+      "platPlc": "경기도 부천시 원미구 춘의동 1번지",
       "itemsCount": 87,
       "totalCount": 87
     },
@@ -552,6 +589,8 @@
       "bjdongCd": "10300",
       "sub": "41194",
       "matched": false,
+      "responseDong": "범박동",
+      "platPlc": "경기도 부천시 소사구 범박동 4-13번지",
       "itemsCount": 15,
       "totalCount": 15
     },
@@ -559,7 +598,9 @@
       "dong": "작동",
       "bjdongCd": "10300",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "작동",
+      "platPlc": "경기도 부천시 오정구 작동 55-4번지",
       "itemsCount": 100,
       "totalCount": 115
     },
@@ -568,6 +609,8 @@
       "bjdongCd": "10400",
       "sub": "41192",
       "matched": false,
+      "responseDong": "도당동",
+      "platPlc": "경기도 부천시 원미구 도당동 4-3번지",
       "itemsCount": 100,
       "totalCount": 145
     },
@@ -576,6 +619,8 @@
       "bjdongCd": "10400",
       "sub": "41194",
       "matched": false,
+      "responseDong": "괴안동",
+      "platPlc": "경기도 부천시 소사구 괴안동 1-21번지",
       "itemsCount": 48,
       "totalCount": 48
     },
@@ -583,7 +628,9 @@
       "dong": "원종동",
       "bjdongCd": "10400",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "원종동",
+      "platPlc": "경기도 부천시 오정구 원종동 9-10번지",
       "itemsCount": 66,
       "totalCount": 66
     },
@@ -592,6 +639,8 @@
       "bjdongCd": "10500",
       "sub": "41192",
       "matched": false,
+      "responseDong": "약대동",
+      "platPlc": "경기도 부천시 원미구 약대동 47-16번지",
       "itemsCount": 21,
       "totalCount": 21
     },
@@ -600,6 +649,8 @@
       "bjdongCd": "10500",
       "sub": "41194",
       "matched": false,
+      "responseDong": "송내동",
+      "platPlc": "경기도 부천시 소사구 송내동 249-9번지",
       "itemsCount": 71,
       "totalCount": 71
     },
@@ -607,7 +658,9 @@
       "dong": "고강동",
       "bjdongCd": "10500",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "고강동",
+      "platPlc": "경기도 부천시 오정구 고강동 2-38번지",
       "itemsCount": 100,
       "totalCount": 133
     },
@@ -616,6 +669,8 @@
       "bjdongCd": "10600",
       "sub": "41192",
       "matched": false,
+      "responseDong": "소사동",
+      "platPlc": "경기도 부천시 원미구 소사동 2번지",
       "itemsCount": 8,
       "totalCount": 8
     },
@@ -624,6 +679,8 @@
       "bjdongCd": "10600",
       "sub": "41194",
       "matched": false,
+      "responseDong": "옥길동",
+      "platPlc": "경기도 부천시 소사구 옥길동 201번지",
       "itemsCount": 52,
       "totalCount": 52
     },
@@ -631,7 +688,9 @@
       "dong": "대장동",
       "bjdongCd": "10600",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "대장동",
+      "platPlc": "경기도 부천시 오정구 대장동 115-9번지",
       "itemsCount": 36,
       "totalCount": 36
     },
@@ -640,6 +699,8 @@
       "bjdongCd": "10700",
       "sub": "41192",
       "matched": false,
+      "responseDong": "역곡동",
+      "platPlc": "경기도 부천시 원미구 역곡동 4-10번지",
       "itemsCount": 38,
       "totalCount": 38
     },
@@ -648,6 +709,8 @@
       "bjdongCd": "10700",
       "sub": "41194",
       "matched": false,
+      "responseDong": "계수동",
+      "platPlc": "경기도 부천시 소사구 계수동 3-23번지",
       "itemsCount": 14,
       "totalCount": 14
     },
@@ -655,7 +718,9 @@
       "dong": "삼정동",
       "bjdongCd": "10700",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "삼정동",
+      "platPlc": "경기도 부천시 오정구 삼정동 12-4번지",
       "itemsCount": 100,
       "totalCount": 229
     },
@@ -664,6 +729,8 @@
       "bjdongCd": "10800",
       "sub": "41192",
       "matched": false,
+      "responseDong": "중동",
+      "platPlc": "경기도 부천시 원미구 중동 676-10번지",
       "itemsCount": 59,
       "totalCount": 59
     },
@@ -672,6 +739,7 @@
       "bjdongCd": "10800",
       "sub": "41194",
       "matched": false,
+      "platPlc": "",
       "itemsCount": 0,
       "totalCount": 0
     },
@@ -679,7 +747,9 @@
       "dong": "내동",
       "bjdongCd": "10800",
       "sub": "41196",
-      "matched": false,
+      "matched": true,
+      "responseDong": "내동",
+      "platPlc": "경기도 부천시 오정구 내동 19-1번지",
       "itemsCount": 100,
       "totalCount": 154
     }
